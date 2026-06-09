@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5001/api',
+  baseURL: import.meta.env.VITE_API_URL || 'https://areaconnectapi-production.up.railway.app/api',
   withCredentials: true,
 });
 
@@ -21,7 +21,7 @@ api.interceptors.response.use(
       original._retry = true;
       try {
         const { data } = await axios.post(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:5001/api'}/auth/refresh`,
+          `${import.meta.env.VITE_API_URL || 'https://areaconnectapi-production.up.railway.app/api'}/auth/refresh`,
           {},
           { withCredentials: true }
         );
