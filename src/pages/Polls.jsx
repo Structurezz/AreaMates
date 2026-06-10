@@ -32,15 +32,15 @@ function PollCard({ poll, userId, onVote }) {
   return (
     <div className={`glass-card p-5 ${isEnded ? 'opacity-70' : ''}`}>
       <div className="flex items-start justify-between gap-3 mb-4">
-        <h3 className="font-semibold text-white leading-snug flex-1">{poll.question}</h3>
+        <h3 className="font-semibold text-[#0F172A] leading-snug flex-1">{poll.question}</h3>
         <div className="flex items-center gap-2 flex-shrink-0">
           {isEnded && (
-            <span className="flex items-center gap-1 text-xs text-white/30 px-2 py-0.5 rounded-full bg-white/5">
+            <span className="flex items-center gap-1 text-xs text-[#94A3B8] px-2 py-0.5 rounded-full bg-[#F1F5F9]">
               <Lock size={10} /> Closed
             </span>
           )}
           {poll.endsAt && !isEnded && (
-            <span className="flex items-center gap-1 text-xs text-amber-400/70">
+            <span className="flex items-center gap-1 text-xs text-amber-600">
               <Clock size={10} />
               {new Date(poll.endsAt).toLocaleDateString()}
             </span>
@@ -58,7 +58,7 @@ function PollCard({ poll, userId, onVote }) {
             <button key={i} onClick={() => vote(i)}
               disabled={isEnded || !!voting}
               className={`w-full text-left relative overflow-hidden rounded-xl transition-all group ${
-                isEnded ? 'cursor-default' : 'cursor-pointer hover:border-white/20'
+                isEnded ? 'cursor-default' : 'cursor-pointer hover:border-[#CBD5E1]'
               } ${isMyVote ? 'border' : 'border border-transparent'}`}
               style={isMyVote ? { borderColor: color + '60' } : {}}>
               {/* Progress fill */}
@@ -72,14 +72,14 @@ function PollCard({ poll, userId, onVote }) {
                   ) : isMyVote ? (
                     <Check size={12} className="flex-shrink-0" style={{ color }} />
                   ) : (
-                    <div className="w-3 h-3 rounded-full border border-white/20 flex-shrink-0 group-hover:border-white/40 transition-colors"
+                    <div className="w-3 h-3 rounded-full border border-[#CBD5E1] flex-shrink-0 group-hover:border-[#94A3B8] transition-colors"
                       style={isMyVote ? { borderColor: color, background: color } : {}} />
                   )}
-                  <span className={`text-sm ${isMyVote ? 'font-medium text-white' : 'text-white/70'}`}>{opt.text}</span>
+                  <span className={`text-sm ${isMyVote ? 'font-medium text-[#0F172A]' : 'text-[#475569]'}`}>{opt.text}</span>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  <span className="text-xs font-semibold" style={{ color: isMyVote ? color : 'rgba(255,255,255,0.35)' }}>{pct}%</span>
-                  <span className="text-xs text-white/20">{opt.votes.length}</span>
+                  <span className="text-xs font-semibold" style={{ color: isMyVote ? color : '#94A3B8' }}>{pct}%</span>
+                  <span className="text-xs text-[#CBD5E1]">{opt.votes.length}</span>
                 </div>
               </div>
             </button>
@@ -87,10 +87,10 @@ function PollCard({ poll, userId, onVote }) {
         })}
       </div>
 
-      <div className="flex items-center justify-between text-xs text-white/25 pt-3 border-t border-white/5">
+      <div className="flex items-center justify-between text-xs text-[#94A3B8] pt-3 border-t border-[#E2E8F0]">
         <span>{totalVotes} vote{totalVotes !== 1 ? 's' : ''} total</span>
         <span>by {poll.createdBy?.name || 'Estate'}</span>
-        {hasVoted && !isEnded && <span className="text-emerald-400/60 flex items-center gap-1"><Check size={10} /> You voted</span>}
+        {hasVoted && !isEnded && <span className="text-emerald-600 flex items-center gap-1"><Check size={10} /> You voted</span>}
       </div>
     </div>
   );
@@ -118,10 +118,10 @@ export default function Polls() {
   return (
     <div className="space-y-5 animate-fade-in pb-12">
       <div>
-        <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-          <BarChart2 size={22} className="text-emerald-400" /> Polls & Voting
+        <h1 className="text-2xl font-bold text-[#0F172A] flex items-center gap-2">
+          <BarChart2 size={22} className="text-emerald-600" /> Polls & Voting
         </h1>
-        <p className="text-white/40 text-sm mt-0.5">Vote on community decisions and see what your neighbours think</p>
+        <p className="text-[#94A3B8] text-sm mt-0.5">Vote on community decisions and see what your neighbours think</p>
       </div>
 
       {/* Stats */}
@@ -133,20 +133,20 @@ export default function Polls() {
         ].map(({ label, value, color }) => (
           <div key={label} className="glass-card p-4 text-center">
             <div className="text-xl font-bold" style={{ color }}>{value}</div>
-            <div className="text-xs text-white/30 mt-0.5">{label}</div>
+            <div className="text-xs text-[#94A3B8] mt-0.5">{label}</div>
           </div>
         ))}
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-white/5 rounded-xl p-1 w-fit">
+      <div className="flex gap-1 bg-[#F1F5F9] rounded-xl p-1 w-fit">
         {[
           { key: 'active', label: `Active (${active.length})` },
           { key: 'closed', label: `Closed (${closed.length})` },
         ].map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
             className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
-              tab === t.key ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/70'
+              tab === t.key ? 'bg-emerald-600 text-white' : 'text-[#475569] hover:text-[#0F172A]'
             }`}>
             {t.label}
           </button>
@@ -154,11 +154,11 @@ export default function Polls() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-16"><RefreshCw size={20} className="text-gold animate-spin" /></div>
+        <div className="flex justify-center py-16"><RefreshCw size={20} className="text-emerald-600 animate-spin" /></div>
       ) : shown.length === 0 ? (
         <div className="glass-card p-12 text-center">
-          <BarChart2 size={28} className="text-white/20 mx-auto mb-3" />
-          <p className="text-white/30 text-sm">
+          <BarChart2 size={28} className="text-[#CBD5E1] mx-auto mb-3" />
+          <p className="text-[#94A3B8] text-sm">
             {tab === 'active' ? 'No active polls right now. Check back soon!' : 'No closed polls yet.'}
           </p>
         </div>

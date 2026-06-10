@@ -4,14 +4,14 @@ import { paymentAPI } from '../api';
 import toast from 'react-hot-toast';
 import {
   CreditCard, Clock, AlertTriangle, CheckCircle2, XCircle,
-  RefreshCw, ExternalLink, Banknote, ChevronRight, Info,
+  RefreshCw, ExternalLink, Banknote, Info,
 } from 'lucide-react';
 
 const STATUS = {
-  paid:    { label: 'Paid',    icon: CheckCircle2,  color: 'text-emerald-400', bg: 'bg-emerald-400/10', border: 'border-emerald-400/20' },
-  pending: { label: 'Pending', icon: Clock,          color: 'text-amber-400',   bg: 'bg-amber-400/10',   border: 'border-amber-400/20' },
-  overdue: { label: 'Overdue', icon: AlertTriangle,  color: 'text-red-400',     bg: 'bg-red-400/10',     border: 'border-red-400/20' },
-  waived:  { label: 'Waived',  icon: XCircle,        color: 'text-slate-400',   bg: 'bg-slate-400/10',   border: 'border-slate-400/20' },
+  paid:    { label: 'Paid',    icon: CheckCircle2,  color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200' },
+  pending: { label: 'Pending', icon: Clock,          color: 'text-amber-600',   bg: 'bg-amber-50',   border: 'border-amber-200' },
+  overdue: { label: 'Overdue', icon: AlertTriangle,  color: 'text-red-600',     bg: 'bg-red-50',     border: 'border-red-200' },
+  waived:  { label: 'Waived',  icon: XCircle,        color: 'text-slate-500',   bg: 'bg-slate-50',   border: 'border-slate-200' },
 };
 
 const TYPE_LABEL = {
@@ -124,9 +124,9 @@ export default function Payments() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="glass-card p-10 text-center">
-          <RefreshCw size={32} className="text-gold animate-spin mx-auto mb-4" />
-          <p className="text-white font-semibold text-lg">Verifying your payment…</p>
-          <p className="text-white/40 text-sm mt-1">Please wait, do not close this tab.</p>
+          <RefreshCw size={32} className="text-emerald-500 animate-spin mx-auto mb-4" />
+          <p className="font-semibold text-lg" style={{ color: '#0F172A' }}>Verifying your payment…</p>
+          <p className="text-sm mt-1" style={{ color: '#94A3B8' }}>Please wait, do not close this tab.</p>
         </div>
       </div>
     );
@@ -136,53 +136,76 @@ export default function Payments() {
     <div className="p-6 max-w-4xl mx-auto">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-display font-bold text-white">Payments</h1>
-        <p className="text-white/40 text-sm mt-1">View your dues, make payments, and track your history.</p>
+        <h1 className="text-2xl font-display font-bold" style={{ color: '#0F172A', letterSpacing: '-0.03em' }}>Payments</h1>
+        <p className="text-sm mt-1" style={{ color: '#94A3B8' }}>View your dues, make payments, and track your history.</p>
       </div>
 
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-7">
         <div className="glass-card p-5 flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-gold/10 border border-gold/20 flex items-center justify-center flex-shrink-0">
-            <Banknote size={18} className="text-gold" />
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{ background: 'rgba(16,185,129,0.10)', border: '1px solid rgba(16,185,129,0.22)' }}
+          >
+            <Banknote size={18} className="text-emerald-600" />
           </div>
           <div>
-            <p className="text-white/40 text-xs">Total Outstanding</p>
-            <p className="text-white font-bold text-lg">{fmt(totalDue)}</p>
+            <p className="text-xs" style={{ color: '#94A3B8' }}>Total Outstanding</p>
+            <p className="font-bold text-lg" style={{ color: '#0F172A' }}>{fmt(totalDue)}</p>
           </div>
         </div>
         <div className="glass-card p-5 flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-red-400/10 border border-red-400/20 flex items-center justify-center flex-shrink-0">
-            <AlertTriangle size={18} className="text-red-400" />
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{ background: '#FEF2F2', border: '1px solid rgba(239,68,68,0.20)' }}
+          >
+            <AlertTriangle size={18} className="text-red-500" />
           </div>
           <div>
-            <p className="text-white/40 text-xs">Overdue</p>
-            <p className="text-white font-bold text-lg">{overdueCount} {overdueCount === 1 ? 'item' : 'items'}</p>
+            <p className="text-xs" style={{ color: '#94A3B8' }}>Overdue</p>
+            <p className="font-bold text-lg" style={{ color: '#0F172A' }}>{overdueCount} {overdueCount === 1 ? 'item' : 'items'}</p>
           </div>
         </div>
         <div className="glass-card p-5 flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-emerald-400/10 border border-emerald-400/20 flex items-center justify-center flex-shrink-0">
-            <CheckCircle2 size={18} className="text-emerald-400" />
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{ background: '#ECFDF5', border: '1px solid rgba(16,185,129,0.22)' }}
+          >
+            <CheckCircle2 size={18} className="text-emerald-600" />
           </div>
           <div>
-            <p className="text-white/40 text-xs">Paid</p>
-            <p className="text-white font-bold text-lg">{history.filter(p => p.status === 'paid').length} payments</p>
+            <p className="text-xs" style={{ color: '#94A3B8' }}>Paid</p>
+            <p className="font-bold text-lg" style={{ color: '#0F172A' }}>{history.filter(p => p.status === 'paid').length} payments</p>
           </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-5 bg-[#111115] border border-white/8 rounded-xl p-1 w-fit">
+      <div
+        className="flex gap-1 mb-5 rounded-xl p-1 w-fit"
+        style={{ background: '#F1F5F9', border: '1px solid #E2E8F0' }}
+      >
         {[['outstanding', 'Outstanding'], ['history', 'History']].map(([key, label]) => (
-          <button key={key} onClick={() => setActiveTab(key)}
-            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
-              activeTab === key ? 'bg-gold text-navy' : 'text-white/40 hover:text-white'
-            }`}>
+          <button
+            key={key}
+            onClick={() => setActiveTab(key)}
+            className="px-4 py-1.5 rounded-lg text-sm font-medium transition-all"
+            style={activeTab === key
+              ? { background: '#FFFFFF', color: '#0F172A', boxShadow: '0 1px 3px rgba(15,23,42,0.08)' }
+              : { color: '#94A3B8' }
+            }
+          >
             {label}
             {key === 'outstanding' && outstanding.length > 0 && (
-              <span className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-full ${
-                activeTab === key ? 'bg-navy/30 text-white' : 'bg-white/10 text-white/60'
-              }`}>{outstanding.length}</span>
+              <span
+                className="ml-1.5 text-xs px-1.5 py-0.5 rounded-full"
+                style={activeTab === key
+                  ? { background: '#ECFDF5', color: '#059669' }
+                  : { background: '#E2E8F0', color: '#64748B' }
+                }
+              >
+                {outstanding.length}
+              </span>
             )}
           </button>
         ))}
@@ -190,14 +213,14 @@ export default function Payments() {
 
       {loading ? (
         <div className="flex justify-center py-20">
-          <RefreshCw size={24} className="text-gold animate-spin" />
+          <RefreshCw size={24} className="text-emerald-500 animate-spin" />
         </div>
       ) : activeTab === 'outstanding' ? (
         outstanding.length === 0 ? (
           <div className="glass-card p-12 text-center">
-            <CheckCircle2 size={40} className="text-emerald-400 mx-auto mb-3" />
-            <p className="text-white font-semibold">You're all caught up!</p>
-            <p className="text-white/40 text-sm mt-1">No outstanding payments at this time.</p>
+            <CheckCircle2 size={40} className="text-emerald-500 mx-auto mb-3" />
+            <p className="font-semibold" style={{ color: '#0F172A' }}>You're all caught up!</p>
+            <p className="text-sm mt-1" style={{ color: '#94A3B8' }}>No outstanding payments at this time.</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -207,37 +230,46 @@ export default function Payments() {
                 const schedule = p.scheduleId || {};
                 const isOverdue = p.status === 'overdue';
                 return (
-                  <div key={p._id}
-                    className={`glass-card p-5 flex flex-col sm:flex-row sm:items-center gap-4 ${
-                      isOverdue ? 'border-red-400/20' : ''
-                    }`}>
+                  <div
+                    key={p._id}
+                    className="glass-card p-5 flex flex-col sm:flex-row sm:items-center gap-4"
+                    style={isOverdue ? { borderColor: 'rgba(239,68,68,0.25)' } : {}}
+                  >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start gap-3">
-                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                          isOverdue ? 'bg-red-400/10' : 'bg-gold/10'
-                        }`}>
-                          <CreditCard size={16} className={isOverdue ? 'text-red-400' : 'text-gold'} />
+                        <div
+                          className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                          style={isOverdue
+                            ? { background: '#FEF2F2', border: '1px solid rgba(239,68,68,0.20)' }
+                            : { background: 'rgba(16,185,129,0.10)', border: '1px solid rgba(16,185,129,0.22)' }
+                          }
+                        >
+                          <CreditCard size={16} className={isOverdue ? 'text-red-500' : 'text-emerald-600'} />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-white font-semibold truncate">{schedule.title || 'Payment Due'}</p>
+                          <p className="font-semibold truncate" style={{ color: '#0F172A' }}>{schedule.title || 'Payment Due'}</p>
                           <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
                             {schedule.type && (
-                              <span className="text-xs text-white/40">{TYPE_LABEL[schedule.type] || schedule.type}</span>
+                              <span className="text-xs" style={{ color: '#94A3B8' }}>{TYPE_LABEL[schedule.type] || schedule.type}</span>
                             )}
-                            <span className="text-xs text-white/30">Due {fmtDate(schedule.dueDate || p.createdAt)}</span>
+                            <span className="text-xs" style={{ color: '#CBD5E1' }}>Due {fmtDate(schedule.dueDate || p.createdAt)}</span>
                           </div>
                         </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-4 sm:flex-shrink-0">
                       <div className="text-right">
-                        <p className={`text-lg font-bold ${isOverdue ? 'text-red-400' : 'text-white'}`}>{fmt(p.amount)}</p>
+                        <p className={`text-lg font-bold ${isOverdue ? 'text-red-600' : ''}`}
+                          style={!isOverdue ? { color: '#0F172A' } : {}}>
+                          {fmt(p.amount)}
+                        </p>
                         <StatusBadge status={p.status} />
                       </div>
                       <button
                         onClick={() => handlePay(p)}
                         disabled={!!paying}
-                        className="flex items-center gap-2 px-4 py-2 bg-gold text-navy rounded-xl font-semibold text-sm hover:bg-gold/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0">
+                        className="btn-primary flex items-center gap-2 flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
                         {paying === p._id ? (
                           <RefreshCw size={14} className="animate-spin" />
                         ) : (
@@ -249,9 +281,12 @@ export default function Payments() {
                   </div>
                 );
               })}
-            <div className="flex items-start gap-2 p-3 bg-blue-500/5 border border-blue-500/15 rounded-xl mt-2">
-              <Info size={14} className="text-blue-400 flex-shrink-0 mt-0.5" />
-              <p className="text-xs text-white/40">
+            <div
+              className="flex items-start gap-2 p-3 rounded-xl mt-2"
+              style={{ background: '#EFF6FF', border: '1px solid rgba(99,102,241,0.18)' }}
+            >
+              <Info size={14} className="text-blue-500 flex-shrink-0 mt-0.5" />
+              <p className="text-xs" style={{ color: '#475569' }}>
                 Clicking "Pay Now" will take you to Paystack's secure payment page. You will be redirected back here once done.
                 If your payment is not reflected, contact the estate manager with your reference number.
               </p>
@@ -261,47 +296,53 @@ export default function Payments() {
       ) : (
         history.length === 0 ? (
           <div className="glass-card p-12 text-center">
-            <Clock size={40} className="text-white/20 mx-auto mb-3" />
-            <p className="text-white font-semibold">No payment history yet</p>
-            <p className="text-white/40 text-sm mt-1">Completed payments will appear here.</p>
+            <Clock size={40} className="mx-auto mb-3" style={{ color: '#CBD5E1' }} />
+            <p className="font-semibold" style={{ color: '#0F172A' }}>No payment history yet</p>
+            <p className="text-sm mt-1" style={{ color: '#94A3B8' }}>Completed payments will appear here.</p>
           </div>
         ) : (
           <div className="glass-card overflow-hidden">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-white/8">
-                  <th className="text-left px-5 py-3 text-xs font-medium text-white/30 uppercase tracking-wider">Description</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-white/30 uppercase tracking-wider hidden sm:table-cell">Amount</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-white/30 uppercase tracking-wider hidden md:table-cell">Method</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-white/30 uppercase tracking-wider hidden lg:table-cell">Date</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-white/30 uppercase tracking-wider">Status</th>
+                <tr style={{ borderBottom: '1px solid #E2E8F0' }}>
+                  <th className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: '#94A3B8' }}>Description</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider hidden sm:table-cell" style={{ color: '#94A3B8' }}>Amount</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider hidden md:table-cell" style={{ color: '#94A3B8' }}>Method</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider hidden lg:table-cell" style={{ color: '#94A3B8' }}>Date</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: '#94A3B8' }}>Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
+              <tbody>
                 {history.map((p) => {
                   const schedule = p.scheduleId || {};
                   return (
-                    <tr key={p._id} className="hover:bg-white/2 transition-colors">
+                    <tr
+                      key={p._id}
+                      style={{ borderBottom: '1px solid rgba(15,23,42,0.05)' }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                      className="transition-colors"
+                    >
                       <td className="px-5 py-4">
-                        <p className="text-white text-sm font-medium">{schedule.title || 'Payment'}</p>
+                        <p className="text-sm font-medium" style={{ color: '#0F172A' }}>{schedule.title || 'Payment'}</p>
                         {schedule.type && (
-                          <p className="text-white/30 text-xs mt-0.5">{TYPE_LABEL[schedule.type] || schedule.type}</p>
+                          <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>{TYPE_LABEL[schedule.type] || schedule.type}</p>
                         )}
-                        <p className="text-gold font-bold sm:hidden text-sm mt-0.5">{fmt(p.amount)}</p>
+                        <p className="font-bold sm:hidden text-sm mt-0.5 text-emerald-600">{fmt(p.amount)}</p>
                       </td>
                       <td className="px-4 py-4 hidden sm:table-cell">
-                        <span className="text-white font-semibold">{fmt(p.amount)}</span>
+                        <span className="font-semibold" style={{ color: '#0F172A' }}>{fmt(p.amount)}</span>
                       </td>
                       <td className="px-4 py-4 hidden md:table-cell">
-                        <span className="text-white/50 text-sm">{METHOD_LABEL[p.method] || p.method || '—'}</span>
+                        <span className="text-sm" style={{ color: '#64748B' }}>{METHOD_LABEL[p.method] || p.method || '—'}</span>
                       </td>
                       <td className="px-4 py-4 hidden lg:table-cell">
-                        <span className="text-white/50 text-sm">{fmtDate(p.paidAt)}</span>
+                        <span className="text-sm" style={{ color: '#64748B' }}>{fmtDate(p.paidAt)}</span>
                       </td>
                       <td className="px-4 py-4">
                         <StatusBadge status={p.status} />
                         {p.paystackReference && (
-                          <p className="text-white/20 text-xs mt-1 font-mono">{p.paystackReference.slice(-8)}</p>
+                          <p className="text-xs mt-1 font-mono" style={{ color: '#CBD5E1' }}>{p.paystackReference.slice(-8)}</p>
                         )}
                       </td>
                     </tr>

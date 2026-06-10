@@ -19,16 +19,28 @@ export default function Modal({ open, onClose, title, children, size = 'md' }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
       <div
-        className={`relative ${sizes[size]} w-full glass-card-gold animate-fade-in overflow-hidden`}
+        className={`relative ${sizes[size]} w-full bg-white rounded-2xl animate-fade-in overflow-hidden`}
+        style={{ border: '1px solid #E2E8F0', boxShadow: '0 20px 48px rgba(15,23,42,0.14)' }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between p-6 border-b border-white/10">
-          <h2 className="text-lg font-display font-semibold text-white">{title}</h2>
+        <div
+          className="flex items-center justify-between p-6"
+          style={{ borderBottom: '1px solid #E2E8F0' }}
+        >
+          <h2
+            className="text-lg font-display font-semibold"
+            style={{ color: '#0F172A', letterSpacing: '-0.02em' }}
+          >
+            {title}
+          </h2>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-all"
+            className="p-1.5 rounded-lg transition-all"
+            style={{ color: '#94A3B8' }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#F1F5F9'; e.currentTarget.style.color = '#0F172A'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#94A3B8'; }}
           >
             <X size={18} />
           </button>

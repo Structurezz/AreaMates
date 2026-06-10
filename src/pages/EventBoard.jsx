@@ -22,21 +22,21 @@ function EventCard({ event, userId, onRsvp }) {
   };
 
   return (
-    <div className={`glass-card p-5 flex flex-col transition-all ${isPast ? 'opacity-50' : 'hover:border-white/20'} ${event.isFridayFunTimes ? 'border-amber-500/30' : ''}`}>
+    <div className={`glass-card p-5 flex flex-col transition-all ${isPast ? 'opacity-50' : 'hover:border-[#CBD5E1]'} ${event.isFridayFunTimes ? 'border-amber-400/40' : ''}`}>
       {event.isFridayFunTimes && (
-        <div className="text-xs font-bold text-amber-400 mb-2 flex items-center gap-1">🎉 Friday Night FunTimes</div>
+        <div className="text-xs font-bold text-amber-600 mb-2 flex items-center gap-1">🎉 Friday Night FunTimes</div>
       )}
       <div className="flex items-start justify-between gap-3 mb-3">
         <div>
-          <h3 className="font-semibold text-white leading-snug">{event.title}</h3>
-          {event.organizer && <p className="text-xs text-white/35 mt-0.5">by {event.organizer}</p>}
+          <h3 className="font-semibold text-[#0F172A] leading-snug">{event.title}</h3>
+          {event.organizer && <p className="text-xs text-[#94A3B8] mt-0.5">by {event.organizer}</p>}
         </div>
         {!isPast && (
           <button onClick={handleRsvp} disabled={loading}
             className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
               hasRsvped
-                ? 'bg-emerald-500/15 text-emerald-400 hover:bg-red-500/10 hover:text-red-400'
-                : 'bg-white/8 text-white/60 hover:bg-blue-500/15 hover:text-blue-400'
+                ? 'bg-emerald-50 text-emerald-600 hover:bg-red-50 hover:text-red-500'
+                : 'bg-[#F1F5F9] text-[#475569] hover:bg-blue-50 hover:text-blue-600'
             } disabled:opacity-50`}>
             {loading ? <RefreshCw size={11} className="animate-spin" /> : hasRsvped ? <Check size={11} /> : <Users size={11} />}
             {hasRsvped ? 'Going' : 'RSVP'}
@@ -45,13 +45,13 @@ function EventCard({ event, userId, onRsvp }) {
       </div>
 
       <div className="space-y-1.5 mb-3 flex-1">
-        <div className="flex items-center gap-2 text-xs text-white/45">
-          <Calendar size={11} className="text-blue-400 flex-shrink-0" />
+        <div className="flex items-center gap-2 text-xs text-[#475569]">
+          <Calendar size={11} className="text-blue-500 flex-shrink-0" />
           {new Date(event.date).toLocaleDateString('en-NG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           {event.time && ` at ${event.time}`}
         </div>
         {event.location && (
-          <div className="flex items-center gap-2 text-xs text-white/45">
+          <div className="flex items-center gap-2 text-xs text-[#475569]">
             <MapPin size={11} className="text-red-400 flex-shrink-0" />
             {event.location}
           </div>
@@ -59,13 +59,13 @@ function EventCard({ event, userId, onRsvp }) {
       </div>
 
       {event.description && (
-        <p className="text-xs text-white/40 leading-relaxed mb-3 line-clamp-2">{event.description}</p>
+        <p className="text-xs text-[#64748B] leading-relaxed mb-3 line-clamp-2">{event.description}</p>
       )}
 
-      <div className="flex items-center gap-2 pt-3 border-t border-white/5">
-        <Users size={11} className="text-white/20" />
-        <span className="text-xs text-white/30">{event.rsvps?.length || 0} going</span>
-        {isPast && <span className="ml-auto text-xs text-white/20">Past event</span>}
+      <div className="flex items-center gap-2 pt-3 border-t border-[#E2E8F0]">
+        <Users size={11} className="text-[#CBD5E1]" />
+        <span className="text-xs text-[#94A3B8]">{event.rsvps?.length || 0} going</span>
+        {isPast && <span className="ml-auto text-xs text-[#CBD5E1]">Past event</span>}
       </div>
     </div>
   );
@@ -97,23 +97,23 @@ export default function EventBoard() {
   return (
     <div className="space-y-5 animate-fade-in pb-12">
       <div>
-        <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-          <Calendar size={22} className="text-blue-400" /> Event Board
+        <h1 className="text-2xl font-bold text-[#0F172A] flex items-center gap-2">
+          <Calendar size={22} className="text-blue-500" /> Event Board
         </h1>
-        <p className="text-white/40 text-sm mt-0.5">Estate events, activities, and Friday Night FunTimes</p>
+        <p className="text-[#94A3B8] text-sm mt-0.5">Estate events, activities, and Friday Night FunTimes</p>
       </div>
 
       {/* Next event banner */}
       {nextEvent && (
         <div className="glass-card p-4 flex items-center gap-4" style={{ borderColor: nextEvent.isFridayFunTimes ? '#F59E0B40' : '#60A5FA30' }}>
           <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 text-xl"
-            style={{ background: nextEvent.isFridayFunTimes ? '#F59E0B18' : '#60A5FA18' }}>
+            style={{ background: nextEvent.isFridayFunTimes ? '#FEF3C7' : '#EFF6FF' }}>
             {nextEvent.isFridayFunTimes ? '🎉' : '📅'}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-xs text-white/40 mb-0.5">Up Next</div>
-            <div className="font-semibold text-white truncate">{nextEvent.title}</div>
-            <div className="text-xs text-white/40 flex items-center gap-1 mt-0.5">
+            <div className="text-xs text-[#94A3B8] mb-0.5">Up Next</div>
+            <div className="font-semibold text-[#0F172A] truncate">{nextEvent.title}</div>
+            <div className="text-xs text-[#64748B] flex items-center gap-1 mt-0.5">
               <Clock size={10} />
               {new Date(nextEvent.date).toLocaleDateString('en-NG', { weekday: 'short', month: 'short', day: 'numeric' })}
               {nextEvent.time && ` · ${nextEvent.time}`}
@@ -121,16 +121,16 @@ export default function EventBoard() {
             </div>
           </div>
           <div className="text-right shrink-0">
-            <div className="text-lg font-bold" style={{ color: nextEvent.isFridayFunTimes ? '#F59E0B' : '#60A5FA' }}>
+            <div className="text-lg font-bold" style={{ color: nextEvent.isFridayFunTimes ? '#D97706' : '#3B82F6' }}>
               {nextEvent.rsvps?.length || 0}
             </div>
-            <div className="text-xs text-white/30">going</div>
+            <div className="text-xs text-[#94A3B8]">going</div>
           </div>
         </div>
       )}
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-white/5 rounded-xl p-1 w-fit">
+      <div className="flex gap-1 bg-[#F1F5F9] rounded-xl p-1 w-fit">
         {[
           { key: 'upcoming', label: `Upcoming (${upcoming.length})` },
           { key: 'mine',     label: `My RSVPs (${myEvents.length})` },
@@ -138,7 +138,7 @@ export default function EventBoard() {
         ].map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
             className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
-              tab === t.key ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/70'
+              tab === t.key ? 'bg-emerald-600 text-white' : 'text-[#475569] hover:text-[#0F172A]'
             }`}>
             {t.label}
           </button>
@@ -146,11 +146,11 @@ export default function EventBoard() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-16"><RefreshCw size={20} className="text-gold animate-spin" /></div>
+        <div className="flex justify-center py-16"><RefreshCw size={20} className="text-emerald-600 animate-spin" /></div>
       ) : shown.length === 0 ? (
         <div className="glass-card p-12 text-center">
-          <Calendar size={28} className="text-white/20 mx-auto mb-3" />
-          <p className="text-white/30 text-sm">
+          <Calendar size={28} className="text-[#CBD5E1] mx-auto mb-3" />
+          <p className="text-[#94A3B8] text-sm">
             {tab === 'upcoming' ? 'No upcoming events' : tab === 'mine' ? "You haven't RSVPed to any events" : 'No past events'}
           </p>
         </div>

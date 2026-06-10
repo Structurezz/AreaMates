@@ -40,19 +40,39 @@ export default function Register() {
   const set = (key, val) => setForm({ ...form, [key]: val });
 
   return (
-    <div className="min-h-screen bg-navy flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#F8FAFC' }}>
       <div className="w-full max-w-md animate-fade-in">
+        {/* Brand mark */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-gold flex items-center justify-center mx-auto mb-4">
-            <Building2 size={32} className="text-navy" />
+          <div
+            className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
+            style={{
+              background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+              boxShadow: '0 4px 24px rgba(16,185,129,0.28)',
+            }}
+          >
+            <Building2 size={32} className="text-white" />
           </div>
-          <h1 className="text-3xl font-display font-bold text-white mb-1">Join Estate</h1>
-          <p className="text-white/50 text-sm">Create your resident account</p>
+          <h1
+            className="text-3xl font-display font-bold mb-1"
+            style={{ color: '#0F172A', letterSpacing: '-0.03em' }}
+          >
+            Join Estate
+          </h1>
+          <p className="text-sm" style={{ color: '#64748B' }}>Create your resident account</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="glass-card-gold p-6 space-y-4">
+        {/* Registration form */}
+        <form
+          onSubmit={handleSubmit}
+          className="glass-card p-6 space-y-4"
+          style={{ border: '1px solid rgba(16,185,129,0.20)', background: 'linear-gradient(135deg, rgba(16,185,129,0.04) 0%, #FFFFFF 100%)' }}
+        >
           {error && (
-            <div className="flex items-center gap-2 text-red-400 bg-red-400/10 border border-red-400/20 rounded-xl p-3 text-sm">
+            <div
+              className="flex items-center gap-2 rounded-xl p-3 text-sm"
+              style={{ color: '#DC2626', background: '#FEF2F2', border: '1px solid rgba(239,68,68,0.25)' }}
+            >
               <AlertCircle size={16} />
               {error}
             </div>
@@ -60,37 +80,67 @@ export default function Register() {
 
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2">
-              <label className="text-sm text-white/60 mb-1.5 block">Full Name</label>
-              <input className="input-field" placeholder="Adaeze Obi" value={form.name}
-                onChange={(e) => set('name', e.target.value)} required />
+              <label className="text-sm mb-1.5 block font-medium" style={{ color: '#475569' }}>Full Name</label>
+              <input
+                className="input-field"
+                placeholder="Adaeze Obi"
+                value={form.name}
+                onChange={(e) => set('name', e.target.value)}
+                required
+              />
             </div>
             <div className="col-span-2">
-              <label className="text-sm text-white/60 mb-1.5 block">Email</label>
-              <input type="email" className="input-field" placeholder="you@example.com" value={form.email}
-                onChange={(e) => set('email', e.target.value)} required />
+              <label className="text-sm mb-1.5 block font-medium" style={{ color: '#475569' }}>Email</label>
+              <input
+                type="email"
+                className="input-field"
+                placeholder="you@example.com"
+                value={form.email}
+                onChange={(e) => set('email', e.target.value)}
+                required
+              />
             </div>
             <div>
-              <label className="text-sm text-white/60 mb-1.5 block">Phone</label>
-              <input className="input-field" placeholder="+234..." value={form.phone}
-                onChange={(e) => set('phone', e.target.value)} />
+              <label className="text-sm mb-1.5 block font-medium" style={{ color: '#475569' }}>Phone</label>
+              <input
+                className="input-field"
+                placeholder="+234..."
+                value={form.phone}
+                onChange={(e) => set('phone', e.target.value)}
+              />
             </div>
             <div>
-              <label className="text-sm text-white/60 mb-1.5 block">Role</label>
-              <select className="input-field" value={form.role} onChange={(e) => set('role', e.target.value)}>
+              <label className="text-sm mb-1.5 block font-medium" style={{ color: '#475569' }}>Role</label>
+              <select
+                className="input-field"
+                value={form.role}
+                onChange={(e) => set('role', e.target.value)}
+              >
                 <option value="resident">Resident</option>
                 <option value="security">Security</option>
               </select>
             </div>
             <div className="col-span-2">
-              <label className="text-sm text-white/60 mb-1.5 block">Estate Invite Code</label>
-              <input className="input-field font-mono uppercase tracking-widest"
-                placeholder="e.g. GREEN1" value={form.estateCode}
-                onChange={(e) => set('estateCode', e.target.value.toUpperCase())} required />
+              <label className="text-sm mb-1.5 block font-medium" style={{ color: '#475569' }}>Estate Invite Code</label>
+              <input
+                className="input-field font-mono uppercase tracking-widest"
+                placeholder="e.g. GREEN1"
+                value={form.estateCode}
+                onChange={(e) => set('estateCode', e.target.value.toUpperCase())}
+                required
+              />
             </div>
             <div className="col-span-2">
-              <label className="text-sm text-white/60 mb-1.5 block">Password</label>
-              <input type="password" className="input-field" placeholder="Min. 6 characters" value={form.password}
-                onChange={(e) => set('password', e.target.value)} required minLength={6} />
+              <label className="text-sm mb-1.5 block font-medium" style={{ color: '#475569' }}>Password</label>
+              <input
+                type="password"
+                className="input-field"
+                placeholder="Min. 6 characters"
+                value={form.password}
+                onChange={(e) => set('password', e.target.value)}
+                required
+                minLength={6}
+              />
             </div>
           </div>
 
@@ -98,9 +148,11 @@ export default function Register() {
             {loading ? 'Creating account...' : 'Create Account'}
           </button>
 
-          <p className="text-center text-sm text-white/40">
+          <p className="text-center text-sm" style={{ color: '#94A3B8' }}>
             Already registered?{' '}
-            <Link to="/login" className="text-gold hover:text-gold-300 transition-colors">Sign in</Link>
+            <Link to="/login" className="font-medium hover:underline transition-colors" style={{ color: '#10B981' }}>
+              Sign in
+            </Link>
           </p>
         </form>
       </div>

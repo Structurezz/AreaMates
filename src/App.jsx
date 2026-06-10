@@ -9,6 +9,7 @@ import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import Dashboard from './pages/Dashboard';
 import Visitors from './pages/Visitors';
+import VisitorDetail from './pages/VisitorDetail';
 import Marketplace from './pages/Marketplace';
 import Chat from './pages/Chat';
 import AlertPage from './pages/AlertPage';
@@ -46,6 +47,7 @@ function AppRoutes() {
       <Route path="/dashboard" element={<RequireResident><Dashboard /></RequireResident>} />
       <Route path="/visitors" element={<RequireResident><Visitors /></RequireResident>} />
       <Route path="/visitors/new" element={<RequireResident><Visitors /></RequireResident>} />
+      <Route path="/visitors/:id" element={<RequireResident><VisitorDetail /></RequireResident>} />
       <Route path="/marketplace" element={<RequireResident><Marketplace /></RequireResident>} />
       <Route path="/chat" element={<RequireResident><Chat /></RequireResident>} />
       <Route path="/payments" element={<RequireResident><Payments /></RequireResident>} />
