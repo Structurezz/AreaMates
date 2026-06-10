@@ -12,9 +12,14 @@ export const SocketProvider = ({ children }) => {
   useEffect(() => {
     if (!user?._id) return;
 
-    const socket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:5001', {
+    const socketUrl =
+      import.meta.env.VITE_SOCKET_URL ||
+      (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/, '') ||
+      'http://localhost:5001';
+    const socket = io(socketUrl, {
       withCredentials: true,
-      transports: ['websocket'],
+      transports: ['polling', 'websocket'],
+      upgrade: true,
     });
 
     socketRef.current = socket;
