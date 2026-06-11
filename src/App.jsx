@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
 import AppLayout from './components/layout/AppLayout';
+import PlanGate from './components/ui/PlanGate';
 import { LoadingScreen } from './components/ui/Spinner';
 import { Toaster } from 'react-hot-toast';
 
@@ -45,16 +46,16 @@ function AppRoutes() {
       <Route path="/register" element={user?.role === 'resident' ? <Navigate to="/dashboard" replace /> : <Register />} />
       <Route path="/invite/:estateCode" element={<Register />} />
       <Route path="/dashboard" element={<RequireResident><Dashboard /></RequireResident>} />
-      <Route path="/visitors" element={<RequireResident><Visitors /></RequireResident>} />
-      <Route path="/visitors/new" element={<RequireResident><Visitors /></RequireResident>} />
-      <Route path="/visitors/:id" element={<RequireResident><VisitorDetail /></RequireResident>} />
-      <Route path="/marketplace" element={<RequireResident><Marketplace /></RequireResident>} />
-      <Route path="/chat" element={<RequireResident><Chat /></RequireResident>} />
-      <Route path="/payments" element={<RequireResident><Payments /></RequireResident>} />
-      <Route path="/alerts" element={<RequireResident><AlertPage /></RequireResident>} />
-      <Route path="/lounge" element={<RequireResident><Lounge /></RequireResident>} />
-      <Route path="/events" element={<RequireResident><EventBoard /></RequireResident>} />
-      <Route path="/polls" element={<RequireResident><Polls /></RequireResident>} />
+      <Route path="/visitors" element={<RequireResident><PlanGate feature="visitorManagement" featureName="Visitor Management"><Visitors /></PlanGate></RequireResident>} />
+      <Route path="/visitors/new" element={<RequireResident><PlanGate feature="visitorManagement" featureName="Visitor Management"><Visitors /></PlanGate></RequireResident>} />
+      <Route path="/visitors/:id" element={<RequireResident><PlanGate feature="visitorManagement" featureName="Visitor Management"><VisitorDetail /></PlanGate></RequireResident>} />
+      <Route path="/marketplace" element={<RequireResident><PlanGate feature="marketplace" featureName="Marketplace"><Marketplace /></PlanGate></RequireResident>} />
+      <Route path="/chat" element={<RequireResident><PlanGate feature="communityChat" featureName="Community Chat"><Chat /></PlanGate></RequireResident>} />
+      <Route path="/payments" element={<RequireResident><PlanGate feature="paymentSystem" featureName="Payments"><Payments /></PlanGate></RequireResident>} />
+      <Route path="/alerts" element={<RequireResident><PlanGate feature="securityPortal" featureName="Security & Alerts"><AlertPage /></PlanGate></RequireResident>} />
+      <Route path="/lounge" element={<RequireResident><PlanGate feature="residentLounge" featureName="Resident Lounge"><Lounge /></PlanGate></RequireResident>} />
+      <Route path="/events" element={<RequireResident><PlanGate feature="eventBoard" featureName="Event Board"><EventBoard /></PlanGate></RequireResident>} />
+      <Route path="/polls" element={<RequireResident><PlanGate feature="pollsAndVoting" featureName="Polls & Voting"><Polls /></PlanGate></RequireResident>} />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>

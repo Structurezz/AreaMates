@@ -1,30 +1,31 @@
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { LayoutDashboard, UserCheck, ShoppingBag, MessageSquare, Bell, LogOut, CreditCard, Music, Calendar, BarChart2 } from 'lucide-react';
+import { LayoutDashboard, UserCheck, ShoppingBag, MessageSquare, Bell, LogOut, CreditCard, Music, Calendar, BarChart2, Lock } from 'lucide-react';
+import { usePlan } from '../../hooks/usePlan';
 
 const NAV = [
   {
     section: 'Home',
     links: [
       { to: '/dashboard',  icon: LayoutDashboard, label: 'Dashboard' },
-      { to: '/visitors',   icon: UserCheck,        label: 'My Visitors' },
-      { to: '/payments',   icon: CreditCard,        label: 'Payments' },
+      { to: '/visitors',   icon: UserCheck,        label: 'My Visitors',    feature: 'visitorManagement' },
+      { to: '/payments',   icon: CreditCard,       label: 'Payments',       feature: 'paymentSystem' },
     ],
   },
   {
     section: 'Community',
     links: [
-      { to: '/lounge',     icon: Music,             label: 'Resident Lounge' },
-      { to: '/events',     icon: Calendar,           label: 'Event Board' },
-      { to: '/polls',      icon: BarChart2,          label: 'Polls & Voting' },
-      { to: '/marketplace',icon: ShoppingBag,        label: 'Marketplace' },
-      { to: '/chat',       icon: MessageSquare,      label: 'Community Chat' },
+      { to: '/lounge',      icon: Music,        label: 'Resident Lounge', feature: 'residentLounge' },
+      { to: '/events',      icon: Calendar,     label: 'Event Board',     feature: 'eventBoard' },
+      { to: '/polls',       icon: BarChart2,    label: 'Polls & Voting',  feature: 'pollsAndVoting' },
+      { to: '/marketplace', icon: ShoppingBag,  label: 'Marketplace',     feature: 'marketplace' },
+      { to: '/chat',        icon: MessageSquare,label: 'Community Chat',  feature: 'communityChat' },
     ],
   },
   {
     section: 'Safety',
     links: [
-      { to: '/alerts',     icon: Bell,              label: 'Alert Security' },
+      { to: '/alerts', icon: Bell, label: 'Alert Security', feature: 'securityPortal' },
     ],
   },
 ];
@@ -32,6 +33,7 @@ const NAV = [
 export default function Sidebar({ mobile = false, onClose }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { can } = usePlan();
   const estateName = user?.estateId && typeof user.estateId === 'object' ? user.estateId.name : 'AreaMates';
 
   return (
@@ -66,17 +68,23 @@ export default function Sidebar({ mobile = false, onClose }) {
               {section}
             </p>
             <div className="space-y-0.5">
-              {links.map(({ to, icon: Icon, label }) => (
-                <NavLink
-                  key={to}
-                  to={to}
-                  end={to === '/dashboard'}
-                  onClick={onClose}
-                  className={({ isActive }) => isActive ? 'sidebar-link active' : 'sidebar-link'}
-                >
-                  <Icon size={16} /><span>{label}</span>
-                </NavLink>
-              ))}
+              {links.map(({ to, icon: Icon, label, feature }) => {
+                const locked = feature ? !can(feature) : false;
+                return (
+                  <NavLink
+                    key={to}
+                    to={to}
+                    end={to === '/dashboard'}
+                    onClick={onClose}
+                    className={({ isActive }) => isActive ? 'sidebar-link active' : 'sidebar-link'}
+                    style={{ opacity: locked ? 0.5 : 1 }}
+                  >
+                    <Icon size={16} />
+                    <span className="flex-1">{label}</span>
+                    {locked && <Lock size={10} style={{ color: '#94A3B8', flexShrink: 0 }} />}
+                  </NavLink>
+                );
+              })}
             </div>
           </div>
         ))}

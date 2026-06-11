@@ -2,12 +2,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { NavLink, useNavigate, Link } from 'react-router-dom';
 import {
   Menu, X, AlertTriangle, MapPin, Phone, Shield, Info, Zap,
-  LayoutDashboard, UserCheck, CreditCard, MessageSquare, Bell,
+  LayoutDashboard, UserCheck, CreditCard, MessageSquare, Bell, Lock,
 } from 'lucide-react';
 import Sidebar from './Sidebar';
 import { Toaster } from 'react-hot-toast';
 import { useSocket } from '../../context/SocketContext';
 import { useAuth } from '../../context/AuthContext';
+import { usePlan } from '../../hooks/usePlan';
 
 const SEVERITY_STYLE = {
   critical: { bar: 'bg-red-500',    badge: 'bg-red-50 text-red-600 border-red-200',    icon: Zap,           border: 'border-red-200',    title: 'text-red-600' },
@@ -17,11 +18,11 @@ const SEVERITY_STYLE = {
 };
 
 const BOTTOM_NAV = [
-  { to: '/dashboard',   icon: LayoutDashboard, label: 'Home' },
-  { to: '/visitors',    icon: UserCheck,        label: 'Visitors' },
-  { to: '/payments',    icon: CreditCard,        label: 'Payments' },
-  { to: '/chat',        icon: MessageSquare,    label: 'Chat' },
-  { to: '/alerts',      icon: Bell,             label: 'Alerts' },
+  { to: '/dashboard', icon: LayoutDashboard, label: 'Home' },
+  { to: '/visitors',  icon: UserCheck,       label: 'Visitors', feature: 'visitorManagement' },
+  { to: '/payments',  icon: CreditCard,      label: 'Payments', feature: 'paymentSystem' },
+  { to: '/chat',      icon: MessageSquare,   label: 'Chat',     feature: 'communityChat' },
+  { to: '/alerts',    icon: Bell,            label: 'Alerts',   feature: 'securityPortal' },
 ];
 
 function BroadcastPopup({ alert, onDismiss }) {
@@ -98,6 +99,7 @@ export default function AppLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [broadcast, setBroadcast] = useState(null);
   const { subscribe } = useSocket() || {};
+  const { can } = usePlan();
 
   const handleDismiss = useCallback(() => setBroadcast(null), []);
 
@@ -164,29 +166,39 @@ export default function AppLayout({ children }) {
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t"
         style={{ borderTopColor: '#E2E8F0', paddingBottom: 'env(safe-area-inset-bottom)' }}>
         <div className="flex">
-          {BOTTOM_NAV.map(({ to, icon: Icon, label }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={to === '/dashboard'}
-              className="flex-1 flex flex-col items-center justify-center py-2.5 gap-0.5 transition-all"
-              style={({ isActive }) => ({
-                color: isActive ? '#6366F1' : '#94A3B8',
-              })}
-            >
-              {({ isActive }) => (
-                <>
-                  <div className="relative">
-                    <Icon size={21} strokeWidth={isActive ? 2.2 : 1.8} />
-                    {isActive && (
-                      <span className="absolute -top-1 -right-1 w-1.5 h-1.5 rounded-full bg-indigo-500" />
-                    )}
-                  </div>
-                  <span className="text-[10px] font-semibold">{label}</span>
-                </>
-              )}
-            </NavLink>
-          ))}
+          {BOTTOM_NAV.map(({ to, icon: Icon, label, feature }) => {
+            const locked = feature ? !can(feature) : false;
+            return (
+              <NavLink
+                key={to}
+                to={to}
+                end={to === '/dashboard'}
+                className="flex-1 flex flex-col items-center justify-center py-2.5 gap-0.5 transition-all"
+                style={({ isActive }) => ({
+                  color: isActive ? '#6366F1' : '#94A3B8',
+                  opacity: locked ? 0.45 : 1,
+                })}
+              >
+                {({ isActive }) => (
+                  <>
+                    <div className="relative">
+                      <Icon size={21} strokeWidth={isActive ? 2.2 : 1.8} />
+                      {isActive && !locked && (
+                        <span className="absolute -top-1 -right-1 w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                      )}
+                      {locked && (
+                        <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-white flex items-center justify-center"
+                          style={{ border: '1px solid #E2E8F0' }}>
+                          <Lock size={7} style={{ color: '#94A3B8' }} />
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[10px] font-semibold">{label}</span>
+                  </>
+                )}
+              </NavLink>
+            );
+          })}
         </div>
       </nav>
 
