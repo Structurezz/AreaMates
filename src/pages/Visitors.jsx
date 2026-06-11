@@ -4,6 +4,7 @@ import QRCode from 'qrcode';
 import { visitorAPI } from '../api';
 import Badge, { visitorStatusBadge } from '../components/ui/Badge';
 import Spinner from '../components/ui/Spinner';
+import Pagination from '../components/ui/Pagination';
 import {
   UserCheck, Plus, QrCode, Calendar, Clock, X,
   Users, Package, Wrench, Heart, MoreHorizontal,
@@ -515,10 +516,14 @@ function VisitorPassDrawer({ visitor, onClose }) {
 /* ─────────────────────────────────────────────────────── */
 /*  Page                                                   */
 /* ─────────────────────────────────────────────────────── */
+const PAGE_SIZE = 15;
+
 export default function ResidentVisitors() {
   const navigate = useNavigate();
   const [visitors,        setVisitors]        = useState([]);
   const [loading,         setLoading]         = useState(true);
+  const [page,            setPage]            = useState(1);
+  const [pagination,      setPagination]      = useState({ total: 0, pages: 1 });
   const [showNew,         setShowNew]         = useState(false);
   const [selectedVisitor, setSelectedVisitor] = useState(null);
 
@@ -527,16 +532,19 @@ export default function ResidentVisitors() {
     else setSelectedVisitor(v);
   };
 
-  const load = async () => {
+  const load = async (p = 1) => {
     setLoading(true);
     try {
-      const { data } = await visitorAPI.getAll();
+      const { data } = await visitorAPI.getAll({ page: p, limit: PAGE_SIZE });
       setVisitors(data.data);
+      setPagination(data.pagination || { total: data.data.length, pages: 1 });
     } catch { toast.error('Failed to load'); }
     finally { setLoading(false); }
   };
 
-  useEffect(() => { load(); }, []);
+  const handlePage = (p) => { setPage(p); load(p); };
+
+  useEffect(() => { load(1); }, []);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -613,11 +621,13 @@ export default function ResidentVisitors() {
         )}
       </div>
 
+      <Pagination page={page} pages={pagination.pages} total={pagination.total} limit={PAGE_SIZE} onPage={handlePage} />
+
       {/* Create sidebar */}
       <Drawer open={showNew} onClose={() => setShowNew(false)} title="Invite a Visitor">
         <NewVisitorForm
           onClose={() => setShowNew(false)}
-          onSuccess={(v) => { setShowNew(false); setSelectedVisitor(v); load(); }}
+          onSuccess={(v) => { setShowNew(false); setSelectedVisitor(v); setPage(1); load(1); }}
         />
       </Drawer>
 
