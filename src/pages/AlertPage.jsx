@@ -5,6 +5,7 @@ import { Bell, Shield, Flame, Heart, Volume2, AlertTriangle, Megaphone, MapPin, 
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import Spinner from '../components/ui/Spinner';
+import Pagination from '../components/ui/Pagination';
 
 const SEVERITY_STYLE = {
   critical: { badge: 'bg-red-50 text-red-600 border border-red-200',    bar: 'bg-red-500' },
@@ -21,21 +22,29 @@ const ALERT_TYPES = [
   { type: 'other',    icon: AlertTriangle, label: 'Other',             color: 'text-slate-500' },
 ];
 
+const PAGE_SIZE = 10;
+
 export default function AlertPage() {
   const [selectedType, setSelectedType] = useState('security');
   const [note, setNote] = useState('');
   const [sending, setSending] = useState(false);
   const [myAlerts, setMyAlerts] = useState([]);
   const [loadingAlerts, setLoadingAlerts] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, pages: 1 });
 
-  const loadAlerts = async () => {
+  const loadAlerts = async (p = 1) => {
+    setLoadingAlerts(true);
     try {
-      const { data } = await alertAPI.getAll();
+      const { data } = await alertAPI.getAll({ page: p, limit: PAGE_SIZE });
       setMyAlerts(data.data);
+      setPagination(data.pagination || { total: data.data.length, pages: 1 });
     } catch { } finally { setLoadingAlerts(false); }
   };
 
-  useEffect(() => { loadAlerts(); }, []);
+  const handlePage = (p) => { setPage(p); loadAlerts(p); };
+
+  useEffect(() => { loadAlerts(1); }, []);
 
   const handleAlert = async () => {
     setSending(true);
@@ -43,7 +52,8 @@ export default function AlertPage() {
       await alertAPI.create({ type: selectedType, note });
       toast.success('Security alerted! Help is on the way.', { duration: 4000 });
       setNote('');
-      loadAlerts();
+      setPage(1);
+      loadAlerts(1);
     } catch {
       toast.error('Failed to send alert. Try again!');
     } finally {
@@ -206,6 +216,11 @@ export default function AlertPage() {
                 </div>
               );
             })}
+          </div>
+        )}
+        {pagination.pages > 1 && (
+          <div className="px-5 py-4" style={{ borderTop: '1px solid rgba(15,23,42,0.06)' }}>
+            <Pagination page={page} pages={pagination.pages} total={pagination.total} limit={PAGE_SIZE} onPage={handlePage} />
           </div>
         )}
       </div>
