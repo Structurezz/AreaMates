@@ -11,6 +11,7 @@ import Register from './pages/auth/Register';
 import Dashboard from './pages/Dashboard';
 import Visitors from './pages/Visitors';
 import VisitorDetail from './pages/VisitorDetail';
+import NewVisitorPage from './pages/NewVisitorPage';
 import Marketplace from './pages/Marketplace';
 import Chat from './pages/Chat';
 import AlertPage from './pages/AlertPage';
@@ -47,7 +48,7 @@ function AppRoutes() {
       <Route path="/invite/:estateCode" element={<Register />} />
       <Route path="/dashboard" element={<RequireResident><Dashboard /></RequireResident>} />
       <Route path="/visitors" element={<RequireResident><PlanGate feature="visitorManagement" featureName="Visitor Management"><Visitors /></PlanGate></RequireResident>} />
-      <Route path="/visitors/new" element={<RequireResident><PlanGate feature="visitorManagement" featureName="Visitor Management"><Visitors /></PlanGate></RequireResident>} />
+      <Route path="/visitors/new" element={<RequireResident><PlanGate feature="visitorManagement" featureName="Visitor Management"><NewVisitorPage /></PlanGate></RequireResident>} />
       <Route path="/visitors/:id" element={<RequireResident><PlanGate feature="visitorManagement" featureName="Visitor Management"><VisitorDetail /></PlanGate></RequireResident>} />
       <Route path="/marketplace" element={<RequireResident><PlanGate feature="marketplace" featureName="Marketplace"><Marketplace /></PlanGate></RequireResident>} />
       <Route path="/chat" element={<RequireResident><PlanGate feature="communityChat" featureName="Community Chat"><Chat /></PlanGate></RequireResident>} />

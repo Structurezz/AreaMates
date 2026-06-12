@@ -346,7 +346,7 @@ function NewVisitorForm({ onClose, onSuccess }) {
 }
 
 /* ─────────────────────────────────────────────────────── */
-/*  Sidebar helper                                         */
+/*  Sidebar helper (desktop only — mobile uses /visitors/new) */
 /* ─────────────────────────────────────────────────────── */
 function Drawer({ open, onClose, title, children }) {
   useEffect(() => {
@@ -358,7 +358,7 @@ function Drawer({ open, onClose, title, children }) {
   if (!open) return null;
 
   return (
-    <div className="fixed right-0 top-0 bottom-0 z-50 flex flex-col w-full sm:w-[480px] animate-slide-in-right bg-white"
+    <div className="fixed right-0 top-0 bottom-0 z-50 flex flex-col w-[480px] animate-slide-in-right bg-white"
       style={{ boxShadow: '-16px 0 48px rgba(15,23,42,0.12)', borderLeft: '1px solid #E2E8F0' }}>
       <div className="flex items-center justify-between px-6 py-5 flex-shrink-0"
         style={{ borderBottom: '1px solid #E2E8F0' }}>
@@ -554,7 +554,7 @@ export default function ResidentVisitors() {
           <h1 className="text-2xl font-bold mb-1" style={{ color: '#0F172A', letterSpacing: '-0.02em' }}>My Visitor Passes</h1>
           <p className="text-sm" style={{ color: '#64748B' }}>Pre-register guests and manage their access</p>
         </div>
-        <button onClick={() => setShowNew(true)} className="btn-primary gap-2">
+        <button onClick={() => window.innerWidth < 640 ? navigate('/visitors/new') : setShowNew(true)} className="btn-primary gap-2">
           <Plus size={15} /> Invite Visitor
         </button>
       </div>
@@ -567,7 +567,7 @@ export default function ResidentVisitors() {
           <div className="flex flex-col items-center py-16 gap-3">
             <UserCheck size={40} style={{ color: '#CBD5E1' }} />
             <p className="font-medium" style={{ color: '#94A3B8' }}>No visitors registered</p>
-            <button onClick={() => setShowNew(true)} className="btn-primary gap-2 mt-1">
+            <button onClick={() => window.innerWidth < 640 ? navigate('/visitors/new') : setShowNew(true)} className="btn-primary gap-2 mt-1">
               <Plus size={14} /> Invite Visitor
             </button>
           </div>
