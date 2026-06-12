@@ -120,3 +120,13 @@ export const paymentAPI = {
   initialize: (paymentId) => api.post(`/payments/${paymentId}/initialize`),
   verify: (reference) => api.get(`/payments/verify/${reference}`),
 };
+
+// Social posts (Lounge feed)
+export const postAPI = {
+  getAll:        (page = 1) => api.get(`/posts?page=${page}&limit=20`),
+  create:        (formData) => api.post('/posts', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  delete:        (id) => api.delete(`/posts/${id}`),
+  like:          (id) => api.post(`/posts/${id}/like`),
+  addComment:    (id, text) => api.post(`/posts/${id}/comments`, { text }),
+  deleteComment: (id, commentId) => api.delete(`/posts/${id}/comments/${commentId}`),
+};
