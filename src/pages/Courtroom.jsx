@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   Scale, Gavel, Users, FileText, Clock, CheckCircle2, XCircle,
-  AlertTriangle, Shield, Plus, ArrowLeft, Upload,
-  Send, Briefcase, Star, ThumbsUp, ThumbsDown, Minus,
-  Banknote, Eye, RotateCcw, Lock, TrendingUp, Siren,
+  AlertTriangle, Shield, ChevronRight, Plus, ArrowLeft, Upload,
+  Send, User, Briefcase, Star, ThumbsUp, ThumbsDown, Minus,
+  Banknote, Eye, RotateCcw, Siren, Lock, TrendingUp, MessageSquare, Calendar,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { courtAPI } from '../api';
@@ -13,7 +13,7 @@ import toast from 'react-hot-toast';
 
 const fmt = n => '₦' + Number(n || 0).toLocaleString('en-NG');
 
-const PRIMARY = '#6366F1';
+const PRIMARY      = '#6366F1';
 const PRIMARY_DARK = '#4F46E5';
 
 const STATUS_META = {
@@ -29,15 +29,15 @@ const STATUS_META = {
 };
 
 const TYPE_LABELS = {
-  noise_complaint:      'Noise Complaint',
-  property_damage:      'Property Damage',
-  harassment:           'Harassment',
-  payment_dispute:      'Payment Dispute',
-  marketplace_violation:'Marketplace Violation',
-  community_rules:      'Community Rules',
-  eviction_dispute:     'Eviction Dispute',
-  boundary_dispute:     'Boundary Dispute',
-  other:                'Other',
+  noise_complaint:       'Noise Complaint',
+  property_damage:       'Property Damage',
+  harassment:            'Harassment',
+  payment_dispute:       'Payment Dispute',
+  marketplace_violation: 'Marketplace Violation',
+  community_rules:       'Community Rules',
+  eviction_dispute:      'Eviction Dispute',
+  boundary_dispute:      'Boundary Dispute',
+  other:                 'Other',
 };
 
 const AI_PERSONAS = {
@@ -50,30 +50,33 @@ const AI_PERSONAS = {
 const JUDGE = { name: 'Judge Orizu', initials: 'JO', color: '#B45309' };
 
 const EVENT_META = {
-  case_filed:                { label: 'Case Filed',              icon: FileText,   color: '#64748B' },
-  case_opened:               { label: 'Case Opened',             icon: Gavel,      color: '#2563EB' },
-  lawyer_hired_prosecution:  { label: 'Prosecutor Engaged',      icon: Briefcase,  color: '#DC2626' },
-  lawyer_hired_defense:      { label: 'Defense Counsel Engaged', icon: Briefcase,  color: '#2563EB' },
-  opening_statement:         { label: 'Opening Statement',       icon: FileText,   color: '#0F172A' },
-  rebuttal:                  { label: 'Rebuttal',                icon: RotateCcw,  color: '#7C3AED' },
-  evidence_submitted:        { label: 'Evidence Submitted',      icon: Upload,     color: '#D97706' },
-  cross_examination:         { label: 'Cross Examination',       icon: Eye,        color: '#0284C7' },
-  closing_argument:          { label: 'Closing Argument',        icon: FileText,   color: '#0F172A' },
-  jury_summoned:             { label: 'Jury Summoned',           icon: Users,      color: '#7C3AED' },
-  jury_deliberation_started: { label: 'Jury Deliberating',       icon: Clock,      color: '#7C3AED' },
+  case_filed:                { label: 'Case Filed',              icon: FileText,     color: '#64748B' },
+  case_opened:               { label: 'Case Opened',             icon: Gavel,        color: '#2563EB' },
+  lawyer_hired_prosecution:  { label: 'Prosecutor Engaged',      icon: Briefcase,    color: '#DC2626' },
+  lawyer_hired_defense:      { label: 'Defense Counsel Engaged', icon: Briefcase,    color: '#2563EB' },
+  opening_statement:         { label: 'Opening Statement',       icon: FileText,     color: '#0F172A' },
+  rebuttal:                  { label: 'Rebuttal',                icon: RotateCcw,    color: '#7C3AED' },
+  evidence_submitted:        { label: 'Evidence Submitted',      icon: Upload,       color: '#D97706' },
+  cross_examination:         { label: 'Cross Examination',       icon: Eye,          color: '#0284C7' },
+  closing_argument:          { label: 'Closing Argument',        icon: FileText,     color: '#0F172A' },
+  jury_summoned:             { label: 'Jury Summoned',           icon: Users,        color: '#7C3AED' },
+  jury_deliberation_started: { label: 'Jury Deliberating',       icon: Clock,        color: '#7C3AED' },
   jury_vote_cast:            { label: 'Jury Vote Cast',          icon: CheckCircle2, color: '#059669' },
-  judge_deliberation:        { label: 'Judge Deliberating',      icon: Gavel,      color: '#B45309' },
-  jury_verdict:              { label: 'Jury Verdict',            icon: Users,      color: '#7C3AED' },
-  verdict_delivered:         { label: 'Verdict Delivered',       icon: Gavel,      color: '#B45309' },
-  fine_issued:               { label: 'Fine Issued',             icon: Banknote,   color: '#DC2626' },
+  judge_deliberation:        { label: 'Judge Deliberating',      icon: Gavel,        color: '#B45309' },
+  jury_verdict:              { label: 'Jury Verdict',            icon: Users,        color: '#7C3AED' },
+  verdict_delivered:         { label: 'Verdict Delivered',       icon: Gavel,        color: '#B45309' },
+  fine_issued:               { label: 'Fine Issued',             icon: Banknote,     color: '#DC2626' },
   fine_paid:                 { label: 'Fine Paid',               icon: CheckCircle2, color: '#059669' },
-  settlement_proposed:       { label: 'Settlement Proposed',     icon: TrendingUp, color: '#7C3AED' },
+  settlement_proposed:       { label: 'Settlement Proposed',     icon: TrendingUp,   color: '#7C3AED' },
   settlement_accepted:       { label: 'Settlement Accepted',     icon: CheckCircle2, color: '#059669' },
-  settlement_rejected:       { label: 'Settlement Rejected',     icon: XCircle,    color: '#DC2626' },
-  appeal_filed:              { label: 'Appeal Filed',            icon: RotateCcw,  color: '#D97706' },
-  appeal_ruled:              { label: 'Appeal Ruled',            icon: Gavel,      color: '#B45309' },
-  case_closed:               { label: 'Case Closed',             icon: Lock,       color: '#94A3B8' },
-  punishment_enforced:       { label: 'Punishment Enforced',     icon: Shield,     color: '#DC2626' },
+  settlement_rejected:       { label: 'Settlement Rejected',     icon: XCircle,      color: '#DC2626' },
+  appeal_filed:              { label: 'Appeal Filed',            icon: RotateCcw,    color: '#D97706' },
+  appeal_ruled:              { label: 'Appeal Ruled',            icon: Gavel,        color: '#B45309' },
+  case_closed:               { label: 'Case Closed',             icon: Lock,         color: '#94A3B8' },
+  punishment_enforced:       { label: 'Punishment Enforced',     icon: Shield,       color: '#DC2626' },
+  adjournment_requested:     { label: 'Adjournment Requested',   icon: Calendar,     color: '#7C3AED' },
+  adjournment_granted:       { label: 'Adjournment Granted',     icon: Calendar,     color: '#059669' },
+  adjournment_denied:        { label: 'Adjournment Denied',      icon: Calendar,     color: '#DC2626' },
 };
 
 const SEVERITY_COLORS = {
@@ -92,6 +95,17 @@ const PUNISHMENT_LABELS = {
   community_suspension: 'Community Suspension',
   estate_ban:           'Estate Ban',
 };
+
+// ── tiny helpers ─────────────────────────────────────────────────────────────
+
+function Spinner({ size = 28, color = PRIMARY }) {
+  return (
+    <svg className="animate-spin" width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="10" stroke={color} strokeWidth="2.5" strokeOpacity=".2" />
+      <path d="M12 2a10 10 0 0 1 10 10" stroke={color} strokeWidth="2.5" strokeLinecap="round" />
+    </svg>
+  );
+}
 
 function Avatar({ initials, color, size = 36 }) {
   return (
@@ -153,10 +167,10 @@ function CourtroomBanner({ stats }) {
         {stats && (
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
             {[
-              { label: 'Total Cases',  value: stats.total ?? 0,                           color: '#A5B4FC' },
-              { label: 'In Hearing',   value: stats.byStatus?.in_hearing ?? 0,             color: '#FBBF24' },
-              { label: 'Verdicts',     value: stats.byStatus?.verdict_delivered ?? 0,      color: '#34D399' },
-              { label: 'Settled',      value: stats.byStatus?.settled ?? 0,                color: '#C4B5FD' },
+              { label: 'Total Cases',  value: stats.total ?? 0,                      color: '#A5B4FC' },
+              { label: 'In Hearing',   value: stats.byStatus?.in_hearing ?? 0,        color: '#FBBF24' },
+              { label: 'Verdicts',     value: stats.byStatus?.verdict_delivered ?? 0, color: '#34D399' },
+              { label: 'Settled',      value: stats.byStatus?.settled ?? 0,           color: '#C4B5FD' },
             ].map(s => (
               <div key={s.label} style={{ textAlign: 'center' }}>
                 <div style={{ color: s.color, fontSize: 22, fontWeight: 800, lineHeight: 1 }}>{s.value}</div>
@@ -176,7 +190,7 @@ function CourtroomBanner({ stats }) {
   );
 }
 
-// ── Case card ────────────────────────────────────────────────────────────────
+// ── Case card ─────────────────────────────────────────────────────────────────
 
 function CaseCard({ c, onClick, userId }) {
   const sev = SEVERITY_COLORS[c.severity] || SEVERITY_COLORS.minor;
@@ -225,7 +239,7 @@ function CaseCard({ c, onClick, userId }) {
   );
 }
 
-// ── File Dispute form ────────────────────────────────────────────────────────
+// ── File Dispute form ─────────────────────────────────────────────────────────
 
 function FileDisputeForm({ onFiled, residents }) {
   const [step, setStep] = useState(0);
@@ -236,16 +250,16 @@ function FileDisputeForm({ onFiled, residents }) {
     defendantUserId: '', isDefendantEstate: false,
   });
 
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const set  = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const setCharge = (i, v) => { const c = [...form.charges]; c[i] = v; set('charges', c); };
-  const addCharge = () => set('charges', [...form.charges, '']);
+  const addCharge    = () => set('charges', [...form.charges, '']);
   const removeCharge = (i) => set('charges', form.charges.filter((_, idx) => idx !== i));
 
   const submit = async () => {
     setLoading(true);
     try {
       await courtAPI.fileCase({ ...form, charges: form.charges.filter(c => c.trim()) });
-      toast.success('Case filed. The court has received your complaint.');
+      toast.success('Case filed. The court is now open — your AI lawyer has been assigned.');
       onFiled();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to file case');
@@ -347,9 +361,9 @@ function FileDisputeForm({ onFiled, residents }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
             <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>Charges</label>
-            {form.charges.map((c, i) => (
+            {form.charges.map((charge, i) => (
               <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
-                <input className="input-field" placeholder={`Charge ${i + 1}…`} value={c} onChange={e => setCharge(i, e.target.value)} style={{ flex: 1 }} />
+                <input className="input-field" placeholder={`Charge ${i + 1}…`} value={charge} onChange={e => setCharge(i, e.target.value)} style={{ flex: 1 }} />
                 {form.charges.length > 1 && (
                   <button onClick={() => removeCharge(i)} style={{ padding: '0 12px', borderRadius: 10, border: '1px solid #FECACA', background: '#FEF2F2', color: '#DC2626', cursor: 'pointer' }}>
                     <XCircle size={14} />
@@ -369,6 +383,10 @@ function FileDisputeForm({ onFiled, residents }) {
             <AlertTriangle size={16} color="#D97706" style={{ flexShrink: 0, marginTop: 1 }} />
             <div style={{ fontSize: 12, color: '#92400E' }}>Filing a false claim is a punishable offence under the Estate Community Code. Ensure all information is truthful.</div>
           </div>
+          <div style={{ background: '#EEF2FF', border: '1px solid #C7D2FE', borderRadius: 12, padding: '12px 14px', display: 'flex', gap: 10 }}>
+            <Briefcase size={16} color={PRIMARY} style={{ flexShrink: 0, marginTop: 1 }} />
+            <div style={{ fontSize: 12, color: PRIMARY_DARK }}>Upon filing, the case opens immediately and an AI lawyer will be automatically assigned to represent you.</div>
+          </div>
           <div style={{ display: 'flex', gap: 10 }}>
             <button onClick={() => setStep(1)} style={{ flex: '0 0 auto', padding: '10px 18px', borderRadius: 12, border: '1px solid #E2E8F0', background: '#F8FAFC', color: '#64748B', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Back</button>
             <button onClick={submit} disabled={!canStep2 || loading}
@@ -377,9 +395,7 @@ function FileDisputeForm({ onFiled, residents }) {
                 color: canStep2 && !loading ? '#fff' : '#94A3B8', fontWeight: 700, fontSize: 14, border: 'none',
                 cursor: canStep2 && !loading ? 'pointer' : 'not-allowed',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-              {loading
-                ? <><svg className="animate-spin" width={14} height={14} viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="white" strokeWidth="3" strokeOpacity=".3"/><path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round"/></svg>Filing…</>
-                : <><Gavel size={14} /> File with the Court</>}
+              {loading ? <><Spinner size={14} color="#fff" />Filing…</> : <><Gavel size={14} /> File with the Court</>}
             </button>
           </div>
         </div>
@@ -388,11 +404,11 @@ function FileDisputeForm({ onFiled, residents }) {
   );
 }
 
-// ── Proceeding entry ─────────────────────────────────────────────────────────
+// ── Proceeding entry ──────────────────────────────────────────────────────────
 
 function ProceedingEntry({ p }) {
-  const meta = EVENT_META[p.event] || { label: p.event, icon: FileText, color: '#64748B' };
-  const Icon = meta.icon;
+  const meta   = EVENT_META[p.event] || { label: p.event, icon: FileText, color: '#64748B' };
+  const Icon   = meta.icon;
   const isJudge = p.actorName?.toLowerCase().includes('judge') || p.actorName?.toLowerCase().includes('orizu');
 
   return (
@@ -428,13 +444,12 @@ function ProceedingEntry({ p }) {
   );
 }
 
-// ── Verdict display ──────────────────────────────────────────────────────────
+// ── Verdict display ───────────────────────────────────────────────────────────
 
 function VerdictDisplay({ verdict, fine, caseObj, onPayFine, payingFine, userId }) {
   if (!verdict?.decision) return null;
-  const isGuilty = verdict.decision === 'guilty';
+  const isGuilty    = verdict.decision === 'guilty';
   const isNotGuilty = verdict.decision === 'not_guilty';
-  const isDismissed = verdict.decision === 'dismissed';
   const isDefendant = caseObj.defendant?.userId === userId || caseObj.defendant?.userId?._id === userId;
 
   return (
@@ -452,6 +467,11 @@ function VerdictDisplay({ verdict, fine, caseObj, onPayFine, payingFine, userId 
           <div style={{ fontSize: 22, fontWeight: 900, color: isGuilty ? '#FCA5A5' : isNotGuilty ? '#6EE7B7' : '#94A3B8' }}>
             {isGuilty ? 'GUILTY' : isNotGuilty ? 'NOT GUILTY' : verdict.decision.toUpperCase().replace('_', ' ')}
           </div>
+          {caseObj.isDefaultJudgment && (
+            <div style={{ fontSize: 11, color: '#F87171', fontWeight: 600, marginTop: 3 }}>
+              ⚠ Default judgment — defendant did not respond in time
+            </div>
+          )}
         </div>
       </div>
 
@@ -467,9 +487,7 @@ function VerdictDisplay({ verdict, fine, caseObj, onPayFine, payingFine, userId 
             <div style={{ flex: 1, background: '#DC262618', border: '1px solid #DC262640', borderRadius: 12, padding: '12px 14px', minWidth: 140 }}>
               <div style={{ color: '#FCA5A5', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', marginBottom: 4 }}>Fine Imposed</div>
               <div style={{ color: '#FCA5A5', fontSize: 20, fontWeight: 800 }}>{fmt(verdict.fine)}</div>
-              {fine?.status === 'pending' && fine.dueDate && (
-                <div style={{ color: '#F87171', fontSize: 11, marginTop: 2 }}>Due {new Date(fine.dueDate).toLocaleDateString('en-NG')}</div>
-              )}
+              {fine?.status === 'pending' && fine.dueDate && <div style={{ color: '#F87171', fontSize: 11, marginTop: 2 }}>Due {new Date(fine.dueDate).toLocaleDateString('en-NG')}</div>}
               {fine?.status === 'paid' && <div style={{ color: '#6EE7B7', fontSize: 11, marginTop: 2 }}>✓ Paid</div>}
             </div>
           )}
@@ -488,9 +506,7 @@ function VerdictDisplay({ verdict, fine, caseObj, onPayFine, payingFine, userId 
           style={{ width: '100%', padding: '12px 0', borderRadius: 12,
             background: 'linear-gradient(135deg,#DC2626,#B91C1C)', color: '#fff', fontWeight: 700, fontSize: 14, border: 'none',
             cursor: payingFine ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-          {payingFine
-            ? <><svg className="animate-spin" width={14} height={14} viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="white" strokeWidth="3" strokeOpacity=".3"/><path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round"/></svg>Processing…</>
-            : <><Banknote size={16} /> Pay Fine — {fmt(fine.amount)}</>}
+          {payingFine ? <><Spinner size={14} color="#fff" />Processing…</> : <><Banknote size={16} /> Pay Fine — {fmt(fine.amount)}</>}
         </button>
       )}
       {isGuilty && fine?.status === 'paid' && (
@@ -503,31 +519,177 @@ function VerdictDisplay({ verdict, fine, caseObj, onPayFine, payingFine, userId 
   );
 }
 
-// ── Case detail ──────────────────────────────────────────────────────────────
+// ── My Lawyer chat tab ────────────────────────────────────────────────────────
+
+function LawyerChatTab({ c, isPlaintiff, isDefendant, chatMsg, setChatMsg, chatLoading, onSend }) {
+  const chatEndRef = useRef(null);
+  const side = isPlaintiff ? 'prosecution' : 'defense';
+  const messages = c.lawyerChats?.[side] || [];
+
+  const lawyerPersonaKey = side === 'prosecution'
+    ? c.lawyers?.prosecution?.aiPersona
+    : c.lawyers?.defense?.aiPersona;
+  const persona = lawyerPersonaKey ? AI_PERSONAS[lawyerPersonaKey] : null;
+
+  const lawyerName  = persona?.name  || (side === 'prosecution' ? 'Prosecution Counsel' : 'Defense Counsel');
+  const lawyerColor = persona?.color || (side === 'prosecution' ? '#DC2626' : '#2563EB');
+  const lawyerInits = persona?.initials || (side === 'prosecution' ? 'PC' : 'DC');
+  const lawyerRole  = persona?.role  || (side === 'prosecution' ? 'Prosecution Counsel' : 'Defense Counsel');
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages.length, chatLoading]);
+
+  if (!isPlaintiff && !isDefendant) return null;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      {/* Lawyer identity header */}
+      <div style={{ background: 'linear-gradient(135deg, #F8FAFC, #EEF2FF)', border: '1px solid #C7D2FE', borderRadius: 14, padding: '14px 16px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
+        <Avatar initials={lawyerInits} color={lawyerColor} size={42} />
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 800, fontSize: 14, color: '#0F172A' }}>{lawyerName}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 999,
+              color: lawyerColor, background: lawyerColor + '15', border: `1px solid ${lawyerColor}30` }}>
+              {lawyerRole}
+            </span>
+            <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 999,
+              background: '#EDE9FE', color: '#7C3AED', border: '1px solid #DDD6FE' }}>AI Counsel</span>
+          </div>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontSize: 10, color: '#94A3B8', fontWeight: 600 }}>PRIVATE</div>
+          <div style={{ fontSize: 10, color: '#64748B' }}>Confidential</div>
+        </div>
+      </div>
+
+      {/* Chat messages */}
+      <div style={{ flex: 1, overflowY: 'auto', maxHeight: 380, marginBottom: 12, paddingRight: 4, display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {messages.length === 0 && !chatLoading && (
+          <div style={{ textAlign: 'center', padding: '40px 0' }}>
+            <div style={{ background: lawyerColor + '15', borderRadius: '50%', width: 56, height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+              <MessageSquare size={24} color={lawyerColor} />
+            </div>
+            <div style={{ fontWeight: 700, fontSize: 14, color: '#0F172A', marginBottom: 6 }}>Start a private consultation</div>
+            <div style={{ fontSize: 12, color: '#94A3B8', maxWidth: 260, margin: '0 auto' }}>
+              Ask your lawyer for legal advice, strategy, or to explain any court proceedings.
+            </div>
+          </div>
+        )}
+
+        {messages.map((msg, i) => {
+          const isAI = msg.from === 'ai';
+          return (
+            <div key={i} style={{
+              display: 'flex', gap: 8, flexDirection: isAI ? 'row' : 'row-reverse',
+              alignItems: 'flex-end',
+            }}>
+              {isAI && (
+                <div style={{
+                  width: 30, height: 30, borderRadius: 8, flexShrink: 0,
+                  background: lawyerColor + '22', border: `1.5px solid ${lawyerColor}40`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <span style={{ fontSize: 9, fontWeight: 800, color: lawyerColor }}>{lawyerInits}</span>
+                </div>
+              )}
+              <div style={{
+                maxWidth: '78%',
+                background: isAI ? '#F8FAFC' : `linear-gradient(135deg,${PRIMARY},${PRIMARY_DARK})`,
+                border: isAI ? '1px solid #E2E8F0' : 'none',
+                borderRadius: isAI ? '14px 14px 14px 4px' : '14px 14px 4px 14px',
+                padding: '10px 14px',
+                fontSize: 13,
+                color: isAI ? '#334155' : '#fff',
+                lineHeight: 1.6,
+              }}>
+                {msg.content}
+                <div style={{ fontSize: 10, color: isAI ? '#94A3B8' : 'rgba(255,255,255,0.6)', marginTop: 4, textAlign: isAI ? 'left' : 'right' }}>
+                  {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' }) : ''}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        {chatLoading && (
+          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+            <div style={{
+              width: 30, height: 30, borderRadius: 8, flexShrink: 0,
+              background: lawyerColor + '22', border: `1.5px solid ${lawyerColor}40`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <span style={{ fontSize: 9, fontWeight: 800, color: lawyerColor }}>{lawyerInits}</span>
+            </div>
+            <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '14px 14px 14px 4px', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Spinner size={14} color={lawyerColor} />
+              <span style={{ fontSize: 12, color: '#94A3B8', fontStyle: 'italic' }}>Counsel is reviewing…</span>
+            </div>
+          </div>
+        )}
+
+        <div ref={chatEndRef} />
+      </div>
+
+      {/* Input */}
+      <div style={{ display: 'flex', gap: 8 }}>
+        <input
+          className="input-field"
+          placeholder="Ask your lawyer anything…"
+          value={chatMsg}
+          onChange={e => setChatMsg(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !chatLoading && chatMsg.trim()) { e.preventDefault(); onSend(); } }}
+          style={{ flex: 1 }}
+          disabled={chatLoading}
+        />
+        <button
+          onClick={onSend}
+          disabled={!chatMsg.trim() || chatLoading}
+          style={{
+            padding: '0 16px', borderRadius: 12, border: 'none', cursor: chatMsg.trim() && !chatLoading ? 'pointer' : 'not-allowed',
+            background: chatMsg.trim() && !chatLoading ? `linear-gradient(135deg,${PRIMARY},${PRIMARY_DARK})` : '#E2E8F0',
+            color: chatMsg.trim() && !chatLoading ? '#fff' : '#94A3B8',
+            display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: 13,
+          }}>
+          <Send size={14} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Case detail ───────────────────────────────────────────────────────────────
 
 function CaseDetail({ caseId, onBack, user }) {
-  const [c, setC] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('proceedings');
-  const [argText, setArgText] = useState('');
-  const [argSide, setArgSide] = useState('prosecution');
-  const [submittingArg, setSubmittingArg] = useState(false);
-  const [evidenceLabel, setEvidenceLabel] = useState('');
+  const [c, setC]                             = useState(null);
+  const [loading, setLoading]                 = useState(true);
+  const [activeTab, setActiveTab]             = useState('proceedings');
+  const [argText, setArgText]                 = useState('');
+  const [argSide, setArgSide]                 = useState('prosecution');
+  const [submittingArg, setSubmittingArg]     = useState(false);
+  const [evidenceLabel, setEvidenceLabel]     = useState('');
   const [evidenceContent, setEvidenceContent] = useState('');
-  const [evidenceSide, setEvidenceSide] = useState('neutral');
-  const [submittingEvid, setSubmittingEvid] = useState(false);
-  const [juryVote, setJuryVote] = useState('');
-  const [juryReason, setJuryReason] = useState('');
-  const [submittingVote, setSubmittingVote] = useState(false);
-  const [hiringLawyer, setHiringLawyer] = useState(false);
+  const [evidenceSide, setEvidenceSide]       = useState('neutral');
+  const [submittingEvid, setSubmittingEvid]   = useState(false);
+  const [juryVote, setJuryVote]               = useState('');
+  const [juryReason, setJuryReason]           = useState('');
+  const [submittingVote, setSubmittingVote]   = useState(false);
   const [selectedPersona, setSelectedPersona] = useState(null);
   const [selectedLawyerSide, setSelectedLawyerSide] = useState(null);
-  const [payingFine, setPayingFine] = useState(false);
+  const [changingCounsel, setChangingCounsel] = useState(false);
+  const [payingFine, setPayingFine]           = useState(false);
   const [settlementTerms, setSettlementTerms] = useState('');
   const [settlementAmount, setSettlementAmount] = useState('');
   const [submittingSettlement, setSubmittingSettlement] = useState(false);
-  const [appealReason, setAppealReason] = useState('');
+  const [appealReason, setAppealReason]       = useState('');
   const [submittingAppeal, setSubmittingAppeal] = useState(false);
+  // New states
+  const [chatMsg, setChatMsg]                 = useState('');
+  const [chatLoading, setChatLoading]         = useState(false);
+  const [adjournReason, setAdjournReason]     = useState('');
+  const [adjourning, setAdjourning]           = useState(false);
+
   const procRef = useRef(null);
 
   const load = async () => {
@@ -541,25 +703,60 @@ function CaseDetail({ caseId, onBack, user }) {
   useEffect(() => { load(); }, [caseId]);
   useEffect(() => { if (procRef.current) procRef.current.scrollTop = procRef.current.scrollHeight; }, [c?.proceedings?.length]);
 
-  if (loading) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 80 }}><svg className="animate-spin" width={32} height={32} viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke={PRIMARY} strokeWidth="2.5" strokeOpacity=".2"/><path d="M12 2a10 10 0 0 1 10 10" stroke={PRIMARY} strokeWidth="2.5" strokeLinecap="round"/></svg></div>;
+  if (loading) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 80 }}>
+      <Spinner size={32} />
+    </div>
+  );
   if (!c) return <div style={{ padding: 32, color: '#94A3B8' }}>Case not found.</div>;
 
-  const userId = user?._id;
+  const userId      = user?._id;
   const isPlaintiff = c.plaintiff?.userId === userId || c.plaintiff?.userId?._id === userId;
   const isDefendant = !c.defendant?.isEstate && (c.defendant?.userId === userId || c.defendant?.userId?._id === userId);
-  const isJuror = c.jury?.members?.some(m => m === userId || m?._id === userId || m?.toString() === userId);
-  const hasVoted = c.jury?.votes?.some(v => v.userId === userId || v.userId?._id === userId || v.userId?.toString() === userId);
-  const canAct = !['settled','closed'].includes(c.status);
+  const isJuror     = c.jury?.members?.some(m => m === userId || m?._id === userId || m?.toString() === userId);
+  const hasVoted    = c.jury?.votes?.some(v => v.userId === userId || v.userId?._id === userId || v.userId?.toString() === userId);
+  const canAct      = !['settled', 'closed'].includes(c.status);
+  const isParty     = isPlaintiff || isDefendant;
 
-  const hireAILawyer = async () => {
+  // ── actions ────────────────────────────────────────────────────────────────
+
+  const sendChat = async () => {
+    if (!chatMsg.trim() || chatLoading) return;
+    setChatLoading(true);
+    const msg = chatMsg.trim();
+    setChatMsg('');
+    try {
+      await courtAPI.chatWithLawyer(c._id, msg);
+      await load();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to send message');
+      setChatMsg(msg);
+    } finally { setChatLoading(false); }
+  };
+
+  const adjourn = async () => {
+    if (!adjournReason.trim()) return;
+    setAdjourning(true);
+    try {
+      await courtAPI.requestAdjournment(c._id, adjournReason);
+      toast.success('Adjournment request submitted. Judge Orizu will review.');
+      setAdjournReason('');
+      load();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to request adjournment');
+    } finally { setAdjourning(false); }
+  };
+
+  const changeCounsel = async () => {
     if (!selectedPersona || !selectedLawyerSide) return;
-    setHiringLawyer(true);
+    setChangingCounsel(true);
     try {
       await courtAPI.hireLawyer(c._id, { side: selectedLawyerSide, persona: selectedPersona });
-      toast.success('Lawyer engaged — opening argument submitted!');
-      setSelectedPersona(null); setSelectedLawyerSide(null); load();
-    } catch (err) { toast.error(err.response?.data?.message || 'Failed to hire lawyer'); }
-    finally { setHiringLawyer(false); }
+      toast.success('New counsel engaged — opening argument submitted!');
+      setSelectedPersona(null); setSelectedLawyerSide(null);
+      load();
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed to change counsel'); }
+    finally { setChangingCounsel(false); }
   };
 
   const submitArg = async () => {
@@ -613,8 +810,7 @@ function CaseDetail({ caseId, onBack, user }) {
   const respondSettlement = async (action) => {
     try {
       await courtAPI.proposeSettlement(c._id, { action });
-      toast.success(action === 'accept' ? 'Settlement accepted. Case resolved.' : 'Settlement rejected.');
-      load();
+      toast.success(action === 'accept' ? 'Settlement accepted. Case resolved.' : 'Settlement rejected.'); load();
     } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
   };
 
@@ -628,21 +824,58 @@ function CaseDetail({ caseId, onBack, user }) {
     finally { setSubmittingAppeal(false); }
   };
 
+  // ── tabs ───────────────────────────────────────────────────────────────────
+
   const sev = SEVERITY_COLORS[c.severity] || SEVERITY_COLORS.minor;
+
   const DETAIL_TABS = [
     { id: 'proceedings', label: 'Proceedings', count: c.proceedings?.length },
+    ...(isParty ? [{ id: 'lawyer', label: 'My Lawyer' }] : []),
     { id: 'evidence',    label: 'Evidence',    count: c.evidence?.length },
-    { id: 'jury',        label: 'Jury',        count: c.jury?.members?.length },
     { id: 'actions',     label: 'Actions' },
+    { id: 'jury',        label: 'Jury',        count: c.jury?.members?.length },
   ];
+
+  // ── response deadline banner ───────────────────────────────────────────────
+
+  const showDeadline = c.responseDeadline && !['settled','closed','verdict_delivered'].includes(c.status);
+  const isDefaultWarning = !!c.defaultJudgmentWarningAt;
 
   return (
     <div>
-      <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#64748B', fontSize: 13, fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', marginBottom: 16, padding: 0 }}>
+      <button onClick={onBack}
+        style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#64748B', fontSize: 13, fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', marginBottom: 16, padding: 0 }}>
         <ArrowLeft size={15} /> All Cases
       </button>
 
-      {/* Header */}
+      {/* Response deadline warning */}
+      {showDeadline && (
+        <div style={{
+          background: isDefaultWarning ? '#FEF2F2' : '#FFFBEB',
+          border: `1px solid ${isDefaultWarning ? '#FECACA' : '#FDE68A'}`,
+          borderRadius: 12, padding: '12px 16px', marginBottom: 12,
+          display: 'flex', alignItems: 'center', gap: 10,
+        }}>
+          {isDefaultWarning
+            ? <Siren size={16} color="#DC2626" style={{ flexShrink: 0 }} />
+            : <Clock size={16} color="#D97706" style={{ flexShrink: 0 }} />}
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: isDefaultWarning ? '#DC2626' : '#92400E' }}>
+              {isDefaultWarning ? 'Default Judgment Warning' : 'Response Deadline'}
+            </div>
+            <div style={{ fontSize: 11, color: isDefaultWarning ? '#B91C1C' : '#B45309', marginTop: 1 }}>
+              {isDefaultWarning
+                ? `The defendant has been warned. Failure to respond may result in a default judgment against them.`
+                : `Defendant must respond by ${new Date(c.responseDeadline).toLocaleDateString('en-NG', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' })}`}
+            </div>
+          </div>
+          {isDefaultWarning && (
+            <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: '#DC2626', color: '#fff', flexShrink: 0 }}>URGENT</span>
+          )}
+        </div>
+      )}
+
+      {/* Case header */}
       <div style={{ background: 'linear-gradient(135deg,#1E1B4B,#312E81)', borderRadius: 18, padding: '20px 22px', marginBottom: 16, border: '1px solid #3730A3' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
           <div style={{ flex: 1 }}>
@@ -650,17 +883,26 @@ function CaseDetail({ caseId, onBack, user }) {
               <span style={{ fontFamily: 'monospace', fontSize: 12, color: '#F59E0B', fontWeight: 700 }}>{c.caseNumber}</span>
               <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 999, color: sev.text, background: sev.bg + 'cc', border: `1px solid ${sev.border}` }}>{c.severity?.toUpperCase()}</span>
               <span style={{ fontSize: 11, color: '#6366F1' }}>{TYPE_LABELS[c.type]}</span>
+              {c.isDefaultJudgment && (
+                <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: '#DC2626', color: '#fff' }}>DEFAULT</span>
+              )}
             </div>
             <div style={{ color: '#E0E7FF', fontSize: 17, fontWeight: 800, marginBottom: 10 }}>{c.title}</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <Avatar initials={(c.plaintiff?.name || 'P')[0].toUpperCase()} color="#10B981" size={26} />
-                <div><div style={{ color: '#94A3B8', fontSize: 9, fontWeight: 700, textTransform: 'uppercase' }}>Plaintiff</div><div style={{ color: '#E0E7FF', fontSize: 12, fontWeight: 600 }}>{c.plaintiff?.name || 'Unknown'}</div></div>
+                <div>
+                  <div style={{ color: '#94A3B8', fontSize: 9, fontWeight: 700, textTransform: 'uppercase' }}>Plaintiff</div>
+                  <div style={{ color: '#E0E7FF', fontSize: 12, fontWeight: 600 }}>{c.plaintiff?.name || 'Unknown'}</div>
+                </div>
               </div>
               <div style={{ color: '#DC2626', fontWeight: 900, fontSize: 14, padding: '0 6px' }}>VS</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <Avatar initials={c.defendant?.isEstate ? 'ES' : (c.defendant?.name || 'D')[0].toUpperCase()} color="#DC2626" size={26} />
-                <div><div style={{ color: '#94A3B8', fontSize: 9, fontWeight: 700, textTransform: 'uppercase' }}>Defendant</div><div style={{ color: '#E0E7FF', fontSize: 12, fontWeight: 600 }}>{c.defendant?.isEstate ? 'Estate Management' : (c.defendant?.name || 'Unknown')}</div></div>
+                <div>
+                  <div style={{ color: '#94A3B8', fontSize: 9, fontWeight: 700, textTransform: 'uppercase' }}>Defendant</div>
+                  <div style={{ color: '#E0E7FF', fontSize: 12, fontWeight: 600 }}>{c.defendant?.isEstate ? 'Estate Management' : (c.defendant?.name || 'Unknown')}</div>
+                </div>
               </div>
             </div>
           </div>
@@ -689,14 +931,26 @@ function CaseDetail({ caseId, onBack, user }) {
               <div key={side} style={{ flex: 1, minWidth: 150, background: 'rgba(255,255,255,0.05)', borderRadius: 10, padding: '8px 12px', border: `1px solid ${sideColor}30` }}>
                 <div style={{ color: sideColor, fontSize: 9, fontWeight: 700, textTransform: 'uppercase', marginBottom: 5 }}>{label}</div>
                 {persona
-                  ? <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}><Avatar initials={persona.initials} color={persona.color} size={26} /><div><div style={{ color: '#E0E7FF', fontSize: 11, fontWeight: 700 }}>{persona.name}</div><div style={{ color: '#6366F1', fontSize: 10 }}>AI · {persona.role}</div></div></div>
+                  ? <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                      <Avatar initials={persona.initials} color={persona.color} size={26} />
+                      <div>
+                        <div style={{ color: '#E0E7FF', fontSize: 11, fontWeight: 700 }}>{persona.name}</div>
+                        <div style={{ color: '#6366F1', fontSize: 10 }}>AI · {persona.role}</div>
+                      </div>
+                    </div>
                   : <div style={{ color: '#475569', fontSize: 11, fontStyle: 'italic' }}>Self-represented</div>}
               </div>
             );
           })}
           <div style={{ flex: 1, minWidth: 150, background: 'rgba(255,255,255,0.05)', borderRadius: 10, padding: '8px 12px', border: '1px solid #B4530930' }}>
             <div style={{ color: '#B45309', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', marginBottom: 5 }}>Presiding Judge</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}><Avatar initials={JUDGE.initials} color={JUDGE.color} size={26} /><div><div style={{ color: '#E0E7FF', fontSize: 11, fontWeight: 700 }}>{JUDGE.name}</div><div style={{ color: '#6366F1', fontSize: 10 }}>AI Judge</div></div></div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+              <Avatar initials={JUDGE.initials} color={JUDGE.color} size={26} />
+              <div>
+                <div style={{ color: '#E0E7FF', fontSize: 11, fontWeight: 700 }}>{JUDGE.name}</div>
+                <div style={{ color: '#6366F1', fontSize: 10 }}>AI Judge</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -706,10 +960,10 @@ function CaseDetail({ caseId, onBack, user }) {
       )}
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 14, background: '#F8FAFC', borderRadius: 12, padding: 4, border: '1px solid #E2E8F0' }}>
+      <div style={{ display: 'flex', gap: 4, marginBottom: 14, background: '#F8FAFC', borderRadius: 12, padding: 4, border: '1px solid #E2E8F0', flexWrap: 'wrap' }}>
         {DETAIL_TABS.map(t => (
           <button key={t.id} onClick={() => setActiveTab(t.id)}
-            style={{ flex: 1, padding: '8px 0', borderRadius: 9, fontSize: 11, fontWeight: 600, border: 'none', cursor: 'pointer', transition: 'all 0.15s',
+            style={{ flex: 1, minWidth: 70, padding: '8px 6px', borderRadius: 9, fontSize: 11, fontWeight: 600, border: 'none', cursor: 'pointer', transition: 'all 0.15s',
               background: activeTab === t.id ? '#fff' : 'transparent',
               color: activeTab === t.id ? '#0F172A' : '#64748B',
               boxShadow: activeTab === t.id ? '0 1px 4px rgba(0,0,0,0.08)' : 'none' }}>
@@ -718,6 +972,7 @@ function CaseDetail({ caseId, onBack, user }) {
         ))}
       </div>
 
+      {/* ── PROCEEDINGS TAB ── */}
       {activeTab === 'proceedings' && (
         <div>
           {c.plaintiffStatement && (
@@ -734,6 +989,20 @@ function CaseDetail({ caseId, onBack, user }) {
         </div>
       )}
 
+      {/* ── MY LAWYER TAB ── */}
+      {activeTab === 'lawyer' && isParty && (
+        <LawyerChatTab
+          c={c}
+          isPlaintiff={isPlaintiff}
+          isDefendant={isDefendant}
+          chatMsg={chatMsg}
+          setChatMsg={setChatMsg}
+          chatLoading={chatLoading}
+          onSend={sendChat}
+        />
+      )}
+
+      {/* ── EVIDENCE TAB ── */}
       {activeTab === 'evidence' && (
         <div>
           {c.evidence?.length === 0
@@ -753,13 +1022,14 @@ function CaseDetail({ caseId, onBack, user }) {
         </div>
       )}
 
+      {/* ── JURY TAB ── */}
       {activeTab === 'jury' && (
         <div>
           {c.jury?.tally && (c.jury.tally.guilty > 0 || c.jury.tally.notGuilty > 0) && (
             <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 12, padding: '14px 16px', marginBottom: 16 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>Jury Tally</div>
               <div style={{ display: 'flex', gap: 12 }}>
-                {[{l:'Guilty',v:c.jury.tally.guilty,c:'#DC2626'},{l:'Not Guilty',v:c.jury.tally.notGuilty,c:'#059669'},{l:'Abstain',v:c.jury.tally.abstain,c:'#64748B'}].map(t => (
+                {[{ l: 'Guilty', v: c.jury.tally.guilty, c: '#DC2626' }, { l: 'Not Guilty', v: c.jury.tally.notGuilty, c: '#059669' }, { l: 'Abstain', v: c.jury.tally.abstain, c: '#64748B' }].map(t => (
                   <div key={t.l} style={{ flex: 1, textAlign: 'center', padding: '12px 0', background: t.c + '10', borderRadius: 10, border: `1px solid ${t.c}25` }}>
                     <div style={{ fontSize: 22, fontWeight: 800, color: t.c }}>{t.v}</div>
                     <div style={{ fontSize: 10, fontWeight: 700, color: t.c, textTransform: 'uppercase', marginTop: 2 }}>{t.l}</div>
@@ -774,7 +1044,7 @@ function CaseDetail({ caseId, onBack, user }) {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 10 }}>
                 {c.jury.members.map((m, i) => {
                   const vote = c.jury?.votes?.find(v => v.userId === (m._id || m) || v.userId?._id === (m._id || m));
-                  const revealed = ['verdict_delivered','closed','settled'].includes(c.status);
+                  const revealed = ['verdict_delivered', 'closed', 'settled'].includes(c.status);
                   return (
                     <div key={i} style={{ background: '#FAFAFA', border: '1px solid #E2E8F0', borderRadius: 12, padding: '12px 14px', textAlign: 'center' }}>
                       <Avatar initials={`J${i + 1}`} color="#7C3AED" size={34} />
@@ -793,18 +1063,19 @@ function CaseDetail({ caseId, onBack, user }) {
         </div>
       )}
 
+      {/* ── ACTIONS TAB ── */}
       {activeTab === 'actions' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
           {/* Jury duty */}
-          {isJuror && !hasVoted && ['open','in_hearing','jury_deliberation'].includes(c.status) && (
+          {isJuror && !hasVoted && ['open', 'in_hearing', 'jury_deliberation'].includes(c.status) && (
             <div style={{ background: '#F5F3FF', border: '1px solid #DDD6FE', borderRadius: 14, padding: '16px 18px' }}>
               <div style={{ fontWeight: 700, fontSize: 14, color: '#4C1D95', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <Star size={16} color="#7C3AED" /> You've Been Summoned — Jury Duty
               </div>
               <div style={{ fontSize: 12, color: '#6D28D9', marginBottom: 14 }}>Your estate community has selected you to serve as a juror. Your vote helps determine justice.</div>
               <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-                {[{v:'guilty',l:'Guilty',i:ThumbsDown,c:'#DC2626'},{v:'not_guilty',l:'Not Guilty',i:ThumbsUp,c:'#059669'},{v:'abstain',l:'Abstain',i:Minus,c:'#64748B'}].map(o => (
+                {[{ v: 'guilty', l: 'Guilty', i: ThumbsDown, c: '#DC2626' }, { v: 'not_guilty', l: 'Not Guilty', i: ThumbsUp, c: '#059669' }, { v: 'abstain', l: 'Abstain', i: Minus, c: '#64748B' }].map(o => (
                   <button key={o.v} onClick={() => setJuryVote(o.v)}
                     style={{ flex: 1, padding: '10px 0', borderRadius: 11, fontWeight: 700, fontSize: 11,
                       border: juryVote === o.v ? `1.5px solid ${o.c}` : '1px solid #E2E8F0',
@@ -818,7 +1089,7 @@ function CaseDetail({ caseId, onBack, user }) {
                 onChange={e => setJuryReason(e.target.value)} style={{ resize: 'none', marginBottom: 10 }} />
               <button onClick={castVote} disabled={!juryVote || submittingVote}
                 style={{ width: '100%', padding: '10px 0', borderRadius: 12, fontWeight: 700, fontSize: 13,
-                  background: juryVote ? `linear-gradient(135deg,#7C3AED,#5B21B6)` : '#E2E8F0',
+                  background: juryVote ? 'linear-gradient(135deg,#7C3AED,#5B21B6)' : '#E2E8F0',
                   color: juryVote ? '#fff' : '#94A3B8', border: 'none', cursor: juryVote ? 'pointer' : 'not-allowed',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                 <Scale size={14} /> Cast My Vote
@@ -832,61 +1103,12 @@ function CaseDetail({ caseId, onBack, user }) {
             </div>
           )}
 
-          {/* Hire AI Lawyer */}
-          {canAct && (isPlaintiff || isDefendant) && (
-            <div style={{ background: '#FAFAFA', border: '1px solid #E2E8F0', borderRadius: 14, padding: '16px 18px' }}>
-              <div style={{ fontWeight: 700, fontSize: 14, color: '#0F172A', marginBottom: 4 }}>Hire an AI Lawyer</div>
-              <div style={{ fontSize: 12, color: '#64748B', marginBottom: 14 }}>Let a specialist argue your case with the full force of law.</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, marginBottom: 12 }}>
-                {Object.entries(AI_PERSONAS).map(([key, p]) => (
-                  <button key={key} onClick={() => setSelectedPersona(selectedPersona === key ? null : key)}
-                    style={{ padding: '10px 12px', borderRadius: 10, textAlign: 'left',
-                      border: selectedPersona === key ? `1.5px solid ${p.color}` : '1px solid #E2E8F0',
-                      background: selectedPersona === key ? p.color + '10' : '#fff', cursor: 'pointer' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <Avatar initials={p.initials} color={p.color} size={28} />
-                      <div><div style={{ fontSize: 11, fontWeight: 700, color: p.color }}>{p.name}</div><div style={{ fontSize: 10, color: '#94A3B8' }}>{p.role}</div></div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-              {selectedPersona && (
-                <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-                  {isPlaintiff && (
-                    <button onClick={() => setSelectedLawyerSide('prosecution')}
-                      style={{ flex: 1, padding: '8px 0', borderRadius: 10, fontWeight: 700, fontSize: 12,
-                        border: selectedLawyerSide === 'prosecution' ? '1.5px solid #DC2626' : '1px solid #E2E8F0',
-                        background: selectedLawyerSide === 'prosecution' ? '#FEF2F2' : '#FAFAFA',
-                        color: selectedLawyerSide === 'prosecution' ? '#DC2626' : '#64748B', cursor: 'pointer' }}>As Prosecution</button>
-                  )}
-                  {isDefendant && (
-                    <button onClick={() => setSelectedLawyerSide('defense')}
-                      style={{ flex: 1, padding: '8px 0', borderRadius: 10, fontWeight: 700, fontSize: 12,
-                        border: selectedLawyerSide === 'defense' ? '1.5px solid #2563EB' : '1px solid #E2E8F0',
-                        background: selectedLawyerSide === 'defense' ? '#EFF6FF' : '#FAFAFA',
-                        color: selectedLawyerSide === 'defense' ? '#2563EB' : '#64748B', cursor: 'pointer' }}>As Defense</button>
-                  )}
-                </div>
-              )}
-              {selectedPersona && selectedLawyerSide && (
-                <button onClick={hireAILawyer} disabled={hiringLawyer}
-                  style={{ width: '100%', padding: '10px 0', borderRadius: 12, fontWeight: 700, fontSize: 13,
-                    background: `linear-gradient(135deg,${PRIMARY},${PRIMARY_DARK})`, color: '#fff', border: 'none', cursor: hiringLawyer ? 'not-allowed' : 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                  {hiringLawyer
-                    ? <><svg className="animate-spin" width={14} height={14} viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="white" strokeWidth="3" strokeOpacity=".3"/><path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round"/></svg>Briefing counsel…</>
-                    : <><Briefcase size={14} /> Hire {AI_PERSONAS[selectedPersona].name}</>}
-                </button>
-              )}
-            </div>
-          )}
-
           {/* Submit argument */}
-          {canAct && (isPlaintiff || isDefendant) && c.status !== 'filed' && (
+          {canAct && isParty && c.status !== 'filed' && (
             <div style={{ background: '#FAFAFA', border: '1px solid #E2E8F0', borderRadius: 14, padding: '16px 18px' }}>
               <div style={{ fontWeight: 700, fontSize: 14, color: '#0F172A', marginBottom: 12 }}>Submit an Argument</div>
               <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-                {[{v:'prosecution',l:'Prosecution',c:'#DC2626'},{v:'defense',l:'Defense',c:'#2563EB'}].map(s => (
+                {[{ v: 'prosecution', l: 'Prosecution', c: '#DC2626' }, { v: 'defense', l: 'Defense', c: '#2563EB' }].map(s => (
                   <button key={s.v} onClick={() => setArgSide(s.v)}
                     style={{ flex: 1, padding: '7px 0', borderRadius: 10, fontWeight: 600, fontSize: 12,
                       border: argSide === s.v ? `1.5px solid ${s.c}` : '1px solid #E2E8F0',
@@ -902,13 +1124,13 @@ function CaseDetail({ caseId, onBack, user }) {
                   background: argText.trim() ? 'linear-gradient(135deg,#0F172A,#1E293B)' : '#E2E8F0',
                   color: argText.trim() ? '#fff' : '#94A3B8', border: 'none', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                <Send size={14} /> Submit to Court
+                {submittingArg ? <><Spinner size={14} color="#fff" />Submitting…</> : <><Send size={14} /> Submit to Court</>}
               </button>
             </div>
           )}
 
           {/* Submit evidence */}
-          {canAct && (isPlaintiff || isDefendant) && (
+          {canAct && isParty && (
             <div style={{ background: '#FAFAFA', border: '1px solid #E2E8F0', borderRadius: 14, padding: '16px 18px' }}>
               <div style={{ fontWeight: 700, fontSize: 14, color: '#0F172A', marginBottom: 12 }}>Submit Evidence</div>
               <input className="input-field" placeholder="Evidence label (e.g. WhatsApp Screenshot, Payment Record...)" value={evidenceLabel}
@@ -916,7 +1138,7 @@ function CaseDetail({ caseId, onBack, user }) {
               <textarea className="input-field" rows={3} placeholder="Describe the evidence..." value={evidenceContent}
                 onChange={e => setEvidenceContent(e.target.value)} style={{ resize: 'vertical', marginBottom: 8 }} />
               <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-                {['prosecution','defense','neutral'].map(s => (
+                {['prosecution', 'defense', 'neutral'].map(s => (
                   <button key={s} onClick={() => setEvidenceSide(s)}
                     style={{ flex: 1, padding: '6px 0', borderRadius: 9, fontWeight: 600, fontSize: 11, textTransform: 'capitalize',
                       border: evidenceSide === s ? `1.5px solid ${PRIMARY}` : '1px solid #E2E8F0',
@@ -930,13 +1152,72 @@ function CaseDetail({ caseId, onBack, user }) {
                   background: evidenceLabel.trim() && evidenceContent.trim() ? 'linear-gradient(135deg,#D97706,#B45309)' : '#E2E8F0',
                   color: evidenceLabel.trim() && evidenceContent.trim() ? '#fff' : '#94A3B8', border: 'none', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                <Upload size={14} /> Admit to Evidence
+                {submittingEvid ? <><Spinner size={14} color="#fff" />Uploading…</> : <><Upload size={14} /> Admit to Evidence</>}
               </button>
             </div>
           )}
 
+          {/* Request adjournment */}
+          {canAct && isParty && (
+            <div style={{ background: '#FAFAFA', border: '1px solid #E2E8F0', borderRadius: 14, padding: '16px 18px' }}>
+              <div style={{ fontWeight: 700, fontSize: 14, color: '#0F172A', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Calendar size={15} color="#7C3AED" /> Request Adjournment
+              </div>
+              <div style={{ fontSize: 12, color: '#64748B', marginBottom: 12 }}>Ask the court to pause proceedings. Judge Orizu will review and rule on your request.</div>
+              <textarea className="input-field" rows={3} placeholder="State your reason for requesting an adjournment…"
+                value={adjournReason} onChange={e => setAdjournReason(e.target.value)} style={{ resize: 'none', marginBottom: 10 }} />
+              <button onClick={adjourn} disabled={!adjournReason.trim() || adjourning}
+                style={{ width: '100%', padding: '10px 0', borderRadius: 12, fontWeight: 700, fontSize: 13,
+                  background: adjournReason.trim() && !adjourning ? 'linear-gradient(135deg,#7C3AED,#5B21B6)' : '#E2E8F0',
+                  color: adjournReason.trim() && !adjourning ? '#fff' : '#94A3B8', border: 'none', cursor: adjournReason.trim() && !adjourning ? 'pointer' : 'not-allowed',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                {adjourning ? <><Spinner size={14} color="#fff" />Submitting…</> : <><Calendar size={14} /> Request Adjournment</>}
+              </button>
+
+              {/* Existing adjournments list */}
+              {c.adjournments?.length > 0 && (
+                <div style={{ marginTop: 14 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 8 }}>Adjournment History</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {c.adjournments.map((adj, i) => {
+                      const granted = adj.status === 'granted';
+                      const denied  = adj.status === 'denied';
+                      return (
+                        <div key={i} style={{
+                          background: granted ? '#ECFDF5' : denied ? '#FEF2F2' : '#F8FAFC',
+                          border: `1px solid ${granted ? '#A7F3D0' : denied ? '#FECACA' : '#E2E8F0'}`,
+                          borderRadius: 10, padding: '10px 12px',
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                            {granted && <CheckCircle2 size={13} color="#059669" />}
+                            {denied  && <XCircle size={13} color="#DC2626" />}
+                            {!granted && !denied && <Clock size={13} color="#94A3B8" />}
+                            <span style={{ fontSize: 11, fontWeight: 700,
+                              color: granted ? '#065F46' : denied ? '#DC2626' : '#64748B',
+                              textTransform: 'uppercase' }}>
+                              {adj.status || 'Pending'} — {adj.side}
+                            </span>
+                            <span style={{ fontSize: 10, color: '#94A3B8', marginLeft: 'auto' }}>
+                              {adj.requestedAt ? new Date(adj.requestedAt).toLocaleDateString('en-NG') : ''}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: 12, color: '#475569', marginBottom: adj.aiRuling ? 6 : 0 }}>{adj.reason}</div>
+                          {adj.aiRuling && (
+                            <div style={{ fontSize: 11, color: granted ? '#065F46' : '#B91C1C', fontStyle: 'italic', background: granted ? '#D1FAE5' : '#FEE2E2', borderRadius: 6, padding: '5px 8px' }}>
+                              <span style={{ fontWeight: 700 }}>Judge Orizu: </span>{adj.aiRuling}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Settlement */}
-          {canAct && (isPlaintiff || isDefendant) && c.status !== 'filed' && (
+          {canAct && isParty && c.status !== 'filed' && (
             <div style={{ background: '#FAFAFA', border: '1px solid #E2E8F0', borderRadius: 14, padding: '16px 18px' }}>
               <div style={{ fontWeight: 700, fontSize: 14, color: '#0F172A', marginBottom: 4 }}>Propose Settlement</div>
               <div style={{ fontSize: 12, color: '#64748B', marginBottom: 12 }}>Reach an agreement without a full verdict.</div>
@@ -947,7 +1228,7 @@ function CaseDetail({ caseId, onBack, user }) {
                     <div style={{ fontSize: 13, color: '#334155', marginBottom: 6 }}>{c.settlement.terms}</div>
                     {c.settlement.amount > 0 && <div style={{ fontSize: 13, fontWeight: 700, color: '#7C3AED' }}>Amount: {fmt(c.settlement.amount)}</div>}
                   </div>
-                  {((isPlaintiff || isDefendant) && String(c.settlement.proposedById) !== userId) && (
+                  {isParty && String(c.settlement.proposedById) !== userId && (
                     <div style={{ display: 'flex', gap: 8 }}>
                       <button onClick={() => respondSettlement('accept')} style={{ flex: 1, padding: '9px 0', borderRadius: 10, background: 'linear-gradient(135deg,#059669,#047857)', color: '#fff', fontWeight: 700, fontSize: 12, border: 'none', cursor: 'pointer' }}>Accept</button>
                       <button onClick={() => respondSettlement('reject')} style={{ flex: 1, padding: '9px 0', borderRadius: 10, background: '#FEF2F2', color: '#DC2626', fontWeight: 700, fontSize: 12, border: '1px solid #FECACA', cursor: 'pointer' }}>Reject</button>
@@ -971,7 +1252,7 @@ function CaseDetail({ caseId, onBack, user }) {
           )}
 
           {/* Appeal */}
-          {(isPlaintiff || isDefendant) && c.status === 'verdict_delivered' && !c.appeal?.filed && (
+          {isParty && c.status === 'verdict_delivered' && !c.appeal?.filed && (
             <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 14, padding: '16px 18px' }}>
               <div style={{ fontWeight: 700, fontSize: 14, color: '#92400E', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <RotateCcw size={15} color="#D97706" /> Appeal the Verdict
@@ -994,7 +1275,75 @@ function CaseDetail({ caseId, onBack, user }) {
             </div>
           )}
 
-          {!canAct && !isJuror && !isPlaintiff && !isDefendant && (
+          {/* Pay fine shortcut */}
+          {isDefendant && c.verdict?.decision === 'guilty' && c.fine?.status === 'pending' && c.fine?.amount > 0 && (
+            <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 14, padding: '16px 18px' }}>
+              <div style={{ fontWeight: 700, fontSize: 14, color: '#DC2626', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Banknote size={15} color="#DC2626" /> Outstanding Fine
+              </div>
+              <div style={{ fontSize: 12, color: '#B91C1C', marginBottom: 12 }}>You have an unpaid court fine of <strong>{fmt(c.fine.amount)}</strong>. Pay now to avoid further penalties.</div>
+              <button onClick={payFine} disabled={payingFine}
+                style={{ width: '100%', padding: '10px 0', borderRadius: 12, fontWeight: 700, fontSize: 13,
+                  background: 'linear-gradient(135deg,#DC2626,#B91C1C)', color: '#fff', border: 'none',
+                  cursor: payingFine ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                {payingFine ? <><Spinner size={14} color="#fff" />Processing…</> : <><Banknote size={14} /> Pay Fine — {fmt(c.fine.amount)}</>}
+              </button>
+            </div>
+          )}
+
+          {/* Change Counsel */}
+          {canAct && isParty && (
+            <div style={{ background: '#FAFAFA', border: '1px solid #E2E8F0', borderRadius: 14, padding: '16px 18px' }}>
+              <div style={{ fontWeight: 700, fontSize: 14, color: '#0F172A', marginBottom: 4 }}>Change Counsel</div>
+              <div style={{ fontSize: 12, color: '#64748B', marginBottom: 14 }}>Replace your current AI lawyer with a different specialist.</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, marginBottom: 12 }}>
+                {Object.entries(AI_PERSONAS).map(([key, p]) => (
+                  <button key={key} onClick={() => setSelectedPersona(selectedPersona === key ? null : key)}
+                    style={{ padding: '10px 12px', borderRadius: 10, textAlign: 'left',
+                      border: selectedPersona === key ? `1.5px solid ${p.color}` : '1px solid #E2E8F0',
+                      background: selectedPersona === key ? p.color + '10' : '#fff', cursor: 'pointer' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Avatar initials={p.initials} color={p.color} size={28} />
+                      <div>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: p.color }}>{p.name}</div>
+                        <div style={{ fontSize: 10, color: '#94A3B8' }}>{p.role}</div>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+              {selectedPersona && (
+                <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                  {isPlaintiff && (
+                    <button onClick={() => setSelectedLawyerSide('prosecution')}
+                      style={{ flex: 1, padding: '8px 0', borderRadius: 10, fontWeight: 700, fontSize: 12,
+                        border: selectedLawyerSide === 'prosecution' ? '1.5px solid #DC2626' : '1px solid #E2E8F0',
+                        background: selectedLawyerSide === 'prosecution' ? '#FEF2F2' : '#FAFAFA',
+                        color: selectedLawyerSide === 'prosecution' ? '#DC2626' : '#64748B', cursor: 'pointer' }}>As Prosecution</button>
+                  )}
+                  {isDefendant && (
+                    <button onClick={() => setSelectedLawyerSide('defense')}
+                      style={{ flex: 1, padding: '8px 0', borderRadius: 10, fontWeight: 700, fontSize: 12,
+                        border: selectedLawyerSide === 'defense' ? '1.5px solid #2563EB' : '1px solid #E2E8F0',
+                        background: selectedLawyerSide === 'defense' ? '#EFF6FF' : '#FAFAFA',
+                        color: selectedLawyerSide === 'defense' ? '#2563EB' : '#64748B', cursor: 'pointer' }}>As Defense</button>
+                  )}
+                </div>
+              )}
+              {selectedPersona && selectedLawyerSide && (
+                <button onClick={changeCounsel} disabled={changingCounsel}
+                  style={{ width: '100%', padding: '10px 0', borderRadius: 12, fontWeight: 700, fontSize: 13,
+                    background: `linear-gradient(135deg,${PRIMARY},${PRIMARY_DARK})`, color: '#fff', border: 'none', cursor: changingCounsel ? 'not-allowed' : 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                  {changingCounsel
+                    ? <><Spinner size={14} color="#fff" />Briefing new counsel…</>
+                    : <><Briefcase size={14} /> Appoint {AI_PERSONAS[selectedPersona].name}</>}
+                </button>
+              )}
+            </div>
+          )}
+
+          {!canAct && !isJuror && !isParty && (
             <div style={{ textAlign: 'center', color: '#94A3B8', padding: '32px 0', fontSize: 13 }}>
               You are an observer in this case. Only the plaintiff, defendant, and jurors may act.
             </div>
@@ -1005,23 +1354,23 @@ function CaseDetail({ caseId, onBack, user }) {
   );
 }
 
-// ── Main Courtroom page ──────────────────────────────────────────────────────
+// ── Main Courtroom page ───────────────────────────────────────────────────────
 
 export default function Courtroom() {
   const { user } = useAuth();
-  const [tab, setTab] = useState('active');
-  const [cases, setCases] = useState([]);
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [residents, setResidents] = useState([]);
+  const [tab, setTab]                 = useState('active');
+  const [cases, setCases]             = useState([]);
+  const [stats, setStats]             = useState(null);
+  const [loading, setLoading]         = useState(true);
+  const [residents, setResidents]     = useState([]);
   const [selectedCaseId, setSelectedCaseId] = useState(null);
 
   const loadCases = async (filter) => {
     setLoading(true);
     try {
       const params = {};
-      if (filter === 'active') params.status = 'open,in_hearing,jury_deliberation,judge_deliberation,filed';
-      else if (filter === 'mine') params.mine = true;
+      if (filter === 'active')  params.status = 'open,in_hearing,jury_deliberation,judge_deliberation,filed';
+      else if (filter === 'mine')    params.mine = true;
       else if (filter === 'records') params.status = 'verdict_delivered,settled,closed';
       const res = await courtAPI.listCases(params);
       setCases(res.data.data || []);
@@ -1088,7 +1437,11 @@ export default function Courtroom() {
       {tab !== 'file' && (
         <div>
           {loading
-            ? <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 60 }}><svg className="animate-spin" width={28} height={28} viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke={PRIMARY} strokeWidth="2.5" strokeOpacity=".2"/><path d="M12 2a10 10 0 0 1 10 10" stroke={PRIMARY} strokeWidth="2.5" strokeLinecap="round"/></svg></div>
+            ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 60 }}>
+                <Spinner size={28} />
+              </div>
+            )
             : cases.length === 0
               ? (
                 <div style={{ textAlign: 'center', padding: '60px 0' }}>
@@ -1109,22 +1462,21 @@ export default function Courtroom() {
                   )}
                 </div>
               )
-              : cases.map(c => <CaseCard key={c._id} c={c} onClick={() => setSelectedCaseId(c._id)} userId={user?._id} />)
-          }
+              : cases.map(c => <CaseCard key={c._id} c={c} onClick={() => setSelectedCaseId(c._id)} userId={user?._id} />)}
         </div>
       )}
 
-      {/* Court guide */}
+      {/* Your Rights in Court footer */}
       <div style={{ marginTop: 32, background: '#1E1B4B', borderRadius: 16, padding: '20px 24px', border: '1px solid #3730A3' }}>
         <div style={{ color: '#A5B4FC', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>Your Rights in Court</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 12 }}>
           {[
-            { icon: Scale,     title: 'Right to File',      desc: 'Any resident can bring a dispute before the court at any time.' },
-            { icon: Briefcase, title: 'Right to Counsel',   desc: 'Hire AI lawyers Adaeze, Emeka, Chidi, or Ngozi for expert representation.' },
-            { icon: Star,      title: 'Jury of Your Peers', desc: '5 randomly selected estate residents hear the case and cast votes.' },
-            { icon: Gavel,     title: 'Fair Verdict',       desc: 'Judge Orizu weighs all evidence and arguments before ruling.' },
-            { icon: TrendingUp,title: 'Settle Amicably',    desc: 'Propose a settlement at any point to resolve the dispute peacefully.' },
-            { icon: RotateCcw, title: 'Right of Appeal',    desc: "Disagree with the verdict? File an appeal with Judge Orizu's reconsideration." },
+            { icon: Scale,      title: 'Right to File',       desc: 'Any resident can bring a dispute before the court at any time.' },
+            { icon: Briefcase,  title: 'Auto-Assigned Lawyer', desc: 'An AI lawyer is instantly assigned when you file — your case opens immediately.' },
+            { icon: Star,       title: 'Jury of Your Peers',   desc: '5 randomly selected estate residents hear the case and cast votes.' },
+            { icon: Gavel,      title: 'Fair Verdict',         desc: 'Judge Orizu weighs all evidence and arguments before ruling.' },
+            { icon: TrendingUp, title: 'Settle Amicably',      desc: 'Propose a settlement at any point to resolve the dispute peacefully.' },
+            { icon: RotateCcw,  title: 'Right of Appeal',      desc: "Disagree with the verdict? File an appeal with Judge Orizu's reconsideration." },
           ].map(({ icon: Icon, title, desc }) => (
             <div key={title} style={{ display: 'flex', gap: 10 }}>
               <div style={{ background: '#312E81', borderRadius: 8, padding: '6px', flexShrink: 0, height: 'fit-content' }}>

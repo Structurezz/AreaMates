@@ -145,4 +145,6 @@ export const courtAPI = {
   proposeSettlement: (id, data) => api.post(`/court/${id}/settle`, data),
   fileAppeal:        (id, data) => api.post(`/court/${id}/appeal`, data),
   payFine:           (id) => api.post(`/court/${id}/pay-fine`),
+  chatWithLawyer:    (id, message) => api.post(`/court/${id}/chat`, { message }),
+  requestAdjournment:(id, reason) => api.post(`/court/${id}/adjourn`, { reason }),
 };
