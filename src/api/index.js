@@ -130,3 +130,18 @@ export const postAPI = {
   addComment:    (id, text) => api.post(`/posts/${id}/comments`, { text }),
   deleteComment: (id, commentId) => api.delete(`/posts/${id}/comments/${commentId}`),
 };
+
+// Courtroom
+export const courtAPI = {
+  listCases:         (params) => api.get('/court', { params }),
+  getCase:           (id) => api.get(`/court/${id}`),
+  getStats:          () => api.get('/court/stats'),
+  fileCase:          (data) => api.post('/court', data),
+  hireLawyer:        (id, data) => api.post(`/court/${id}/lawyer`, data),
+  submitArgument:    (id, data) => api.post(`/court/${id}/argument`, data),
+  submitEvidence:    (id, data) => api.post(`/court/${id}/evidence`, data),
+  castJuryVote:      (id, data) => api.post(`/court/${id}/jury-vote`, data),
+  proposeSettlement: (id, data) => api.post(`/court/${id}/settle`, data),
+  fileAppeal:        (id, data) => api.post(`/court/${id}/appeal`, data),
+  payFine:           (id) => api.post(`/court/${id}/pay-fine`),
+};

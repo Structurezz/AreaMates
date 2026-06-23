@@ -19,6 +19,7 @@ import Payments from './pages/Payments';
 import Lounge from './pages/Lounge';
 import EventBoard from './pages/EventBoard';
 import Polls from './pages/Polls';
+import Courtroom from './pages/Courtroom';
 
 function RequireResident({ children }) {
   const { user, loading } = useAuth();
@@ -57,6 +58,7 @@ function AppRoutes() {
       <Route path="/lounge" element={<RequireResident><PlanGate feature="residentLounge" featureName="Resident Lounge"><Lounge /></PlanGate></RequireResident>} />
       <Route path="/events" element={<RequireResident><PlanGate feature="eventBoard" featureName="Event Board"><EventBoard /></PlanGate></RequireResident>} />
       <Route path="/polls" element={<RequireResident><PlanGate feature="pollsAndVoting" featureName="Polls & Voting"><Polls /></PlanGate></RequireResident>} />
+      <Route path="/courtroom" element={<RequireResident><Courtroom /></RequireResident>} />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
