@@ -533,7 +533,7 @@ function CaseDetail({ caseId, onBack, user }) {
   const load = async () => {
     try {
       const res = await courtAPI.getCase(caseId);
-      setC(res.data.case);
+      setC(res.data.data);
     } catch { toast.error('Failed to load case'); }
     finally { setLoading(false); }
   };
@@ -1024,13 +1024,13 @@ export default function Courtroom() {
       else if (filter === 'mine') params.mine = true;
       else if (filter === 'records') params.status = 'verdict_delivered,settled,closed';
       const res = await courtAPI.listCases(params);
-      setCases(res.data.cases || []);
+      setCases(res.data.data || []);
     } catch { setCases([]); }
     finally { setLoading(false); }
   };
 
   useEffect(() => {
-    courtAPI.getStats().then(r => setStats(r.data.stats)).catch(() => {});
+    courtAPI.getStats().then(r => setStats(r.data.data)).catch(() => {});
     courtAPI.getMembers().then(r => {
       setResidents((r.data.data || []).map(res => ({
         _id: res._id,
