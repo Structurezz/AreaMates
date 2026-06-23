@@ -328,7 +328,7 @@ function FileDisputeForm({ onFiled, residents }) {
               <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>Select Defendant</label>
               <select className="input-field" value={form.defendantUserId} onChange={e => set('defendantUserId', e.target.value)}>
                 <option value="">— Select a resident —</option>
-                {residents.map(r => <option key={r._id} value={r._id}>{r.name}{r.unit ? ` (${r.unit})` : ''}</option>)}
+                {residents.map(r => <option key={r._id} value={r._id}>{r.name}{r.unit ? ` — ${r.unit}` : ''}</option>)}
               </select>
             </div>
           )}
@@ -1031,12 +1031,13 @@ export default function Courtroom() {
 
   useEffect(() => {
     courtAPI.getStats().then(r => setStats(r.data.stats)).catch(() => {});
-    residentAPI.getAll().then(r => {
-      setResidents((r.data.residents || []).map(res => ({
-        _id: res.userId?._id || res._id,
-        name: res.userId?.name || res.name,
-        unit: res.unitId?.name,
-      })));
+    residentAPI.getAll({ limit: 200 }).then(r => {
+      const list = r.data.data || r.data.residents || [];
+      setResidents(list.map(res => ({
+        _id: res._id,
+        name: res.name,
+        unit: res.unitId ? `${res.unitId.block ? res.unitId.block + ' ' : ''}${res.unitId.unitNumber}` : null,
+      })).filter(res => res._id !== user?._id));
     }).catch(() => {});
   }, []);
 
