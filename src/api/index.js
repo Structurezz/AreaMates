@@ -136,6 +136,7 @@ export const courtAPI = {
   listCases:         (params) => api.get('/court', { params }),
   getCase:           (id) => api.get(`/court/${id}`),
   getStats:          () => api.get('/court/stats'),
+  getMembers:        () => api.get('/court/members'),
   fileCase:          (data) => api.post('/court', data),
   hireLawyer:        (id, data) => api.post(`/court/${id}/lawyer`, data),
   submitArgument:    (id, data) => api.post(`/court/${id}/argument`, data),

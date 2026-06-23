@@ -6,7 +6,7 @@ import {
   Banknote, Eye, RotateCcw, Lock, TrendingUp, Siren,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { courtAPI, residentAPI } from '../api';
+import { courtAPI } from '../api';
 import toast from 'react-hot-toast';
 
 // ── helpers ─────────────────────────────────────────────────────────────────
@@ -1031,9 +1031,8 @@ export default function Courtroom() {
 
   useEffect(() => {
     courtAPI.getStats().then(r => setStats(r.data.stats)).catch(() => {});
-    residentAPI.getAll({ limit: 200 }).then(r => {
-      const list = r.data.data || r.data.residents || [];
-      setResidents(list.map(res => ({
+    courtAPI.getMembers().then(r => {
+      setResidents((r.data.data || []).map(res => ({
         _id: res._id,
         name: res.name,
         unit: res.unitId ? `${res.unitId.block ? res.unitId.block + ' ' : ''}${res.unitId.unitNumber}` : null,
