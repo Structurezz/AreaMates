@@ -9,6 +9,7 @@ import { Toaster } from 'react-hot-toast';
 import { useSocket } from '../../context/SocketContext';
 import { useAuth } from '../../context/AuthContext';
 import { usePlan } from '../../hooks/usePlan';
+import NotificationBell from '../ui/NotificationBell';
 
 const SEVERITY_STYLE = {
   critical: { bar: 'bg-red-500',    badge: 'bg-red-50 text-red-600 border-red-200',    icon: Zap,           border: 'border-red-200',    title: 'text-red-600' },
@@ -145,6 +146,7 @@ export default function AppLayout({ children }) {
               Area<span style={{ color: '#6366F1' }}>Mates</span>
             </span>
           </Link>
+          <NotificationBell />
           <button
             onClick={() => setSidebarOpen(true)}
             className="p-2 rounded-xl transition-all"

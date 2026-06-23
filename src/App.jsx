@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
+import { NotificationProvider } from './context/NotificationContext';
 import AppLayout from './components/layout/AppLayout';
 import PlanGate from './components/ui/PlanGate';
 import { LoadingScreen } from './components/ui/Spinner';
@@ -70,11 +71,13 @@ export default function App() {
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <AuthProvider>
         <SocketProvider>
+          <NotificationProvider>
           <AppRoutes />
           <Toaster position="top-right" toastOptions={{
             style: { background: '#1C1C20', color: '#E4E4E7', border: '1px solid #2E2E33', borderRadius: '8px', fontSize: '0.875rem' },
             success: { iconTheme: { primary: '#10B981', secondary: '#1C1C20' } },
           }} />
+          </NotificationProvider>
         </SocketProvider>
       </AuthProvider>
     </BrowserRouter>

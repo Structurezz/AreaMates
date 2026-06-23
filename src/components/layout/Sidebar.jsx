@@ -2,6 +2,7 @@ import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { LayoutDashboard, UserCheck, ShoppingBag, MessageSquare, Bell, LogOut, CreditCard, Music, Calendar, BarChart2, Lock, Scale } from 'lucide-react';
 import { usePlan } from '../../hooks/usePlan';
+import NotificationBell from '../ui/NotificationBell';
 
 const NAV = [
   {
@@ -40,8 +41,8 @@ export default function Sidebar({ mobile = false, onClose }) {
   return (
     <aside className={`flex flex-col h-full bg-white border-r border-[#E2E8F0] ${mobile ? 'w-72' : 'w-64'}`}>
       {/* Brand header */}
-      <Link to="/dashboard" className="block p-5 border-b border-[#E2E8F0] transition-opacity hover:opacity-80" style={{ textDecoration: 'none' }}>
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between p-5 border-b border-[#E2E8F0]">
+        <Link to="/dashboard" className="flex items-center gap-3 transition-opacity hover:opacity-80" style={{ textDecoration: 'none', flex: 1, minWidth: 0 }}>
           <div
             className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
             style={{ background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)', boxShadow: '0 4px 12px rgba(99,102,241,0.25)' }}
@@ -58,8 +59,9 @@ export default function Sidebar({ mobile = false, onClose }) {
             </div>
             <div className="text-xs font-medium mt-0.5 truncate" style={{ color: '#94A3B8' }}>{estateName}</div>
           </div>
-        </div>
-      </Link>
+        </Link>
+        <NotificationBell />
+      </div>
 
       {/* Navigation */}
       <nav className="flex-1 p-3 space-y-4 overflow-y-auto">
