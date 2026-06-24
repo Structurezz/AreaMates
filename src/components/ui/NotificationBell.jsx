@@ -55,7 +55,7 @@ function NotifRow({ n }) {
 }
 
 export default function NotificationBell() {
-  const { notifications, unreadCount, alertCount, markAllRead, clearAll } = useNotifications();
+  const { notifications, unreadCount, alertCount, markAllRead, clearAll, stopSiren } = useNotifications();
   const [open, setOpen] = useState(false);
   const [panelPos, setPanelPos] = useState({ top: 58, right: 12 });
   const buttonRef = useRef(null);
@@ -71,6 +71,7 @@ export default function NotificationBell() {
   }, [open]);
 
   const handleOpen = useCallback(() => {
+    stopSiren();
     if (!open && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
       const panelWidth = Math.min(340, window.innerWidth - 24);
@@ -79,7 +80,7 @@ export default function NotificationBell() {
       setPanelPos({ top: rect.bottom + 8, left });
     }
     setOpen(o => !o);
-  }, [open]);
+  }, [open, stopSiren]);
 
   const alerts = notifications.filter(n => TC[n.type]?.isAlert);
   const normal = notifications.filter(n => !TC[n.type]?.isAlert);
