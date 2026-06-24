@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 import {
   UserCheck, Bell, Megaphone, Plus, Pin,
   ShoppingBag, MessageSquare, Home, AlertTriangle,
-  ChevronRight, Shield, Clock
+  ChevronRight, Shield, Clock, Siren, X
 } from 'lucide-react';
 import Badge from '../components/ui/Badge';
 import { visitorStatusBadge } from '../components/ui/Badge';
@@ -26,6 +26,7 @@ export default function ResidentDashboard() {
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [alerting, setAlerting] = useState(false);
+  const [showAlertConfirm, setShowAlertConfirm] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -38,8 +39,8 @@ export default function ResidentDashboard() {
   }, []);
 
   const handleAlert = async () => {
-    if (!confirm('Send security alert to the gate? Security will be notified immediately.')) return;
     setAlerting(true);
+    setShowAlertConfirm(false);
     try {
       await alertAPI.create({ type: 'security', note: 'Resident triggered alert from dashboard' });
       toast.success('Security alerted! Help is on the way.', { duration: 5000 });
@@ -98,7 +99,7 @@ export default function ResidentDashboard() {
 
             {/* Panic button */}
             <button
-              onClick={handleAlert}
+              onClick={() => setShowAlertConfirm(true)}
               disabled={alerting}
               className="flex-shrink-0 flex flex-col items-center gap-1.5 px-4 py-3 rounded-2xl font-bold text-xs transition-all relative overflow-hidden"
               style={{ background: 'rgba(239,68,68,0.90)', color: 'white', border: '2px solid rgba(255,255,255,0.30)', minWidth: 72 }}>
@@ -263,7 +264,7 @@ export default function ResidentDashboard() {
           <AlertTriangle size={14} style={{ color: '#EF4444' }} /> Emergency
         </h2>
         <button
-          onClick={handleAlert}
+          onClick={() => setShowAlertConfirm(true)}
           disabled={alerting}
           className="panic-btn"
           style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
@@ -275,6 +276,77 @@ export default function ResidentDashboard() {
           Instantly notifies all security personnel with your name and unit number
         </p>
       </div>
+
+      {/* ── Alert Confirm Modal ── */}
+      {showAlertConfirm && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: 16,
+          background: 'rgba(0,0,0,0.70)',
+          backdropFilter: 'blur(6px)',
+        }}>
+          <div style={{
+            background: '#fff', borderRadius: 20, width: '100%', maxWidth: 360,
+            overflow: 'hidden', boxShadow: '0 24px 64px rgba(239,68,68,0.25)',
+            border: '2px solid #EF4444',
+          }}>
+            {/* Header */}
+            <div style={{
+              background: 'linear-gradient(135deg, #DC2626 0%, #B91C1C 100%)',
+              padding: '22px 20px 18px', textAlign: 'center', position: 'relative',
+            }}>
+              <button
+                onClick={() => setShowAlertConfirm(false)}
+                style={{
+                  position: 'absolute', top: 12, right: 12,
+                  background: 'rgba(255,255,255,0.2)', border: 'none',
+                  borderRadius: 8, width: 28, height: 28,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', color: '#fff',
+                }}
+              ><X size={14} /></button>
+              <div style={{
+                width: 56, height: 56, borderRadius: 99,
+                background: 'rgba(255,255,255,0.2)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                margin: '0 auto 10px',
+              }}>
+                <Siren size={26} color="#fff" />
+              </div>
+              <h2 style={{ color: '#fff', fontSize: 17, fontWeight: 800, margin: 0 }}>Send Security Alert?</h2>
+            </div>
+
+            {/* Body */}
+            <div style={{ padding: '18px 20px 22px' }}>
+              <p style={{ fontSize: 13, color: '#4B5563', lineHeight: 1.6, margin: '0 0 18px', textAlign: 'center' }}>
+                Security will be notified immediately with your name and unit number.
+              </p>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  onClick={() => setShowAlertConfirm(false)}
+                  style={{
+                    flex: 1, padding: '12px', background: '#F1F5F9',
+                    color: '#64748B', border: 'none', borderRadius: 12,
+                    fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                  }}
+                >Cancel</button>
+                <button
+                  onClick={handleAlert}
+                  disabled={alerting}
+                  style={{
+                    flex: 2, padding: '12px', background: '#EF4444',
+                    color: '#fff', border: 'none', borderRadius: 12,
+                    fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                  }}
+                >
+                  {alerting ? 'Sending...' : 'Yes, Alert Security'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
