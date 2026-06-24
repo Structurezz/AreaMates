@@ -35,7 +35,7 @@ export const TYPE_CONFIG = {
 
 const DEFAULT_CFG = { Icon: Bell, label: 'Notification', color: '#6366F1', isAlert: false };
 
-const SIREN_URL = 'https://areaconnectapi-production.up.railway.app/engyclick-police-siren-sound-effect-317645.mp3';
+const SIREN_URL = 'https://areaconnectapi-production.up.railway.app/public/engyclick-police-siren-sound-effect-317645.mp3';
 
 function playSiren(durationMs = 4000) {
   try {
@@ -68,8 +68,7 @@ export function NotificationProvider({ children }) {
 
     // Play siren for alert-type notifications (broadcast gets longer wail)
     if (cfg.isAlert) {
-      const sirenDuration = entry.type === 'alert_broadcast' ? 6000 : 4000;
-      playSiren(sirenDuration);
+      playSiren(60000);
     }
 
     const Icon = cfg.Icon;
