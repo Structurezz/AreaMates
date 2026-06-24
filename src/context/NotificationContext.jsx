@@ -126,20 +126,18 @@ export function NotificationProvider({ children }) {
       }),
 
       subscribe('new_alert', (alert) => {
+        const isBroadcast = !!alert.isEmergencyBroadcast;
+        const role = alert.raisedByRole || alert.residentId?.role || 'resident';
+        const name = alert.residentId?.name;
+        const phone = alert.residentId?.phone;
+        const unit = alert.unitId
+          ? `${alert.unitId.block ? `Block ${alert.unitId.block} · ` : ''}Unit ${alert.unitId.unitNumber}`
+          : null;
         addNotification({
-          type: 'new_alert',
-          title: alert.title || 'Security Alert',
-          body: alert.message || alert.note || 'A security alert was raised in your estate',
-          meta: { alertId: alert._id },
-        });
-      }),
-
-      subscribe('alert_broadcast', (alert) => {
-        addNotification({
-          type: 'alert_broadcast',
-          title: alert.title || 'Estate Broadcast',
-          body: alert.note || alert.message || 'Emergency broadcast from estate management',
-          meta: { alertId: alert._id },
+          type: isBroadcast ? 'alert_broadcast' : 'new_alert',
+          title: alert.title || (isBroadcast ? 'Estate Broadcast' : 'Security Alert'),
+          body: alert.note || alert.message || (isBroadcast ? 'Emergency broadcast from estate management' : 'A security alert was raised in your estate'),
+          meta: { alertId: alert._id, raisedByRole: role, raisedByName: name, raisedByPhone: phone, raisedByUnit: unit },
         });
       }),
 
