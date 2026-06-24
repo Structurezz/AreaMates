@@ -66,6 +66,12 @@ export function NotificationProvider({ children }) {
   const { subscribe } = useSocket() || {};
   const [notifications, setNotifications] = useState(loadStored);
   const [unreadCount, setUnreadCount] = useState(() => loadStored().filter(n => !n.readAt).length);
+  const [activeAlert, setActiveAlert] = useState(null);
+
+  const dismissAlert = useCallback(() => {
+    stopSiren();
+    setActiveAlert(null);
+  }, []);
 
   const addNotification = useCallback((notif) => {
     const entry = { ...notif, id: notif.id || String(Date.now()), createdAt: notif.createdAt || new Date().toISOString() };
@@ -78,9 +84,10 @@ export function NotificationProvider({ children }) {
     });
     setUnreadCount(n => n + 1);
 
-    // Play siren for alert-type notifications (broadcast gets longer wail)
     if (cfg.isAlert) {
       playSiren(60000);
+      setActiveAlert(entry);
+      return;
     }
 
     const Icon = cfg.Icon;
@@ -99,10 +106,7 @@ export function NotificationProvider({ children }) {
           </div>
         </div>
       ),
-      {
-        duration: cfg.isAlert ? 8000 : 5000,
-        style: cfg.isAlert ? { borderLeft: '3px solid #EF4444' } : {},
-      }
+      { duration: 5000 }
     );
   }, []);
 
@@ -197,7 +201,7 @@ export function NotificationProvider({ children }) {
   const alertCount = notifications.filter(n => !n.readAt && (TYPE_CONFIG[n.type]?.isAlert)).length;
 
   return (
-    <NotificationContext.Provider value={{ notifications, unreadCount, alertCount, markAllRead, clearAll, stopSiren, TYPE_CONFIG }}>
+    <NotificationContext.Provider value={{ notifications, unreadCount, alertCount, activeAlert, dismissAlert, markAllRead, clearAll, stopSiren, TYPE_CONFIG }}>
       {children}
     </NotificationContext.Provider>
   );

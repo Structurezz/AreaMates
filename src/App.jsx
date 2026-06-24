@@ -6,6 +6,7 @@ import AppLayout from './components/layout/AppLayout';
 import PlanGate from './components/ui/PlanGate';
 import { LoadingScreen } from './components/ui/Spinner';
 import { Toaster } from 'react-hot-toast';
+import AlertModal from './components/ui/AlertModal';
 
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
@@ -73,6 +74,7 @@ export default function App() {
         <SocketProvider>
           <NotificationProvider>
           <AppRoutes />
+          <AlertModal />
           <Toaster position="top-right" toastOptions={{
             style: { background: '#1C1C20', color: '#E4E4E7', border: '1px solid #2E2E33', borderRadius: '8px', fontSize: '0.875rem' },
             success: { iconTheme: { primary: '#10B981', secondary: '#1C1C20' } },
