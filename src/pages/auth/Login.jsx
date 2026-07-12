@@ -272,20 +272,6 @@ function MobileLogin({ form, setForm, showPw, setShowPw, loading, error, handleS
         <h2 style={{ fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-0.03em', marginBottom: 2 }}>Welcome back</h2>
         <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 22 }}>Sign in to your estate account</p>
 
-        {/* Demo chip */}
-        <button
-          onClick={() => setForm({ email: 'resident1@estate-demo.com', password: 'Resident@123' })}
-          style={{
-            width: '100%', textAlign: 'left', padding: '11px 14px', borderRadius: 12,
-            background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.22)',
-            cursor: 'pointer', marginBottom: 22,
-          }}>
-          <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', color: '#818CF8', textTransform: 'uppercase', marginBottom: 3 }}>
-            Try Demo Account
-          </div>
-          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>resident1@estate-demo.com</div>
-        </button>
-
         {error && (
           <div style={{
             display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 10, marginBottom: 16,
@@ -352,8 +338,6 @@ function MobileLogin({ form, setForm, showPw, setShowPw, loading, error, handleS
   );
 }
 
-const DESKTOP_DEMO = { label: 'Resident (Demo)', email: 'resident1@estate-demo.com', password: 'Resident@123' };
-
 export default function Login() {
   const [form, setForm]       = useState({ email: '', password: '' });
   const [showPw, setShowPw]   = useState(false);
@@ -411,20 +395,6 @@ export default function Login() {
                 Area<span style={{ color: '#6366F1' }}>Mates</span>
               </h1>
               <p className="text-sm" style={{ color: '#64748B' }}>Sign in to your estate account</p>
-            </div>
-
-            {/* Demo chip */}
-            <div className="glass-card p-4 mb-4">
-              <p className="text-xs font-semibold mb-3 uppercase tracking-wider" style={{ color: '#94A3B8' }}>Demo Account</p>
-              <button
-                onClick={() => { setForm({ email: DESKTOP_DEMO.email, password: DESKTOP_DEMO.password }); setError(''); }}
-                className="w-full text-xs text-left p-2.5 rounded-lg transition-all"
-                style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}
-                onMouseEnter={e => { e.currentTarget.style.background = '#F1F5F9'; e.currentTarget.style.borderColor = 'rgba(99,102,241,0.3)'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = '#F8FAFC'; e.currentTarget.style.borderColor = '#E2E8F0'; }}>
-                <div className="font-semibold" style={{ color: '#0F172A' }}>{DESKTOP_DEMO.label}</div>
-                <div style={{ color: '#94A3B8' }}>{DESKTOP_DEMO.email}</div>
-              </button>
             </div>
 
             {/* Form */}
