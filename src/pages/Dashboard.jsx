@@ -11,6 +11,7 @@ import Badge from '../components/ui/Badge';
 import { visitorStatusBadge } from '../components/ui/Badge';
 import { format } from 'date-fns';
 import Spinner from '../components/ui/Spinner';
+import CampaignModal from '../components/ui/CampaignModal';
 import toast from 'react-hot-toast';
 
 const CATEGORY_COLORS = {
@@ -61,6 +62,7 @@ export default function ResidentDashboard() {
 
   return (
     <div className="space-y-5 animate-fade-in">
+      <CampaignModal />
 
       {/* ── Hero ── */}
       <div

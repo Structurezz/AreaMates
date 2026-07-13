@@ -148,3 +148,10 @@ export const courtAPI = {
   chatWithLawyer:    (id, message) => api.post(`/court/${id}/chat`, { message }),
   requestAdjournment:(id, reason) => api.post(`/court/${id}/adjourn`, { reason }),
 };
+
+export const campaignAPI = {
+  getActive: (placement) => api.get('/campaigns/active', { params: { placement } }),
+  markSeen:  (id) => api.post(`/campaigns/${id}/seen`),
+  dismiss:   (id) => api.post(`/campaigns/${id}/dismiss`),
+  click:     (id) => api.post(`/campaigns/${id}/click`),
+};
