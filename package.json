@@ -12,6 +12,7 @@
     "node": ">=18"
   },
   "dependencies": {
+    "@react-google-maps/api": "^2.20.8",
     "axios": "^1.7.2",
     "date-fns": "^3.6.0",
     "lucide-react": "^0.395.0",

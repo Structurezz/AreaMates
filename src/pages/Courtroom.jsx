@@ -6,8 +6,10 @@ import {
   Banknote, Eye, RotateCcw, Siren, Lock, TrendingUp, MessageSquare, Calendar,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { courtAPI } from '../api';
+import { courtAPI, estateAPI } from '../api';
 import toast from 'react-hot-toast';
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 
@@ -1364,6 +1366,15 @@ export default function Courtroom() {
   const [loading, setLoading]         = useState(true);
   const [residents, setResidents]     = useState([]);
   const [selectedCaseId, setSelectedCaseId] = useState(null);
+  const [constitution, setConstitution] = useState(null);
+
+  const estateId = user?.estateId?._id || user?.estateId;
+  useEffect(() => {
+    if (!estateId) return;
+    estateAPI.getConstitutionMeta(estateId)
+      .then(({ data }) => setConstitution(data.data))
+      .catch(() => setConstitution(null));
+  }, [estateId]);
 
   const loadCases = async (filter) => {
     setLoading(true);
@@ -1411,6 +1422,31 @@ export default function Courtroom() {
   return (
     <div style={{ maxWidth: 760, margin: '0 auto' }}>
       <CourtroomBanner stats={stats} />
+
+      {constitution?.hasConstitution && (
+        <a
+          href={`${API_BASE}${estateAPI.constitutionFileUrl(estateId)}`}
+          target="_blank"
+          rel="noreferrer"
+          style={{
+            display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16,
+            padding: '12px 16px', borderRadius: 12, textDecoration: 'none',
+            background: 'linear-gradient(135deg, rgba(236,72,153,0.06), rgba(139,92,246,0.05))',
+            border: '1px solid rgba(236,72,153,0.20)',
+          }}>
+          <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(236,72,153,0.14)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <FileText size={16} color="#EC4899" />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#0F172A' }}>Estate Constitution</div>
+            <div style={{ fontSize: 11, color: '#64748B', marginTop: 1 }}>
+              {constitution.pageCount ? `${constitution.pageCount} pages · ` : ''}Governs every case in this estate
+            </div>
+          </div>
+          <ChevronRight size={16} color="#EC4899" />
+        </a>
+      )}
 
       <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: '#F8FAFC', borderRadius: 14, padding: 4, border: '1px solid #E2E8F0' }}>
         {TABS.map(t => (

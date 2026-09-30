@@ -16,6 +16,8 @@ export const estateAPI = {
   getOne: (id) => api.get(`/estates/${id}`),
   update: (id, data) => api.patch(`/estates/${id}`, data),
   getStats: () => api.get('/estates/stats'),
+  getConstitutionMeta: (id) => api.get(`/estates/${id}/constitution/meta`),
+  constitutionFileUrl: (id) => `/estates/${id}/constitution/file`,
 };
 
 // Visitors
