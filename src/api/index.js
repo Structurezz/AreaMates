@@ -7,6 +7,7 @@ export const authAPI = {
   logout: () => api.post('/auth/logout'),
   getMe: () => api.get('/auth/me'),
   refresh: () => api.post('/auth/refresh'),
+  updateProfile: (data) => api.patch('/auth/me', data),
 };
 
 // Estates

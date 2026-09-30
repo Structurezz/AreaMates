@@ -1,6 +1,6 @@
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { LayoutDashboard, UserCheck, ShoppingBag, MessageSquare, Bell, LogOut, CreditCard, Music, Calendar, BarChart2, Lock, Scale } from 'lucide-react';
+import { LayoutDashboard, UserCheck, ShoppingBag, MessageSquare, Bell, LogOut, CreditCard, Music, Calendar, BarChart2, Lock, Scale, Settings as SettingsIcon } from 'lucide-react';
 import { usePlan } from '../../hooks/usePlan';
 import NotificationBell from '../ui/NotificationBell';
 
@@ -95,18 +95,42 @@ export default function Sidebar({ mobile = false, onClose }) {
 
       {/* User footer */}
       <div className="p-4 border-t border-[#E2E8F0]">
-        <div className="flex items-center gap-3 p-2 rounded-xl mb-1">
-          <div
-            className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0"
-            style={{ background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.25)', color: '#4F46E5' }}
-          >
-            {user?.name?.[0]?.toUpperCase()}
-          </div>
+        <Link
+          to="/settings"
+          onClick={onClose}
+          className="flex items-center gap-3 p-2 rounded-xl mb-1 transition-all"
+          style={{ textDecoration: 'none' }}
+          onMouseEnter={e => { e.currentTarget.style.background = '#F8FAFC'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+        >
+          {user?.profilePhoto ? (
+            <img
+              src={user.profilePhoto}
+              alt=""
+              className="w-9 h-9 rounded-full object-cover flex-shrink-0"
+              style={{ border: '1.5px solid rgba(99,102,241,0.25)' }}
+            />
+          ) : (
+            <div
+              className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0"
+              style={{ background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.25)', color: '#4F46E5' }}
+            >
+              {user?.name?.[0]?.toUpperCase()}
+            </div>
+          )}
           <div className="flex-1 min-w-0">
             <div className="text-sm font-semibold truncate" style={{ color: '#0F172A' }}>{user?.name}</div>
             <div className="text-xs truncate" style={{ color: '#94A3B8' }}>{user?.email}</div>
           </div>
-        </div>
+        </Link>
+        <NavLink
+          to="/settings"
+          onClick={onClose}
+          className={({ isActive }) => isActive ? 'sidebar-link active' : 'sidebar-link'}
+        >
+          <SettingsIcon size={16} />
+          <span className="flex-1">Settings</span>
+        </NavLink>
         <button
           onClick={async () => { await logout(); navigate('/login'); }}
           className="flex items-center gap-2 w-full px-3 py-2 rounded-xl transition-all text-sm mt-1"
