@@ -189,6 +189,28 @@ function PassTimer({ visitor }) {
 
   if (['checked-out', 'blacklisted', 'expired'].includes(visitor.status)) return null;
 
+  if (visitor.status === 'checked-in') {
+    const entryTime = visitor.entryTime ? new Date(visitor.entryTime) : null;
+    return (
+      <div className="rounded-xl p-4"
+        style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)' }}>
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{ background: 'rgba(16,185,129,0.14)' }}>
+            <CheckCircle size={20} style={{ color: '#059669' }} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-[10px] font-black uppercase tracking-widest" style={{ color: '#059669' }}>Arrived</div>
+            <div className="text-sm font-bold mt-0.5" style={{ color: '#0F172A' }}>
+              Checked in{entryTime ? ` at ${entryTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}
+            </div>
+          </div>
+          <span className="w-2 h-2 rounded-full flex-shrink-0 animate-pulse" style={{ background: '#10B981' }} />
+        </div>
+      </div>
+    );
+  }
+
   if (now < start) {
     const left = fmt(start - now);
     return (

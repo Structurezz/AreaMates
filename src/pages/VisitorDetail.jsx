@@ -5,7 +5,8 @@ import { visitorAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
 import Badge, { visitorStatusBadge } from '../components/ui/Badge';
 import Spinner from '../components/ui/Spinner';
-import { ArrowLeft, UserCheck, Share2, CheckCircle, MessageCircle } from 'lucide-react';
+import { ArrowLeft, UserCheck, Share2, CheckCircle, MessageCircle, LogIn } from 'lucide-react';
+import { useSocket } from '../context/SocketContext';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 
@@ -232,6 +233,31 @@ function PassTimer({ visitor }) {
 
   if (['checked-out', 'blacklisted', 'expired'].includes(visitor.status)) return null;
 
+  // Arrived & checked in — replace the countdown with a success card
+  if (visitor.status === 'checked-in') {
+    const entryTime = visitor.entryTime ? new Date(visitor.entryTime) : null;
+    return (
+      <div className="rounded-xl p-4"
+        style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)' }}>
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{ background: 'rgba(16,185,129,0.14)' }}>
+            <LogIn size={20} style={{ color: '#059669' }} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-[10px] font-black uppercase tracking-widest" style={{ color: '#059669' }}>
+              Arrived
+            </div>
+            <div className="text-sm font-bold mt-0.5" style={{ color: '#0F172A' }}>
+              Checked in{entryTime ? ` at ${entryTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}
+            </div>
+          </div>
+          <span className="w-2 h-2 rounded-full flex-shrink-0 animate-pulse" style={{ background: '#10B981' }} />
+        </div>
+      </div>
+    );
+  }
+
   if (now < start) {
     return (
       <div className="rounded-xl p-4 text-center" style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.14)' }}>
@@ -271,6 +297,7 @@ export default function VisitorDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { subscribe } = useSocket() || {};
   const [visitor, setVisitor] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -280,6 +307,22 @@ export default function VisitorDetailPage() {
       .catch(() => { toast.error('Visitor not found'); navigate('/visitors'); })
       .finally(() => setLoading(false));
   }, [id]);
+
+  // Live refresh when the guard checks the visitor in/out — timer flips to
+  // the "arrived" card without a reload.
+  useEffect(() => {
+    if (!subscribe) return;
+    const unsub = subscribe('visitor_update', (incoming) => {
+      if (!incoming?._id || incoming._id?.toString() !== id?.toString()) return;
+      setVisitor((prev) => (prev ? { ...prev, ...incoming } : incoming));
+      if (incoming.status === 'checked-in') {
+        toast.success(`${incoming.visitorName || 'Visitor'} has arrived — checked in`, { icon: '🎉', duration: 5000 });
+      } else if (incoming.status === 'checked-out') {
+        toast(`${incoming.visitorName || 'Visitor'} has left the estate.`, { icon: '👋' });
+      }
+    });
+    return unsub;
+  }, [subscribe, id]);
 
   const copyCode = () => {
     navigator.clipboard?.writeText(visitor.visitorCode);
@@ -297,11 +340,17 @@ export default function VisitorDetailPage() {
     blacklisted:   { bg: '#FEF2F2', text: '#DC2626', border: '#FECACA' },
   }[visitor.status] || { bg: '#F8FAFC', text: '#475569', border: '#E2E8F0' };
 
+  const isDone     = visitor.status === 'checked-out';
+  const isIn       = visitor.status === 'checked-in';
+  const isBlocked  = visitor.status === 'blacklisted' || visitor.status === 'expired';
+  const canShare   = !isDone && !isBlocked;
+  const expectedAt = new Date(visitor.expectedDate);
+
   return (
-    <div className="animate-fade-in">
+    <div className="animate-fade-in max-w-xl mx-auto">
 
       {/* Top bar */}
-      <div className="flex items-center gap-3 mb-6">
+      <div className="flex items-center gap-3 mb-4">
         <button onClick={() => navigate('/visitors')}
           className="p-2 rounded-xl transition-all"
           style={{ background: '#F1F5F9', color: '#475569' }}
@@ -309,88 +358,183 @@ export default function VisitorDetailPage() {
           onMouseLeave={e => e.currentTarget.style.background = '#F1F5F9'}>
           <ArrowLeft size={18} />
         </button>
-        <div>
-          <h1 className="text-xl font-bold" style={{ color: '#0F172A', letterSpacing: '-0.02em' }}>Visitor Pass</h1>
-          <p className="text-sm" style={{ color: '#64748B' }}>{visitor.visitorName}</p>
+        <div className="min-w-0 flex-1">
+          <div className="text-[10px] font-black uppercase tracking-widest" style={{ color: '#94A3B8' }}>Visitor Pass</div>
+          <h1 className="text-base font-bold truncate" style={{ color: '#0F172A', letterSpacing: '-0.02em' }}>{visitor.visitorName}</h1>
         </div>
       </div>
 
-      <div className="space-y-5 max-w-lg">
+      <div className="space-y-4">
 
-        {/* Status + name */}
-        <div className="glass-card p-5 flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-lg font-bold text-white flex-shrink-0"
-            style={{ background: `linear-gradient(135deg, ${ACCENT} 0%, ${ACCENT_DARK} 100%)` }}>
-            {visitor.visitorName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-          </div>
-          <div className="min-w-0">
-            <div className="font-bold text-lg truncate" style={{ color: '#0F172A', letterSpacing: '-0.02em' }}>{visitor.visitorName}</div>
-            <div className="flex items-center gap-2 mt-1 flex-wrap">
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
-                style={{ background: statusColor.bg, color: statusColor.text, border: `1px solid ${statusColor.border}` }}>
+        {/* ── Hero ── */}
+        <div className="relative overflow-hidden rounded-3xl p-5 sm:p-6"
+          style={{
+            background:
+              'radial-gradient(120% 90% at 100% 0%, #818CF8 0%, transparent 55%),' +
+              'radial-gradient(90% 80% at 0% 100%, #4338CA 0%, transparent 60%),' +
+              'linear-gradient(135deg, #4F46E5 0%, #4338CA 100%)',
+            boxShadow: '0 20px 40px -18px rgba(67,56,202,0.45), inset 0 1px 0 rgba(255,255,255,0.14)',
+          }}>
+          <div className="absolute inset-0 opacity-[0.15] pointer-events-none"
+            style={{
+              backgroundImage: 'radial-gradient(rgba(255,255,255,0.9) 1px, transparent 1px)',
+              backgroundSize: '18px 18px',
+              maskImage: 'linear-gradient(180deg, rgba(0,0,0,0.9) 0%, transparent 75%)',
+              WebkitMaskImage: 'linear-gradient(180deg, rgba(0,0,0,0.9) 0%, transparent 75%)',
+            }} />
+          <div className="absolute -top-14 -right-10 w-48 h-48 rounded-full pointer-events-none blur-2xl"
+            style={{ background: 'rgba(196,181,253,0.35)' }} />
+
+          <div className="relative flex items-start gap-4">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center text-xl sm:text-2xl font-black flex-shrink-0 text-white"
+              style={{
+                background: 'linear-gradient(135deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.10) 100%)',
+                border: '1.5px solid rgba(255,255,255,0.55)',
+                boxShadow: '0 6px 16px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.35)',
+              }}>
+              {visitor.visitorName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
+                style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', border: '1px solid rgba(255,255,255,0.25)' }}>
+                <span className="w-1.5 h-1.5 rounded-full inline-block"
+                  style={{ background: isIn ? '#86EFAC' : isBlocked ? '#FCA5A5' : isDone ? '#CBD5E1' : '#FDE68A' }} />
                 {visitor.status}
               </span>
-              <span className="text-sm" style={{ color: '#64748B' }}>{visitor.purpose}</span>
+              <div className="font-black text-xl sm:text-2xl mt-1.5 text-white truncate" style={{ letterSpacing: '-0.02em' }}>
+                {visitor.visitorName}
+              </div>
+              <div className="text-xs sm:text-sm mt-1 truncate" style={{ color: 'rgba(255,255,255,0.85)' }}>{visitor.purpose}</div>
+              <div className="text-[11px] sm:text-xs mt-2" style={{ color: 'rgba(255,255,255,0.70)' }}>
+                {format(expectedAt, 'EEE, MMM d · h:mm a')}
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Countdown */}
+        {/* ── Live arrival / arrived state ── */}
         <PassTimer visitor={visitor} />
 
-        {/* Ticket */}
-        <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(99,102,241,0.18)' }}>
-          <div className="p-5 flex items-center justify-between"
+        {/* ── Pass ticket ── */}
+        <div className="rounded-3xl overflow-hidden"
+          style={{
+            border: '1px solid rgba(99,102,241,0.18)',
+            boxShadow: '0 20px 40px -18px rgba(79,70,229,0.20)',
+          }}>
+          {/* Ticket header */}
+          <div className="px-5 py-4 flex items-center justify-between"
             style={{ background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)' }}>
-            <div>
-              <div className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: 'rgba(255,255,255,0.70)' }}>Guest Pass</div>
-              <div className="text-xl font-bold text-white" style={{ letterSpacing: '-0.02em' }}>{visitor.visitorName}</div>
-              <div className="text-sm mt-0.5" style={{ color: 'rgba(255,255,255,0.75)' }}>{visitor.purpose}</div>
+            <div className="min-w-0">
+              <div className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.75)' }}>Guest Pass</div>
+              <div className="text-sm font-bold text-white truncate mt-0.5">{user?.estateId?.name || 'Your Estate'}</div>
             </div>
-            <div className="w-11 h-11 rounded-xl flex items-center justify-center"
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
               style={{ background: 'rgba(255,255,255,0.20)', border: '1px solid rgba(255,255,255,0.30)' }}>
-              <UserCheck size={20} className="text-white" />
+              <UserCheck size={18} className="text-white" />
             </div>
           </div>
-          <div className="relative" style={{ borderTop: '2px dashed rgba(99,102,241,0.20)' }}>
+
+          {/* Perforation */}
+          <div className="relative" style={{ borderTop: '2px dashed rgba(99,102,241,0.22)' }}>
             <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full" style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }} />
             <div className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full" style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }} />
           </div>
-          <div className="p-5 text-center" style={{ background: '#FFFFFF' }}>
-            <div className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: '#94A3B8' }}>Access Code</div>
-            <button onClick={copyCode} className="group inline-block mb-4" title="Click to copy">
-              <div className="visitor-code text-4xl font-bold tracking-[0.15em] mb-1" style={{ color: ACCENT }}>{visitor.visitorCode}</div>
-              <div className="text-xs opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: '#94A3B8' }}>Tap to copy</div>
+
+          {/* Code + QR */}
+          <div className="p-5 sm:p-6 text-center" style={{ background: '#FFFFFF' }}>
+            <div className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: '#94A3B8' }}>Access Code</div>
+            <button onClick={copyCode} className="group inline-block mb-4" title="Tap to copy">
+              <div className="visitor-code text-4xl sm:text-5xl font-black tracking-[0.18em]"
+                style={{ color: ACCENT, letterSpacing: '0.18em' }}>
+                {visitor.visitorCode}
+              </div>
+              <div className="text-[10px] font-semibold mt-1 flex items-center justify-center gap-1 opacity-70 group-hover:opacity-100 transition-opacity"
+                style={{ color: '#64748B' }}>
+                <Share2 size={10} /> Tap to copy
+              </div>
             </button>
-            <QRCanvas value={visitor.visitorCode} size={180} />
-            <p className="text-xs mt-2" style={{ color: '#94A3B8' }}>Scan at the security gate</p>
+
+            <div className="inline-block p-3 rounded-2xl"
+              style={{ background: '#F8FAFC', border: '1px solid rgba(15,23,42,0.05)' }}>
+              <QRCanvas value={visitor.visitorCode} size={180} />
+            </div>
+            <p className="text-[11px] mt-3 font-medium" style={{ color: '#94A3B8' }}>Scan at the security gate</p>
           </div>
         </div>
 
-        {/* Details grid */}
-        <div className="grid grid-cols-2 gap-3">
-          {[
-            { label: 'Date',     value: format(new Date(visitor.expectedDate), 'MMM d, yyyy') },
-            { label: 'Time',     value: format(new Date(visitor.expectedDate), 'h:mm a')      },
-            { label: 'Duration', value: `${visitor.expectedDuration || 720} min`              },
-            ...(visitor.visitorPhone ? [{ label: 'Phone', value: visitor.visitorPhone }] : []),
-          ].map(({ label, value }) => (
-            <div key={label} className="rounded-xl p-3" style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
-              <div className="text-xs font-medium mb-0.5" style={{ color: '#94A3B8' }}>{label}</div>
-              <div className="text-sm font-semibold truncate" style={{ color: '#0F172A' }}>{value}</div>
+        {/* ── Visit details ── */}
+        <div className="glass-card overflow-hidden">
+          <div className="px-5 pt-4 pb-3 flex items-center gap-2"
+            style={{ borderBottom: '1px solid rgba(15,23,42,0.05)' }}>
+            <div className="w-6 h-6 rounded-lg flex items-center justify-center"
+              style={{ background: 'rgba(99,102,241,0.10)' }}>
+              <UserCheck size={12} style={{ color: '#4F46E5' }} />
             </div>
-          ))}
+            <h2 className="text-xs font-bold uppercase tracking-widest" style={{ color: '#64748B' }}>Visit details</h2>
+          </div>
+          <div className="divide-y" style={{ borderColor: 'rgba(15,23,42,0.05)' }}>
+            {[
+              { label: 'Date',     value: format(expectedAt, 'EEE, MMM d, yyyy') },
+              { label: 'Time',     value: format(expectedAt, 'h:mm a') },
+              { label: 'Duration', value: `${visitor.expectedDuration || 720} min` },
+              ...(visitor.visitorPhone ? [{ label: 'Phone', value: visitor.visitorPhone, href: `tel:${visitor.visitorPhone}` }] : []),
+              ...(visitor.entryTime  ? [{ label: 'Entry',  value: format(new Date(visitor.entryTime), 'h:mm a'), tone: '#059669' }] : []),
+              ...(visitor.exitTime   ? [{ label: 'Exit',   value: format(new Date(visitor.exitTime),  'h:mm a'), tone: '#1D4ED8' }] : []),
+            ].map(({ label, value, href, tone }) => (
+              <div key={label} className="px-5 py-3 flex items-center justify-between gap-3">
+                <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#94A3B8' }}>{label}</span>
+                {href ? (
+                  <a href={href} className="text-sm font-bold" style={{ color: tone || '#4F46E5', textDecoration: 'none' }}>{value}</a>
+                ) : (
+                  <span className="text-sm font-bold" style={{ color: tone || '#0F172A' }}>{value}</span>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 pb-8">
-          <button onClick={copyCode} className="btn-outline gap-2"><Share2 size={14} /> Copy Code</button>
-          <button
-            onClick={() => shareVisitorPass(visitor, user?.estateId)}
-            className="flex items-center justify-center gap-2 rounded-[9px] px-3 py-2 text-sm font-semibold"
-            style={{ background: '#25D366', color: 'white', border: 'none', cursor: 'pointer' }}>
-            <WhatsAppIcon /> Share Pass
-          </button>
-          <button onClick={() => navigate('/visitors')} className="btn-primary col-span-2 gap-2"><CheckCircle size={14} /> Done</button>
+        {/* ── Actions (floating above the mobile bottom nav) ── */}
+        <div
+          className="sticky bottom-24 lg:static lg:bottom-0 z-20 space-y-2 pt-3 pb-3 lg:pb-8 -mx-4 lg:mx-0 px-4 lg:px-0"
+          style={{
+            background: 'linear-gradient(to top, rgba(248,250,252,0.98) 70%, rgba(248,250,252,0))',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+          }}>
+          {canShare && (
+            <button
+              onClick={() => shareVisitorPass(visitor, user?.estateId)}
+              className="w-full flex items-center justify-center gap-2 rounded-2xl font-bold text-white transition-all active:scale-98"
+              style={{
+                background: 'linear-gradient(135deg, #25D366, #128C7E)',
+                padding: '14px', fontSize: 15,
+                boxShadow: '0 10px 24px -8px rgba(18,140,126,0.45)',
+              }}>
+              <WhatsAppIcon /> Share pass on WhatsApp
+            </button>
+          )}
+          <div className="grid grid-cols-2 gap-2">
+            <button onClick={copyCode}
+              className="flex items-center justify-center gap-2 rounded-xl py-3 font-semibold text-sm transition-all"
+              style={{ background: '#F1F5F9', color: '#475569', border: '1px solid #E2E8F0' }}>
+              <Share2 size={14} /> Copy code
+            </button>
+            <button onClick={() => navigate('/visitors')}
+              className="flex items-center justify-center gap-2 rounded-xl py-3 font-semibold text-sm text-white transition-all"
+              style={{ background: 'linear-gradient(135deg, #6366F1, #4F46E5)' }}>
+              <CheckCircle size={14} /> Done
+            </button>
+          </div>
+          {isDone && (
+            <div className="text-center text-[11px] mt-2" style={{ color: '#94A3B8' }}>
+              This visitor has already checked out.
+            </div>
+          )}
+          {isBlocked && (
+            <div className="text-center text-[11px] mt-2" style={{ color: '#DC2626' }}>
+              Pass is {visitor.status} — the guard cannot admit this visitor.
+            </div>
+          )}
         </div>
       </div>
     </div>
