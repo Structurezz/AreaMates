@@ -495,7 +495,7 @@ export default function VisitorDetailPage() {
 
         {/* ── Actions (floating above the mobile bottom nav) ── */}
         <div
-          className="sticky bottom-24 lg:static lg:bottom-0 z-20 space-y-2 pt-3 pb-3 lg:pb-8 -mx-4 lg:mx-0 px-4 lg:px-0"
+          className="sticky bottom-20 lg:static lg:bottom-0 z-20 space-y-2 pt-3 pb-2 lg:pb-8 -mx-4 lg:mx-0 px-4 lg:px-0"
           style={{
             background: 'linear-gradient(to top, rgba(248,250,252,0.98) 70%, rgba(248,250,252,0))',
             backdropFilter: 'blur(8px)',
