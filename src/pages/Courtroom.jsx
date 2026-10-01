@@ -19,15 +19,15 @@ const PRIMARY      = '#6366F1';
 const PRIMARY_DARK = '#4F46E5';
 
 const STATUS_META = {
-  filed:              { label: 'Filed',              color: '#64748B', bg: '#F1F5F9' },
-  open:               { label: 'Open',               color: '#2563EB', bg: '#EFF6FF' },
-  in_hearing:         { label: 'In Hearing',         color: '#D97706', bg: '#FFFBEB' },
-  jury_deliberation:  { label: 'Jury Deliberating',  color: '#7C3AED', bg: '#F5F3FF' },
-  judge_deliberation: { label: 'Judge Deliberating', color: '#DC2626', bg: '#FEF2F2' },
-  verdict_delivered:  { label: 'Verdict Delivered',  color: '#065F46', bg: '#D1FAE5' },
-  settled:            { label: 'Settled',            color: '#059669', bg: '#ECFDF5' },
-  appealing:          { label: 'Appealing',          color: '#B45309', bg: '#FEF3C7' },
-  closed:             { label: 'Closed',             color: '#94A3B8', bg: '#F8FAFC' },
+  filed:              { label: 'Just Filed',        color: '#64748B', bg: '#F1F5F9', hint: 'Waiting for the other side to respond' },
+  open:               { label: 'Open',              color: '#2563EB', bg: '#EFF6FF', hint: 'Both sides can share their story' },
+  in_hearing:         { label: 'In Progress',       color: '#D97706', bg: '#FFFBEB', hint: 'Arguments and evidence being heard' },
+  jury_deliberation:  { label: 'Jury Voting',       color: '#7C3AED', bg: '#F5F3FF', hint: 'Neighbours are voting on the case' },
+  judge_deliberation: { label: 'Awaiting Decision', color: '#DC2626', bg: '#FEF2F2', hint: 'Judge Orizu is making the final call' },
+  verdict_delivered:  { label: 'Decided',           color: '#065F46', bg: '#D1FAE5', hint: 'The judge has given a decision' },
+  settled:            { label: 'Resolved',          color: '#059669', bg: '#ECFDF5', hint: 'Both sides reached an agreement' },
+  appealing:          { label: 'Under Appeal',      color: '#B45309', bg: '#FEF3C7', hint: 'A party is asking the judge to review' },
+  closed:             { label: 'Closed',            color: '#94A3B8', bg: '#F8FAFC', hint: 'Case is complete' },
 };
 
 const TYPE_LABELS = {
@@ -132,61 +132,105 @@ function StatusBadge({ status }) {
   );
 }
 
-// ── Courtroom banner ─────────────────────────────────────────────────────────
+// ── Hero ─────────────────────────────────────────────────────────────────────
 
-function CourtroomBanner({ stats }) {
+function CourtroomBanner({ stats, onStart }) {
+  const steps = [
+    { n: 1, icon: FileText,     title: 'Tell us what happened',  desc: 'Describe the problem in your own words.' },
+    { n: 2, icon: Users,        title: 'Both sides are heard',   desc: 'An AI lawyer helps you. Neighbours vote as jurors.' },
+    { n: 3, icon: Gavel,        title: 'A fair decision',        desc: "Judge Orizu rules — or you both settle." },
+  ];
+
+  const quickStats = stats ? [
+    { label: 'Open now',    value: (stats.byStatus?.open ?? 0) + (stats.byStatus?.in_hearing ?? 0) + (stats.byStatus?.filed ?? 0), color: '#4F46E5' },
+    { label: 'Jury voting', value: stats.byStatus?.jury_deliberation ?? 0, color: '#7C3AED' },
+    { label: 'Decided',     value: stats.byStatus?.verdict_delivered ?? 0, color: '#059669' },
+    { label: 'Resolved',    value: stats.byStatus?.settled ?? 0,           color: '#0891B2' },
+  ] : [];
+
   return (
     <div style={{
-      background: 'linear-gradient(135deg, #1E1B4B 0%, #312E81 50%, #1E1B3A 100%)',
-      borderRadius: 20, padding: '28px 28px', marginBottom: 24,
-      border: '1px solid #3730A3', position: 'relative', overflow: 'hidden',
+      background: 'linear-gradient(135deg, #EEF2FF 0%, #FAF5FF 55%, #FDF2F8 100%)',
+      borderRadius: 20, padding: '22px 22px 20px', marginBottom: 20,
+      border: '1px solid #E0E7FF', position: 'relative', overflow: 'hidden',
     }}>
-      <div style={{ position: 'absolute', top: -40, right: -40, width: 160, height: 160, borderRadius: '50%', background: 'rgba(99,102,241,0.08)', pointerEvents: 'none' }} />
-      <div style={{ position: 'absolute', bottom: -30, left: -30, width: 120, height: 120, borderRadius: '50%', background: 'rgba(180,83,9,0.06)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', top: -50, right: -40, width: 180, height: 180, borderRadius: '50%', background: 'rgba(99,102,241,0.10)', pointerEvents: 'none', filter: 'blur(8px)' }} />
+      <div style={{ position: 'absolute', bottom: -40, left: -30, width: 140, height: 140, borderRadius: '50%', background: 'rgba(236,72,153,0.08)', pointerEvents: 'none', filter: 'blur(8px)' }} />
 
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-            <div style={{ background: 'rgba(180,83,9,0.2)', border: '1px solid rgba(180,83,9,0.4)', borderRadius: 12, padding: '8px 10px' }}>
-              <Scale size={22} color="#F59E0B" />
-            </div>
-            <div>
-              <div style={{ color: '#A5B4FC', fontSize: 10, fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
-                AreaConnect Court of Justice
-              </div>
-              <div style={{ color: '#E0E7FF', fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.2 }}>
-                The Honourable Court
-              </div>
-            </div>
+      <div style={{ position: 'relative' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+          <div style={{ background: '#fff', border: '1px solid #C7D2FE', borderRadius: 12, padding: '8px 10px', boxShadow: '0 2px 8px rgba(99,102,241,0.12)' }}>
+            <Scale size={20} color={PRIMARY} />
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
-            <div style={{ background: 'rgba(180,83,9,0.15)', borderRadius: 8, padding: '3px 10px' }}>
-              <span style={{ color: '#D97706', fontSize: 11, fontWeight: 600 }}>Presiding: Judge Orizu</span>
-            </div>
-            <div style={{ color: '#6366F1', fontSize: 11 }}>· Every Resident Has a Voice</div>
+          <span style={{ fontSize: 10, fontWeight: 700, color: PRIMARY_DARK, letterSpacing: '0.14em', textTransform: 'uppercase', padding: '3px 10px', background: '#fff', borderRadius: 999, border: '1px solid #C7D2FE' }}>
+            Community Court
+          </span>
+        </div>
+
+        <h1 style={{ color: '#0F172A', fontSize: 24, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.2, margin: '0 0 6px' }}>
+          Got a problem? Get it resolved fairly.
+        </h1>
+        <p style={{ color: '#475569', fontSize: 13, lineHeight: 1.55, margin: 0, maxWidth: 520 }}>
+          Issues with a neighbour, management, or marketplace? Start a case — an AI lawyer takes your side, your neighbours vote, and Judge Orizu makes a fair decision.
+        </p>
+
+        <button onClick={onStart}
+          style={{
+            marginTop: 14, padding: '11px 18px', borderRadius: 12, border: 'none', cursor: 'pointer',
+            background: `linear-gradient(135deg, ${PRIMARY}, ${PRIMARY_DARK})`, color: '#fff',
+            fontWeight: 700, fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 8,
+            boxShadow: '0 6px 18px rgba(79,70,229,0.28)',
+          }}>
+          <Plus size={15} /> Start a case
+        </button>
+
+        {/* How it works — 3 simple steps */}
+        <div style={{
+          marginTop: 18, background: 'rgba(255,255,255,0.72)', border: '1px solid #E0E7FF',
+          borderRadius: 14, padding: '12px 14px', backdropFilter: 'blur(6px)',
+        }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: PRIMARY_DARK, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
+            How it works
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 10 }}>
+            {steps.map(({ n, icon: Icon, title, desc }) => (
+              <div key={n} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                <div style={{
+                  width: 32, height: 32, borderRadius: 10, flexShrink: 0,
+                  background: '#EEF2FF', border: `1px solid ${PRIMARY}30`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  position: 'relative',
+                }}>
+                  <Icon size={14} color={PRIMARY_DARK} />
+                  <span style={{
+                    position: 'absolute', top: -5, right: -5, width: 16, height: 16, borderRadius: '50%',
+                    background: PRIMARY, color: '#fff', fontSize: 9, fontWeight: 800,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>{n}</span>
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: 12, color: '#0F172A', lineHeight: 1.3 }}>{title}</div>
+                  <div style={{ fontSize: 11, color: '#64748B', lineHeight: 1.45, marginTop: 2 }}>{desc}</div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
+
+        {/* Stats */}
         {stats && (
-          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-            {[
-              { label: 'Total Cases',  value: stats.total ?? 0,                      color: '#A5B4FC' },
-              { label: 'In Hearing',   value: stats.byStatus?.in_hearing ?? 0,        color: '#FBBF24' },
-              { label: 'Verdicts',     value: stats.byStatus?.verdict_delivered ?? 0, color: '#34D399' },
-              { label: 'Settled',      value: stats.byStatus?.settled ?? 0,           color: '#C4B5FD' },
-            ].map(s => (
-              <div key={s.label} style={{ textAlign: 'center' }}>
-                <div style={{ color: s.color, fontSize: 22, fontWeight: 800, lineHeight: 1 }}>{s.value}</div>
-                <div style={{ color: '#6366F1', fontSize: 10, fontWeight: 600, marginTop: 2 }}>{s.label}</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginTop: 12 }}>
+            {quickStats.map(s => (
+              <div key={s.label} style={{
+                background: '#fff', border: '1px solid #E2E8F0', borderRadius: 12,
+                padding: '10px 8px', textAlign: 'center',
+              }}>
+                <div style={{ color: s.color, fontSize: 20, fontWeight: 800, lineHeight: 1 }}>{s.value}</div>
+                <div style={{ color: '#64748B', fontSize: 10, fontWeight: 600, marginTop: 4 }}>{s.label}</div>
               </div>
             ))}
           </div>
         )}
-      </div>
-
-      <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-        <p style={{ color: '#4338CA', fontSize: 11, fontStyle: 'italic', margin: 0 }}>
-          "Every resident has the right to be heard, represented, and judged fairly. File your case with confidence."
-        </p>
       </div>
     </div>
   );
@@ -199,6 +243,8 @@ function CaseCard({ c, onClick, userId }) {
   const isMine = c.plaintiff?.userId === userId || c.plaintiff?.userId?._id === userId ||
                  c.defendant?.userId === userId || c.defendant?.userId?._id === userId;
   const isJuror = c.jury?.members?.some(m => m === userId || m?._id === userId || m?.toString() === userId);
+
+  const statusMeta = STATUS_META[c.status] || STATUS_META.filed;
 
   return (
     <button onClick={onClick} className="w-full text-left transition-all"
@@ -217,7 +263,7 @@ function CaseCard({ c, onClick, userId }) {
           <div style={{ fontWeight: 700, fontSize: 14, color: '#0F172A', marginBottom: 4 }}>{c.title}</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#64748B', flexWrap: 'wrap' }}>
             <span>{c.plaintiff?.name || 'Unknown'}</span>
-            <span style={{ color: '#DC2626', fontWeight: 800 }}>vs</span>
+            <span style={{ color: '#94A3B8', fontWeight: 700 }}>vs</span>
             <span>{c.defendant?.isEstate ? 'Estate Management' : (c.defendant?.name || 'Unknown')}</span>
             <span style={{ color: '#CBD5E1' }}>·</span>
             <span style={{ color: '#94A3B8' }}>{TYPE_LABELS[c.type] || c.type}</span>
@@ -230,18 +276,19 @@ function CaseCard({ c, onClick, userId }) {
           </span>
         </div>
       </div>
-      {(c.proceedings?.length > 0 || c.fine?.status === 'pending') && (
+      {statusMeta.hint && (
         <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-          {c.proceedings?.length > 0 && <><Clock size={11} color="#94A3B8" /><span style={{ fontSize: 11, color: '#94A3B8' }}>{c.proceedings.length} proceedings</span></>}
-          {c.jury?.members?.length > 0 && <><span style={{ color: '#CBD5E1' }}>·</span><Users size={11} color="#7C3AED" /><span style={{ fontSize: 11, color: '#7C3AED' }}>{c.jury.members.length} jurors</span></>}
-          {c.fine?.status === 'pending' && <><span style={{ color: '#CBD5E1' }}>·</span><Banknote size={11} color="#DC2626" /><span style={{ fontSize: 11, color: '#DC2626' }}>Fine pending</span></>}
+          <div style={{ width: 6, height: 6, borderRadius: '50%', background: statusMeta.color }} />
+          <span style={{ fontSize: 11.5, color: '#475569' }}>{statusMeta.hint}</span>
+          {c.fine?.status === 'pending' && <><span style={{ color: '#CBD5E1' }}>·</span><Banknote size={11} color="#DC2626" /><span style={{ fontSize: 11, color: '#DC2626', fontWeight: 600 }}>Fine owed</span></>}
+          <ChevronRight size={14} color="#94A3B8" style={{ marginLeft: 'auto' }} />
         </div>
       )}
     </button>
   );
 }
 
-// ── File Dispute form ─────────────────────────────────────────────────────────
+// ── Start a case form ────────────────────────────────────────────────────────
 
 function FileDisputeForm({ onFiled, residents }) {
   const [step, setStep] = useState(0);
@@ -275,7 +322,7 @@ function FileDisputeForm({ onFiled, residents }) {
   return (
     <div style={{ maxWidth: 560 }}>
       <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
-        {['Case Details', 'Defendant', 'Your Statement'].map((s, i) => (
+        {["What's it about?", "Who's involved?", 'Tell your story'].map((s, i) => (
           <div key={i} style={{ flex: 1, textAlign: 'center' }}>
             <div style={{ height: 3, borderRadius: 2, marginBottom: 6, background: i <= step ? PRIMARY : '#E2E8F0' }} />
             <span style={{ fontSize: 10, fontWeight: 600, color: i === step ? PRIMARY : '#94A3B8' }}>{s}</span>
@@ -286,11 +333,11 @@ function FileDisputeForm({ onFiled, residents }) {
       {step === 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
-            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>Case Title</label>
-            <input className="input-field" placeholder="Brief title of your complaint" value={form.title} onChange={e => set('title', e.target.value)} />
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>Give it a short title</label>
+            <input className="input-field" placeholder="e.g. Loud music every night" value={form.title} onChange={e => set('title', e.target.value)} />
           </div>
           <div>
-            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>Type of Dispute</label>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>What kind of problem?</label>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
               {Object.entries(TYPE_LABELS).map(([val, label]) => (
                 <button key={val} onClick={() => set('type', val)}
@@ -304,7 +351,7 @@ function FileDisputeForm({ onFiled, residents }) {
             </div>
           </div>
           <div>
-            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>Severity</label>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>How serious is it?</label>
             <div style={{ display: 'flex', gap: 8 }}>
               {['minor', 'moderate', 'major', 'critical'].map(s => {
                 const sc = SEVERITY_COLORS[s];
@@ -335,15 +382,15 @@ function FileDisputeForm({ onFiled, residents }) {
               border: form.isDefendantEstate ? '1.5px solid #DC2626' : '1px solid #E2E8F0',
               background: form.isDefendantEstate ? '#FEF2F2' : '#FAFAFA', cursor: 'pointer' }}>
             <div style={{ fontWeight: 700, fontSize: 13, color: form.isDefendantEstate ? '#DC2626' : '#0F172A', marginBottom: 3 }}>
-              {form.isDefendantEstate ? '✓ ' : ''}Filing against Estate Management
+              {form.isDefendantEstate ? '✓ ' : ''}It's about Estate Management
             </div>
-            <div style={{ fontSize: 12, color: '#64748B' }}>Dispute a decision, fine, or action made by management</div>
+            <div style={{ fontSize: 12, color: '#64748B' }}>Something management did — a fine, decision, or action you disagree with.</div>
           </button>
           {!form.isDefendantEstate && (
             <div>
-              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>Select Defendant</label>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>Which neighbour?</label>
               <select className="input-field" value={form.defendantUserId} onChange={e => set('defendantUserId', e.target.value)}>
-                <option value="">— Select a resident —</option>
+                <option value="">— Pick a resident —</option>
                 {residents.map(r => <option key={r._id} value={r._id}>{r.name}{r.unit ? ` — ${r.unit}` : ''}</option>)}
               </select>
             </div>
@@ -362,10 +409,10 @@ function FileDisputeForm({ onFiled, residents }) {
       {step === 2 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
-            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>Charges</label>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>What are they doing wrong?</label>
             {form.charges.map((charge, i) => (
               <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
-                <input className="input-field" placeholder={`Charge ${i + 1}…`} value={charge} onChange={e => setCharge(i, e.target.value)} style={{ flex: 1 }} />
+                <input className="input-field" placeholder={i === 0 ? 'e.g. Plays loud music past midnight' : `Another thing…`} value={charge} onChange={e => setCharge(i, e.target.value)} style={{ flex: 1 }} />
                 {form.charges.length > 1 && (
                   <button onClick={() => removeCharge(i)} style={{ padding: '0 12px', borderRadius: 10, border: '1px solid #FECACA', background: '#FEF2F2', color: '#DC2626', cursor: 'pointer' }}>
                     <XCircle size={14} />
@@ -373,31 +420,31 @@ function FileDisputeForm({ onFiled, residents }) {
                 )}
               </div>
             ))}
-            <button onClick={addCharge} style={{ fontSize: 12, color: PRIMARY, fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', paddingLeft: 0 }}>+ Add charge</button>
+            <button onClick={addCharge} style={{ fontSize: 12, color: PRIMARY, fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', paddingLeft: 0 }}>+ Add another</button>
           </div>
           <div>
-            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>Your Opening Statement</label>
-            <textarea className="input-field" rows={5} placeholder="Describe the incident in detail. Include dates, times, witnesses, and how it affected you..."
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>What happened?</label>
+            <textarea className="input-field" rows={5} placeholder="Tell us the full story. When did it happen? How many times? Who saw it? How is it affecting you?"
               value={form.plaintiffStatement} onChange={e => set('plaintiffStatement', e.target.value)} style={{ resize: 'vertical' }} />
-            <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 4 }}>{form.plaintiffStatement.length} chars (min. 30)</div>
+            <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 4 }}>{form.plaintiffStatement.length} characters (at least 30)</div>
           </div>
           <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 12, padding: '12px 14px', display: 'flex', gap: 10 }}>
             <AlertTriangle size={16} color="#D97706" style={{ flexShrink: 0, marginTop: 1 }} />
-            <div style={{ fontSize: 12, color: '#92400E' }}>Filing a false claim is a punishable offence under the Estate Community Code. Ensure all information is truthful.</div>
+            <div style={{ fontSize: 12, color: '#92400E' }}>Only share what's true. Making up a story can get you in trouble under the estate's community rules.</div>
           </div>
           <div style={{ background: '#EEF2FF', border: '1px solid #C7D2FE', borderRadius: 12, padding: '12px 14px', display: 'flex', gap: 10 }}>
             <Briefcase size={16} color={PRIMARY} style={{ flexShrink: 0, marginTop: 1 }} />
-            <div style={{ fontSize: 12, color: PRIMARY_DARK }}>Upon filing, the case opens immediately and an AI lawyer will be automatically assigned to represent you.</div>
+            <div style={{ fontSize: 12, color: PRIMARY_DARK }}>When you submit, a free AI lawyer is assigned to you right away. You don't pay anything.</div>
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
             <button onClick={() => setStep(1)} style={{ flex: '0 0 auto', padding: '10px 18px', borderRadius: 12, border: '1px solid #E2E8F0', background: '#F8FAFC', color: '#64748B', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Back</button>
             <button onClick={submit} disabled={!canStep2 || loading}
               style={{ flex: 1, padding: '11px 0', borderRadius: 12,
-                background: canStep2 && !loading ? 'linear-gradient(135deg,#DC2626,#B91C1C)' : '#E2E8F0',
+                background: canStep2 && !loading ? `linear-gradient(135deg,${PRIMARY},${PRIMARY_DARK})` : '#E2E8F0',
                 color: canStep2 && !loading ? '#fff' : '#94A3B8', fontWeight: 700, fontSize: 14, border: 'none',
                 cursor: canStep2 && !loading ? 'pointer' : 'not-allowed',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-              {loading ? <><Spinner size={14} color="#fff" />Filing…</> : <><Gavel size={14} /> File with the Court</>}
+              {loading ? <><Spinner size={14} color="#fff" />Submitting…</> : <><Gavel size={14} /> Submit my case</>}
             </button>
           </div>
         </div>
@@ -831,11 +878,11 @@ function CaseDetail({ caseId, onBack, user }) {
   const sev = SEVERITY_COLORS[c.severity] || SEVERITY_COLORS.minor;
 
   const DETAIL_TABS = [
-    { id: 'proceedings', label: 'Proceedings', count: c.proceedings?.length },
+    { id: 'proceedings', label: "What's Happened", count: c.proceedings?.length },
     ...(isParty ? [{ id: 'lawyer', label: 'My Lawyer' }] : []),
-    { id: 'evidence',    label: 'Evidence',    count: c.evidence?.length },
+    { id: 'evidence',    label: 'Proof',    count: c.evidence?.length },
     { id: 'actions',     label: 'Actions' },
-    { id: 'jury',        label: 'Jury',        count: c.jury?.members?.length },
+    { id: 'jury',        label: 'Jury',     count: c.jury?.members?.length },
   ];
 
   // ── response deadline banner ───────────────────────────────────────────────
@@ -847,7 +894,7 @@ function CaseDetail({ caseId, onBack, user }) {
     <div>
       <button onClick={onBack}
         style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#64748B', fontSize: 13, fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', marginBottom: 16, padding: 0 }}>
-        <ArrowLeft size={15} /> All Cases
+        <ArrowLeft size={15} /> Back to all cases
       </button>
 
       {/* Response deadline warning */}
@@ -878,32 +925,32 @@ function CaseDetail({ caseId, onBack, user }) {
       )}
 
       {/* Case header */}
-      <div style={{ background: 'linear-gradient(135deg,#1E1B4B,#312E81)', borderRadius: 18, padding: '20px 22px', marginBottom: 16, border: '1px solid #3730A3' }}>
+      <div style={{ background: 'linear-gradient(135deg,#EEF2FF 0%,#FAF5FF 55%,#FDF2F8 100%)', borderRadius: 18, padding: '20px 22px', marginBottom: 16, border: '1px solid #E0E7FF' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
           <div style={{ flex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-              <span style={{ fontFamily: 'monospace', fontSize: 12, color: '#F59E0B', fontWeight: 700 }}>{c.caseNumber}</span>
-              <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 999, color: sev.text, background: sev.bg + 'cc', border: `1px solid ${sev.border}` }}>{c.severity?.toUpperCase()}</span>
-              <span style={{ fontSize: 11, color: '#6366F1' }}>{TYPE_LABELS[c.type]}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, flexWrap: 'wrap' }}>
+              <span style={{ fontFamily: 'monospace', fontSize: 12, color: PRIMARY_DARK, fontWeight: 700 }}>{c.caseNumber}</span>
+              <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 999, color: sev.text, background: sev.bg, border: `1px solid ${sev.border}` }}>{c.severity?.toUpperCase()}</span>
+              <span style={{ fontSize: 11, color: '#64748B' }}>{TYPE_LABELS[c.type]}</span>
               {c.isDefaultJudgment && (
-                <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: '#DC2626', color: '#fff' }}>DEFAULT</span>
+                <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: '#DC2626', color: '#fff' }}>NO RESPONSE</span>
               )}
             </div>
-            <div style={{ color: '#E0E7FF', fontSize: 17, fontWeight: 800, marginBottom: 10 }}>{c.title}</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ color: '#0F172A', fontSize: 17, fontWeight: 800, marginBottom: 10 }}>{c.title}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <Avatar initials={(c.plaintiff?.name || 'P')[0].toUpperCase()} color="#10B981" size={26} />
                 <div>
-                  <div style={{ color: '#94A3B8', fontSize: 9, fontWeight: 700, textTransform: 'uppercase' }}>Plaintiff</div>
-                  <div style={{ color: '#E0E7FF', fontSize: 12, fontWeight: 600 }}>{c.plaintiff?.name || 'Unknown'}</div>
+                  <div style={{ color: '#64748B', fontSize: 9, fontWeight: 700, textTransform: 'uppercase' }}>Filed by</div>
+                  <div style={{ color: '#0F172A', fontSize: 12, fontWeight: 600 }}>{c.plaintiff?.name || 'Unknown'}</div>
                 </div>
               </div>
-              <div style={{ color: '#DC2626', fontWeight: 900, fontSize: 14, padding: '0 6px' }}>VS</div>
+              <div style={{ color: '#64748B', fontWeight: 800, fontSize: 12, padding: '0 6px' }}>vs</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <Avatar initials={c.defendant?.isEstate ? 'ES' : (c.defendant?.name || 'D')[0].toUpperCase()} color="#DC2626" size={26} />
                 <div>
-                  <div style={{ color: '#94A3B8', fontSize: 9, fontWeight: 700, textTransform: 'uppercase' }}>Defendant</div>
-                  <div style={{ color: '#E0E7FF', fontSize: 12, fontWeight: 600 }}>{c.defendant?.isEstate ? 'Estate Management' : (c.defendant?.name || 'Unknown')}</div>
+                  <div style={{ color: '#64748B', fontSize: 9, fontWeight: 700, textTransform: 'uppercase' }}>Named</div>
+                  <div style={{ color: '#0F172A', fontSize: 12, fontWeight: 600 }}>{c.defendant?.isEstate ? 'Estate Management' : (c.defendant?.name || 'Unknown')}</div>
                 </div>
               </div>
             </div>
@@ -912,45 +959,45 @@ function CaseDetail({ caseId, onBack, user }) {
         </div>
 
         {c.charges?.length > 0 && (
-          <div style={{ paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-            <div style={{ color: '#6366F1', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', marginBottom: 6 }}>Charges</div>
+          <div style={{ paddingTop: 12, borderTop: '1px solid #E0E7FF' }}>
+            <div style={{ color: PRIMARY_DARK, fontSize: 9, fontWeight: 700, textTransform: 'uppercase', marginBottom: 6 }}>What they're saying</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {c.charges.map((ch, i) => (
-                <span key={i} style={{ fontSize: 11, fontWeight: 600, padding: '2px 10px', borderRadius: 999, background: '#DC262618', color: '#FCA5A5', border: '1px solid #DC262630' }}>{i + 1}. {ch}</span>
+                <span key={i} style={{ fontSize: 11, fontWeight: 600, padding: '2px 10px', borderRadius: 999, background: '#fff', color: '#334155', border: '1px solid #E2E8F0' }}>{i + 1}. {ch}</span>
               ))}
             </div>
           </div>
         )}
 
         {/* Lawyers row */}
-        <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #E0E7FF', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           {[
-            { side: 'prosecution', lawyer: c.lawyers?.prosecution, sideColor: '#DC2626', label: 'Prosecution' },
-            { side: 'defense',     lawyer: c.lawyers?.defense,     sideColor: '#2563EB', label: 'Defense' },
+            { side: 'prosecution', lawyer: c.lawyers?.prosecution, sideColor: '#DC2626', label: "Filer's lawyer" },
+            { side: 'defense',     lawyer: c.lawyers?.defense,     sideColor: '#2563EB', label: "Other side's lawyer" },
           ].map(({ side, lawyer, sideColor, label }) => {
             const persona = lawyer?.aiPersona ? AI_PERSONAS[lawyer.aiPersona] : null;
             return (
-              <div key={side} style={{ flex: 1, minWidth: 150, background: 'rgba(255,255,255,0.05)', borderRadius: 10, padding: '8px 12px', border: `1px solid ${sideColor}30` }}>
+              <div key={side} style={{ flex: 1, minWidth: 150, background: '#fff', borderRadius: 10, padding: '8px 12px', border: `1px solid ${sideColor}30` }}>
                 <div style={{ color: sideColor, fontSize: 9, fontWeight: 700, textTransform: 'uppercase', marginBottom: 5 }}>{label}</div>
                 {persona
                   ? <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                       <Avatar initials={persona.initials} color={persona.color} size={26} />
                       <div>
-                        <div style={{ color: '#E0E7FF', fontSize: 11, fontWeight: 700 }}>{persona.name}</div>
-                        <div style={{ color: '#6366F1', fontSize: 10 }}>AI · {persona.role}</div>
+                        <div style={{ color: '#0F172A', fontSize: 11, fontWeight: 700 }}>{persona.name}</div>
+                        <div style={{ color: '#64748B', fontSize: 10 }}>AI · {persona.role}</div>
                       </div>
                     </div>
-                  : <div style={{ color: '#475569', fontSize: 11, fontStyle: 'italic' }}>Self-represented</div>}
+                  : <div style={{ color: '#94A3B8', fontSize: 11, fontStyle: 'italic' }}>No lawyer yet</div>}
               </div>
             );
           })}
-          <div style={{ flex: 1, minWidth: 150, background: 'rgba(255,255,255,0.05)', borderRadius: 10, padding: '8px 12px', border: '1px solid #B4530930' }}>
-            <div style={{ color: '#B45309', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', marginBottom: 5 }}>Presiding Judge</div>
+          <div style={{ flex: 1, minWidth: 150, background: '#fff', borderRadius: 10, padding: '8px 12px', border: '1px solid #B4530930' }}>
+            <div style={{ color: '#B45309', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', marginBottom: 5 }}>Judge</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
               <Avatar initials={JUDGE.initials} color={JUDGE.color} size={26} />
               <div>
-                <div style={{ color: '#E0E7FF', fontSize: 11, fontWeight: 700 }}>{JUDGE.name}</div>
-                <div style={{ color: '#6366F1', fontSize: 10 }}>AI Judge</div>
+                <div style={{ color: '#0F172A', fontSize: 11, fontWeight: 700 }}>{JUDGE.name}</div>
+                <div style={{ color: '#64748B', fontSize: 10 }}>AI judge</div>
               </div>
             </div>
           </div>
@@ -979,13 +1026,13 @@ function CaseDetail({ caseId, onBack, user }) {
         <div>
           {c.plaintiffStatement && (
             <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 12, padding: '14px 16px', marginBottom: 16 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>Plaintiff's Opening Statement</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>What the Filer Said Happened</div>
               <div style={{ fontSize: 13, color: '#334155', lineHeight: 1.7 }}>{c.plaintiffStatement}</div>
             </div>
           )}
           <div ref={procRef} style={{ maxHeight: 440, overflowY: 'auto', paddingRight: 4 }}>
             {c.proceedings?.length === 0
-              ? <div style={{ textAlign: 'center', color: '#94A3B8', padding: '40px 0', fontSize: 13 }}>No proceedings yet. The court is in recess.</div>
+              ? <div style={{ textAlign: 'center', color: '#94A3B8', padding: '40px 0', fontSize: 13 }}>Nothing has happened yet. The case is just getting started.</div>
               : c.proceedings.map((p, i) => <ProceedingEntry key={p._id || i} p={p} />)}
           </div>
         </div>
@@ -1008,7 +1055,7 @@ function CaseDetail({ caseId, onBack, user }) {
       {activeTab === 'evidence' && (
         <div>
           {c.evidence?.length === 0
-            ? <div style={{ textAlign: 'center', color: '#94A3B8', padding: '40px 0', fontSize: 13 }}>No evidence on record.</div>
+            ? <div style={{ textAlign: 'center', color: '#94A3B8', padding: '40px 0', fontSize: 13 }}>Nothing has been shared yet. Add proof under the Actions tab.</div>
             : c.evidence.map((e, i) => (
               <div key={i} style={{ background: '#FAFAFA', border: '1px solid #E2E8F0', borderRadius: 12, padding: '14px 16px', marginBottom: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
@@ -1041,7 +1088,7 @@ function CaseDetail({ caseId, onBack, user }) {
             </div>
           )}
           {!c.jury?.members?.length
-            ? <div style={{ textAlign: 'center', color: '#94A3B8', padding: '40px 0', fontSize: 13 }}>Jury not yet summoned.</div>
+            ? <div style={{ textAlign: 'center', color: '#94A3B8', padding: '40px 0', fontSize: 13 }}>No jury picked yet. Neighbours will be randomly chosen once the hearing starts.</div>
             : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 10 }}>
                 {c.jury.members.map((m, i) => {
@@ -1073,11 +1120,11 @@ function CaseDetail({ caseId, onBack, user }) {
           {isJuror && !hasVoted && ['open', 'in_hearing', 'jury_deliberation'].includes(c.status) && (
             <div style={{ background: '#F5F3FF', border: '1px solid #DDD6FE', borderRadius: 14, padding: '16px 18px' }}>
               <div style={{ fontWeight: 700, fontSize: 14, color: '#4C1D95', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Star size={16} color="#7C3AED" /> You've Been Summoned — Jury Duty
+                <Star size={16} color="#7C3AED" /> You're on the jury
               </div>
-              <div style={{ fontSize: 12, color: '#6D28D9', marginBottom: 14 }}>Your estate community has selected you to serve as a juror. Your vote helps determine justice.</div>
+              <div style={{ fontSize: 12, color: '#6D28D9', marginBottom: 14 }}>Read what both sides said, then vote on who you think is right. Your choice stays private until the final decision.</div>
               <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-                {[{ v: 'guilty', l: 'Guilty', i: ThumbsDown, c: '#DC2626' }, { v: 'not_guilty', l: 'Not Guilty', i: ThumbsUp, c: '#059669' }, { v: 'abstain', l: 'Abstain', i: Minus, c: '#64748B' }].map(o => (
+                {[{ v: 'guilty', l: 'Did it', i: ThumbsDown, c: '#DC2626' }, { v: 'not_guilty', l: "Didn't do it", i: ThumbsUp, c: '#059669' }, { v: 'abstain', l: 'Not sure', i: Minus, c: '#64748B' }].map(o => (
                   <button key={o.v} onClick={() => setJuryVote(o.v)}
                     style={{ flex: 1, padding: '10px 0', borderRadius: 11, fontWeight: 700, fontSize: 11,
                       border: juryVote === o.v ? `1.5px solid ${o.c}` : '1px solid #E2E8F0',
@@ -1087,30 +1134,31 @@ function CaseDetail({ caseId, onBack, user }) {
                   </button>
                 ))}
               </div>
-              <textarea className="input-field" rows={2} placeholder="Reasoning (optional)..." value={juryReason}
+              <textarea className="input-field" rows={2} placeholder="Why? (optional — nobody else will see this until the case closes)" value={juryReason}
                 onChange={e => setJuryReason(e.target.value)} style={{ resize: 'none', marginBottom: 10 }} />
               <button onClick={castVote} disabled={!juryVote || submittingVote}
                 style={{ width: '100%', padding: '10px 0', borderRadius: 12, fontWeight: 700, fontSize: 13,
                   background: juryVote ? 'linear-gradient(135deg,#7C3AED,#5B21B6)' : '#E2E8F0',
                   color: juryVote ? '#fff' : '#94A3B8', border: 'none', cursor: juryVote ? 'pointer' : 'not-allowed',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                <Scale size={14} /> Cast My Vote
+                <Scale size={14} /> Submit my vote
               </button>
             </div>
           )}
           {isJuror && hasVoted && (
             <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
               <CheckCircle2 size={18} color="#10B981" />
-              <span style={{ color: '#065F46', fontWeight: 600, fontSize: 13 }}>Your jury vote has been recorded. The court thanks you for your service.</span>
+              <span style={{ color: '#065F46', fontWeight: 600, fontSize: 13 }}>Thanks — your vote is in. We'll let you know when the final decision drops.</span>
             </div>
           )}
 
           {/* Submit argument */}
           {canAct && isParty && c.status !== 'filed' && (
             <div style={{ background: '#FAFAFA', border: '1px solid #E2E8F0', borderRadius: 14, padding: '16px 18px' }}>
-              <div style={{ fontWeight: 700, fontSize: 14, color: '#0F172A', marginBottom: 12 }}>Submit an Argument</div>
+              <div style={{ fontWeight: 700, fontSize: 14, color: '#0F172A', marginBottom: 4 }}>Say Something to the Court</div>
+              <div style={{ fontSize: 12, color: '#64748B', marginBottom: 12 }}>Add your argument or respond to what the other side said.</div>
               <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-                {[{ v: 'prosecution', l: 'Prosecution', c: '#DC2626' }, { v: 'defense', l: 'Defense', c: '#2563EB' }].map(s => (
+                {[{ v: 'prosecution', l: 'For the filer', c: '#DC2626' }, { v: 'defense', l: 'For the other side', c: '#2563EB' }].map(s => (
                   <button key={s.v} onClick={() => setArgSide(s.v)}
                     style={{ flex: 1, padding: '7px 0', borderRadius: 10, fontWeight: 600, fontSize: 12,
                       border: argSide === s.v ? `1.5px solid ${s.c}` : '1px solid #E2E8F0',
@@ -1119,14 +1167,14 @@ function CaseDetail({ caseId, onBack, user }) {
                   </button>
                 ))}
               </div>
-              <textarea className="input-field" rows={4} placeholder="Your argument or rebuttal…" value={argText}
+              <textarea className="input-field" rows={4} placeholder="What do you want the court to know?" value={argText}
                 onChange={e => setArgText(e.target.value)} style={{ resize: 'vertical', marginBottom: 10 }} />
               <button onClick={submitArg} disabled={!argText.trim() || submittingArg}
                 style={{ width: '100%', padding: '10px 0', borderRadius: 12, fontWeight: 700, fontSize: 13,
                   background: argText.trim() ? 'linear-gradient(135deg,#0F172A,#1E293B)' : '#E2E8F0',
                   color: argText.trim() ? '#fff' : '#94A3B8', border: 'none', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                {submittingArg ? <><Spinner size={14} color="#fff" />Submitting…</> : <><Send size={14} /> Submit to Court</>}
+                {submittingArg ? <><Spinner size={14} color="#fff" />Submitting…</> : <><Send size={14} /> Send to court</>}
               </button>
             </div>
           )}
@@ -1134,18 +1182,19 @@ function CaseDetail({ caseId, onBack, user }) {
           {/* Submit evidence */}
           {canAct && isParty && (
             <div style={{ background: '#FAFAFA', border: '1px solid #E2E8F0', borderRadius: 14, padding: '16px 18px' }}>
-              <div style={{ fontWeight: 700, fontSize: 14, color: '#0F172A', marginBottom: 12 }}>Submit Evidence</div>
-              <input className="input-field" placeholder="Evidence label (e.g. WhatsApp Screenshot, Payment Record...)" value={evidenceLabel}
+              <div style={{ fontWeight: 700, fontSize: 14, color: '#0F172A', marginBottom: 4 }}>Add Proof</div>
+              <div style={{ fontSize: 12, color: '#64748B', marginBottom: 12 }}>Screenshots, receipts, messages — anything that supports your side.</div>
+              <input className="input-field" placeholder="What is it? (e.g. WhatsApp screenshot, payment receipt)" value={evidenceLabel}
                 onChange={e => setEvidenceLabel(e.target.value)} style={{ marginBottom: 8 }} />
-              <textarea className="input-field" rows={3} placeholder="Describe the evidence..." value={evidenceContent}
+              <textarea className="input-field" rows={3} placeholder="Describe it — what does it show?" value={evidenceContent}
                 onChange={e => setEvidenceContent(e.target.value)} style={{ resize: 'vertical', marginBottom: 8 }} />
               <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-                {['prosecution', 'defense', 'neutral'].map(s => (
-                  <button key={s} onClick={() => setEvidenceSide(s)}
-                    style={{ flex: 1, padding: '6px 0', borderRadius: 9, fontWeight: 600, fontSize: 11, textTransform: 'capitalize',
-                      border: evidenceSide === s ? `1.5px solid ${PRIMARY}` : '1px solid #E2E8F0',
-                      background: evidenceSide === s ? '#EEF2FF' : '#FAFAFA', color: evidenceSide === s ? PRIMARY_DARK : '#64748B', cursor: 'pointer' }}>
-                    {s}
+                {[{ v: 'prosecution', l: 'For filer' }, { v: 'defense', l: 'For other side' }, { v: 'neutral', l: 'Just facts' }].map(s => (
+                  <button key={s.v} onClick={() => setEvidenceSide(s.v)}
+                    style={{ flex: 1, padding: '6px 0', borderRadius: 9, fontWeight: 600, fontSize: 11,
+                      border: evidenceSide === s.v ? `1.5px solid ${PRIMARY}` : '1px solid #E2E8F0',
+                      background: evidenceSide === s.v ? '#EEF2FF' : '#FAFAFA', color: evidenceSide === s.v ? PRIMARY_DARK : '#64748B', cursor: 'pointer' }}>
+                    {s.l}
                   </button>
                 ))}
               </div>
@@ -1154,7 +1203,7 @@ function CaseDetail({ caseId, onBack, user }) {
                   background: evidenceLabel.trim() && evidenceContent.trim() ? 'linear-gradient(135deg,#D97706,#B45309)' : '#E2E8F0',
                   color: evidenceLabel.trim() && evidenceContent.trim() ? '#fff' : '#94A3B8', border: 'none', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                {submittingEvid ? <><Spinner size={14} color="#fff" />Uploading…</> : <><Upload size={14} /> Admit to Evidence</>}
+                {submittingEvid ? <><Spinner size={14} color="#fff" />Uploading…</> : <><Upload size={14} /> Add proof</>}
               </button>
             </div>
           )}
@@ -1163,23 +1212,23 @@ function CaseDetail({ caseId, onBack, user }) {
           {canAct && isParty && (
             <div style={{ background: '#FAFAFA', border: '1px solid #E2E8F0', borderRadius: 14, padding: '16px 18px' }}>
               <div style={{ fontWeight: 700, fontSize: 14, color: '#0F172A', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Calendar size={15} color="#7C3AED" /> Request Adjournment
+                <Calendar size={15} color="#7C3AED" /> Ask for More Time
               </div>
-              <div style={{ fontSize: 12, color: '#64748B', marginBottom: 12 }}>Ask the court to pause proceedings. Judge Orizu will review and rule on your request.</div>
-              <textarea className="input-field" rows={3} placeholder="State your reason for requesting an adjournment…"
+              <div style={{ fontSize: 12, color: '#64748B', marginBottom: 12 }}>Need extra time to respond or gather proof? Explain why and the judge will decide.</div>
+              <textarea className="input-field" rows={3} placeholder="Why do you need more time?"
                 value={adjournReason} onChange={e => setAdjournReason(e.target.value)} style={{ resize: 'none', marginBottom: 10 }} />
               <button onClick={adjourn} disabled={!adjournReason.trim() || adjourning}
                 style={{ width: '100%', padding: '10px 0', borderRadius: 12, fontWeight: 700, fontSize: 13,
                   background: adjournReason.trim() && !adjourning ? 'linear-gradient(135deg,#7C3AED,#5B21B6)' : '#E2E8F0',
                   color: adjournReason.trim() && !adjourning ? '#fff' : '#94A3B8', border: 'none', cursor: adjournReason.trim() && !adjourning ? 'pointer' : 'not-allowed',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                {adjourning ? <><Spinner size={14} color="#fff" />Submitting…</> : <><Calendar size={14} /> Request Adjournment</>}
+                {adjourning ? <><Spinner size={14} color="#fff" />Submitting…</> : <><Calendar size={14} /> Ask for more time</>}
               </button>
 
               {/* Existing adjournments list */}
               {c.adjournments?.length > 0 && (
                 <div style={{ marginTop: 14 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 8 }}>Adjournment History</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 8 }}>Previous Requests</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {c.adjournments.map((adj, i) => {
                       const granted = adj.status === 'granted';
@@ -1221,12 +1270,12 @@ function CaseDetail({ caseId, onBack, user }) {
           {/* Settlement */}
           {canAct && isParty && c.status !== 'filed' && (
             <div style={{ background: '#FAFAFA', border: '1px solid #E2E8F0', borderRadius: 14, padding: '16px 18px' }}>
-              <div style={{ fontWeight: 700, fontSize: 14, color: '#0F172A', marginBottom: 4 }}>Propose Settlement</div>
-              <div style={{ fontSize: 12, color: '#64748B', marginBottom: 12 }}>Reach an agreement without a full verdict.</div>
+              <div style={{ fontWeight: 700, fontSize: 14, color: '#0F172A', marginBottom: 4 }}>Settle It Peacefully</div>
+              <div style={{ fontSize: 12, color: '#64748B', marginBottom: 12 }}>Skip the hearing. Offer an agreement — if the other side accepts, the case ends here.</div>
               {c.settlement?.status === 'proposed' ? (
                 <div>
                   <div style={{ background: '#F5F3FF', borderRadius: 10, padding: '12px 14px', marginBottom: 10, border: '1px solid #DDD6FE' }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: '#7C3AED', marginBottom: 4 }}>SETTLEMENT PROPOSED</div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#7C3AED', marginBottom: 4 }}>OFFER ON THE TABLE</div>
                     <div style={{ fontSize: 13, color: '#334155', marginBottom: 6 }}>{c.settlement.terms}</div>
                     {c.settlement.amount > 0 && <div style={{ fontSize: 13, fontWeight: 700, color: '#7C3AED' }}>Amount: {fmt(c.settlement.amount)}</div>}
                   </div>
@@ -1239,14 +1288,14 @@ function CaseDetail({ caseId, onBack, user }) {
                 </div>
               ) : (
                 <div>
-                  <textarea className="input-field" rows={3} placeholder="Propose settlement terms..." value={settlementTerms} onChange={e => setSettlementTerms(e.target.value)} style={{ resize: 'none', marginBottom: 8 }} />
-                  <input className="input-field" type="number" placeholder="Settlement amount (₦) — optional" value={settlementAmount} onChange={e => setSettlementAmount(e.target.value)} style={{ marginBottom: 10 }} />
+                  <textarea className="input-field" rows={3} placeholder="What would make this right? (e.g. apology, stop the noise after 10pm…)" value={settlementTerms} onChange={e => setSettlementTerms(e.target.value)} style={{ resize: 'none', marginBottom: 8 }} />
+                  <input className="input-field" type="number" placeholder="Any money involved (₦) — optional" value={settlementAmount} onChange={e => setSettlementAmount(e.target.value)} style={{ marginBottom: 10 }} />
                   <button onClick={proposeSettlement} disabled={!settlementTerms.trim() || submittingSettlement}
                     style={{ width: '100%', padding: '10px 0', borderRadius: 12, fontWeight: 700, fontSize: 13,
                       background: settlementTerms.trim() ? `linear-gradient(135deg,${PRIMARY},${PRIMARY_DARK})` : '#E2E8F0',
                       color: settlementTerms.trim() ? '#fff' : '#94A3B8', border: 'none', cursor: 'pointer',
                       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                    <TrendingUp size={14} /> Propose Settlement
+                    <TrendingUp size={14} /> Offer a settlement
                   </button>
                 </div>
               )}
@@ -1257,22 +1306,22 @@ function CaseDetail({ caseId, onBack, user }) {
           {isParty && c.status === 'verdict_delivered' && !c.appeal?.filed && (
             <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 14, padding: '16px 18px' }}>
               <div style={{ fontWeight: 700, fontSize: 14, color: '#92400E', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <RotateCcw size={15} color="#D97706" /> Appeal the Verdict
+                <RotateCcw size={15} color="#D97706" /> Ask Judge to Look Again
               </div>
-              <div style={{ fontSize: 12, color: '#B45309', marginBottom: 12 }}>Disagree with Judge Orizu? State your grounds and request reconsideration.</div>
-              <textarea className="input-field" rows={3} placeholder="Your grounds for appeal..." value={appealReason} onChange={e => setAppealReason(e.target.value)} style={{ resize: 'none', marginBottom: 10 }} />
+              <div style={{ fontSize: 12, color: '#B45309', marginBottom: 12 }}>Think the decision is unfair? Tell the judge why and he'll review it.</div>
+              <textarea className="input-field" rows={3} placeholder="Why do you think the decision is wrong?" value={appealReason} onChange={e => setAppealReason(e.target.value)} style={{ resize: 'none', marginBottom: 10 }} />
               <button onClick={fileAppeal} disabled={!appealReason.trim() || submittingAppeal}
                 style={{ width: '100%', padding: '10px 0', borderRadius: 12, fontWeight: 700, fontSize: 13,
                   background: appealReason.trim() ? 'linear-gradient(135deg,#D97706,#B45309)' : '#E2E8F0',
                   color: appealReason.trim() ? '#fff' : '#94A3B8', border: 'none', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                <RotateCcw size={14} /> File Appeal
+                <RotateCcw size={14} /> Request review
               </button>
             </div>
           )}
           {c.appeal?.filed && (
             <div style={{ background: '#FEF3C7', border: '1px solid #FDE68A', borderRadius: 12, padding: '14px 16px' }}>
-              <div style={{ fontWeight: 700, fontSize: 13, color: '#92400E', marginBottom: 4 }}>Appeal: {c.appeal.status?.toUpperCase()}</div>
+              <div style={{ fontWeight: 700, fontSize: 13, color: '#92400E', marginBottom: 4 }}>Review Request: {c.appeal.status?.toUpperCase()}</div>
               <div style={{ fontSize: 12, color: '#B45309' }}>{c.appeal.reason}</div>
             </div>
           )}
@@ -1281,14 +1330,14 @@ function CaseDetail({ caseId, onBack, user }) {
           {isDefendant && c.verdict?.decision === 'guilty' && c.fine?.status === 'pending' && c.fine?.amount > 0 && (
             <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 14, padding: '16px 18px' }}>
               <div style={{ fontWeight: 700, fontSize: 14, color: '#DC2626', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Banknote size={15} color="#DC2626" /> Outstanding Fine
+                <Banknote size={15} color="#DC2626" /> Fine to Pay
               </div>
-              <div style={{ fontSize: 12, color: '#B91C1C', marginBottom: 12 }}>You have an unpaid court fine of <strong>{fmt(c.fine.amount)}</strong>. Pay now to avoid further penalties.</div>
+              <div style={{ fontSize: 12, color: '#B91C1C', marginBottom: 12 }}>You owe <strong>{fmt(c.fine.amount)}</strong>. Pay it now to close out the case.</div>
               <button onClick={payFine} disabled={payingFine}
                 style={{ width: '100%', padding: '10px 0', borderRadius: 12, fontWeight: 700, fontSize: 13,
                   background: 'linear-gradient(135deg,#DC2626,#B91C1C)', color: '#fff', border: 'none',
                   cursor: payingFine ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                {payingFine ? <><Spinner size={14} color="#fff" />Processing…</> : <><Banknote size={14} /> Pay Fine — {fmt(c.fine.amount)}</>}
+                {payingFine ? <><Spinner size={14} color="#fff" />Processing…</> : <><Banknote size={14} /> Pay fine — {fmt(c.fine.amount)}</>}
               </button>
             </div>
           )}
@@ -1296,8 +1345,8 @@ function CaseDetail({ caseId, onBack, user }) {
           {/* Change Counsel */}
           {canAct && isParty && (
             <div style={{ background: '#FAFAFA', border: '1px solid #E2E8F0', borderRadius: 14, padding: '16px 18px' }}>
-              <div style={{ fontWeight: 700, fontSize: 14, color: '#0F172A', marginBottom: 4 }}>Change Counsel</div>
-              <div style={{ fontSize: 12, color: '#64748B', marginBottom: 14 }}>Replace your current AI lawyer with a different specialist.</div>
+              <div style={{ fontWeight: 700, fontSize: 14, color: '#0F172A', marginBottom: 4 }}>Switch Your AI Lawyer</div>
+              <div style={{ fontSize: 12, color: '#64748B', marginBottom: 14 }}>Not happy with your lawyer? Pick a different one — they each have their own style.</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, marginBottom: 12 }}>
                 {Object.entries(AI_PERSONAS).map(([key, p]) => (
                   <button key={key} onClick={() => setSelectedPersona(selectedPersona === key ? null : key)}
@@ -1347,7 +1396,7 @@ function CaseDetail({ caseId, onBack, user }) {
 
           {!canAct && !isJuror && !isParty && (
             <div style={{ textAlign: 'center', color: '#94A3B8', padding: '32px 0', fontSize: 13 }}>
-              You are an observer in this case. Only the plaintiff, defendant, and jurors may act.
+              You're just watching this case. Only the two sides and the jury can take action here.
             </div>
           )}
         </div>
@@ -1413,15 +1462,15 @@ export default function Courtroom() {
   }
 
   const TABS = [
-    { id: 'active',  label: 'Active Cases' },
-    { id: 'file',    label: '+ File Dispute' },
+    { id: 'active',  label: 'Open Cases' },
+    { id: 'file',    label: '+ Start a Case' },
     { id: 'mine',    label: 'My Cases' },
-    { id: 'records', label: 'Hall of Records' },
+    { id: 'records', label: 'Past Cases' },
   ];
 
   return (
     <div style={{ maxWidth: 760, margin: '0 auto' }}>
-      <CourtroomBanner stats={stats} />
+      <CourtroomBanner stats={stats} onStart={() => setTab('file')} />
 
       {constitution?.hasConstitution && (
         <a
@@ -1463,8 +1512,8 @@ export default function Courtroom() {
       {tab === 'file' && (
         <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #E2E8F0', padding: '24px 24px' }}>
           <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 18, fontWeight: 800, color: '#0F172A', marginBottom: 4 }}>File a Dispute</div>
-            <div style={{ fontSize: 13, color: '#64748B' }}>Bring your complaint before Judge Orizu and the AreaConnect Court. Every resident deserves to be heard.</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: '#0F172A', marginBottom: 4 }}>Start a Case</div>
+            <div style={{ fontSize: 13, color: '#64748B' }}>Just answer a few quick questions. We'll handle the legal part — you only need to tell us what happened in your own words.</div>
           </div>
           <FileDisputeForm onFiled={() => { setTab('mine'); loadCases('mine'); }} residents={residents} />
         </div>
@@ -1485,15 +1534,19 @@ export default function Courtroom() {
                     <Scale size={28} color={PRIMARY} />
                   </div>
                   <div style={{ fontWeight: 700, fontSize: 16, color: '#0F172A', marginBottom: 6 }}>
-                    {tab === 'active' ? 'No Active Cases' : tab === 'mine' ? 'No Cases Yet' : 'No Records'}
+                    {tab === 'active' ? 'All quiet right now' : tab === 'mine' ? "You haven't started a case" : 'Nothing in the archive'}
                   </div>
-                  <div style={{ fontSize: 13, color: '#94A3B8', maxWidth: 280, margin: '0 auto 16px' }}>
-                    {tab === 'mine' ? "You haven't filed or been named in any cases." : "No cases matching this filter."}
+                  <div style={{ fontSize: 13, color: '#94A3B8', maxWidth: 300, margin: '0 auto 16px' }}>
+                    {tab === 'mine'
+                      ? "If something's bothering you, start a case. It's free and takes a minute."
+                      : tab === 'active'
+                        ? "No one in your estate has an open case. Peaceful times!"
+                        : "No past cases to show here yet."}
                   </div>
                   {tab === 'mine' && (
                     <button onClick={() => setTab('file')}
                       style={{ padding: '10px 24px', borderRadius: 12, background: `linear-gradient(135deg,${PRIMARY},${PRIMARY_DARK})`, color: '#fff', fontWeight: 700, fontSize: 13, border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                      <Plus size={14} /> File a Dispute
+                      <Plus size={14} /> Start a case
                     </button>
                   )}
                 </div>
@@ -1502,25 +1555,26 @@ export default function Courtroom() {
         </div>
       )}
 
-      {/* Your Rights in Court footer */}
-      <div style={{ marginTop: 32, background: '#1E1B4B', borderRadius: 16, padding: '20px 24px', border: '1px solid #3730A3' }}>
-        <div style={{ color: '#A5B4FC', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>Your Rights in Court</div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 12 }}>
+      {/* Good to know */}
+      <div style={{ marginTop: 32, background: '#F8FAFC', borderRadius: 16, padding: '20px 22px', border: '1px solid #E2E8F0' }}>
+        <div style={{ fontSize: 15, fontWeight: 800, color: '#0F172A', marginBottom: 4 }}>Good to know</div>
+        <div style={{ fontSize: 12, color: '#64748B', marginBottom: 14 }}>Common questions people ask before starting a case.</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 12 }}>
           {[
-            { icon: Scale,      title: 'Right to File',       desc: 'Any resident can bring a dispute before the court at any time.' },
-            { icon: Briefcase,  title: 'Auto-Assigned Lawyer', desc: 'An AI lawyer is instantly assigned when you file — your case opens immediately.' },
-            { icon: Star,       title: 'Jury of Your Peers',   desc: '5 randomly selected estate residents hear the case and cast votes.' },
-            { icon: Gavel,      title: 'Fair Verdict',         desc: 'Judge Orizu weighs all evidence and arguments before ruling.' },
-            { icon: TrendingUp, title: 'Settle Amicably',      desc: 'Propose a settlement at any point to resolve the dispute peacefully.' },
-            { icon: RotateCcw,  title: 'Right of Appeal',      desc: "Disagree with the verdict? File an appeal with Judge Orizu's reconsideration." },
+            { icon: Scale,      title: 'Does it cost anything?',   desc: "No. Starting a case and getting an AI lawyer is 100% free." },
+            { icon: Briefcase,  title: "I'm not a lawyer — ok?",   desc: 'Totally fine. An AI lawyer is assigned to you and does the legal talking.' },
+            { icon: Star,       title: 'Who decides who\'s right?', desc: '5 random neighbours vote, then Judge Orizu makes the final call.' },
+            { icon: TrendingUp, title: 'What if we agree?',        desc: 'Offer a settlement any time. If both sides accept, the case closes right there.' },
+            { icon: RotateCcw,  title: 'Can the decision change?', desc: 'Yes — if you think it\'s unfair, ask the judge to review it.' },
+            { icon: Shield,     title: 'Is my case private?',      desc: 'Only your name and the facts of the case are shared. Chats with your lawyer stay private.' },
           ].map(({ icon: Icon, title, desc }) => (
             <div key={title} style={{ display: 'flex', gap: 10 }}>
-              <div style={{ background: '#312E81', borderRadius: 8, padding: '6px', flexShrink: 0, height: 'fit-content' }}>
-                <Icon size={14} color="#A5B4FC" />
+              <div style={{ background: '#EEF2FF', borderRadius: 8, padding: '6px', flexShrink: 0, height: 'fit-content', border: '1px solid #C7D2FE' }}>
+                <Icon size={14} color={PRIMARY_DARK} />
               </div>
               <div>
-                <div style={{ color: '#E0E7FF', fontSize: 12, fontWeight: 700, marginBottom: 2 }}>{title}</div>
-                <div style={{ color: '#4338CA', fontSize: 11, lineHeight: 1.5 }}>{desc}</div>
+                <div style={{ color: '#0F172A', fontSize: 12.5, fontWeight: 700, marginBottom: 2 }}>{title}</div>
+                <div style={{ color: '#64748B', fontSize: 11.5, lineHeight: 1.5 }}>{desc}</div>
               </div>
             </div>
           ))}
