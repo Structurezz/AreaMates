@@ -14,7 +14,12 @@ import toast from 'react-hot-toast';
 
 // ── Helpers ────────────────────────────────────────────────────────
 const SERVER_URL = (import.meta.env.VITE_API_URL || 'https://areaconnectapi-production.up.railway.app/api').replace('/api', '');
-const imgUrl     = (path) => path?.startsWith('http') ? path : `${SERVER_URL}${path}`;
+const imgUrl     = (path) => {
+  if (!path) return path;
+  // Already absolute or an inline data URL (profilePhoto is base64) — don't rewrite
+  if (path.startsWith('http') || path.startsWith('data:')) return path;
+  return `${SERVER_URL}${path}`;
+};
 
 function timeAgo(iso) {
   const s = (Date.now() - new Date(iso)) / 1000;
@@ -109,7 +114,7 @@ function CreatePost({ user, onCreated }) {
   return (
     <div className="rounded-2xl border p-4" style={{ background: '#fff', borderColor: '#F1F5F9' }}>
       <div className="flex items-center gap-3">
-        <Avatar name={user?.name} size={38} src={user?.avatar} />
+        <Avatar name={user?.name} size={38} src={user?.profilePhoto} />
         {!expanded ? (
           <button onClick={() => setExpanded(true)}
             className="flex-1 text-left px-4 py-2.5 rounded-2xl text-sm transition-all"
@@ -215,7 +220,7 @@ function PostCard({ post, currentUserId, onDelete }) {
       {/* Author row */}
       <div className="flex items-start justify-between p-4 pb-0">
         <div className="flex items-center gap-3">
-          <Avatar name={post.author?.name} size={40} src={post.author?.avatar} />
+          <Avatar name={post.author?.name} size={40} src={post.author?.profilePhoto} />
           <div>
             <div className="flex items-center gap-2">
               <span className="text-sm font-bold" style={{ color: '#0F172A' }}>{post.author?.name || 'Resident'}</span>
@@ -267,7 +272,7 @@ function PostCard({ post, currentUserId, onDelete }) {
             <div className="space-y-3 py-3">
               {comments.map(c => (
                 <div key={c._id} className="flex items-start gap-2.5 group">
-                  <Avatar name={c.author?.name} size={28} src={c.author?.avatar} />
+                  <Avatar name={c.author?.name} size={28} src={c.author?.profilePhoto} />
                   <div className="flex-1 min-w-0">
                     <div className="rounded-2xl px-3 py-2" style={{ background: '#F8FAFC' }}>
                       <span className="text-xs font-bold" style={{ color: '#0F172A' }}>{c.author?.name || 'Resident'} </span>
