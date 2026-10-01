@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import QRCode from 'qrcode';
 import { visitorAPI } from '../api';
+import { useAuth } from '../context/AuthContext';
 import Badge, { visitorStatusBadge } from '../components/ui/Badge';
 import Spinner from '../components/ui/Spinner';
 import Pagination from '../components/ui/Pagination';
@@ -16,6 +17,7 @@ import toast from 'react-hot-toast';
 
 const ACCENT      = '#6366F1';
 const ACCENT_DARK = '#4F46E5';
+const BRAND_URL   = 'areaconnect.pro';
 
 const WhatsAppIcon = () => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
@@ -23,57 +25,119 @@ const WhatsAppIcon = () => (
   </svg>
 );
 
-const generatePassCanvas = async (v) => {
-  const W = 560, H = 700;
+const truncate = (s, maxLen) => {
+  if (!s) return '';
+  const str = String(s);
+  return str.length > maxLen ? str.slice(0, maxLen - 1) + '…' : str;
+};
+
+const generateBrandedPass = async (v, estate) => {
+  const W = 580, H = 820;
+  const estateName    = truncate(estate?.name || 'Your Estate', 36);
+  const estateAddress = truncate(estate?.address || '', 60);
+
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
+
   ctx.fillStyle = '#FFFFFF';
   ctx.fillRect(0, 0, W, H);
-  const grad = ctx.createLinearGradient(0, 0, W, 0);
+
+  // Hero
+  const grad = ctx.createLinearGradient(0, 0, W, 230);
   grad.addColorStop(0, ACCENT); grad.addColorStop(1, ACCENT_DARK);
   ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, W, 185);
-  ctx.fillStyle = 'rgba(255,255,255,0.70)'; ctx.font = 'bold 12px sans-serif';
-  ctx.fillText('GUEST PASS', 36, 44);
-  ctx.fillStyle = '#FFFFFF'; ctx.font = 'bold 26px sans-serif';
-  ctx.fillText(v.visitorName, 36, 90);
-  ctx.fillStyle = 'rgba(255,255,255,0.78)'; ctx.font = '15px sans-serif';
-  ctx.fillText(v.purpose, 36, 122);
-  ctx.fillStyle = 'rgba(255,255,255,0.65)'; ctx.font = '13px sans-serif';
-  ctx.fillText(format(new Date(v.expectedDate), 'MMM d, yyyy · h:mm a'), 36, 154);
-  ctx.setLineDash([6, 5]); ctx.strokeStyle = 'rgba(0,0,0,0.10)'; ctx.lineWidth = 1.5;
-  ctx.beginPath(); ctx.moveTo(16, 200); ctx.lineTo(W - 16, 200); ctx.stroke();
+  ctx.fillRect(0, 0, W, 230);
+  ctx.fillStyle = 'rgba(255,255,255,0.08)';
+  ctx.beginPath(); ctx.arc(W - 40, 30, 110, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.05)';
+  ctx.beginPath(); ctx.arc(40, 220, 80, 0, Math.PI * 2); ctx.fill();
+
+  ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.font = 'bold 11px sans-serif';
+  const estateCap = estateName.toUpperCase();
+  ctx.fillText(estateCap, 36, 46);
+  const w = ctx.measureText(estateCap).width;
+  ctx.fillStyle = 'rgba(255,255,255,0.70)';
+  ctx.fillText('·', 36 + w + 6, 46);
+  ctx.fillText('GUEST PASS', 36 + w + 18, 46);
+
+  ctx.fillStyle = '#FFFFFF'; ctx.font = 'bold 28px sans-serif';
+  ctx.fillText(truncate(v.visitorName, 24), 36, 100);
+  ctx.fillStyle = 'rgba(255,255,255,0.82)'; ctx.font = '15px sans-serif';
+  ctx.fillText(truncate(v.purpose, 36), 36, 132);
+  ctx.fillStyle = 'rgba(255,255,255,0.70)'; ctx.font = '13px sans-serif';
+  ctx.fillText(format(new Date(v.expectedDate), 'MMM d, yyyy · h:mm a'), 36, 162);
+  if (estateAddress) {
+    ctx.fillStyle = 'rgba(255,255,255,0.60)'; ctx.font = '11px sans-serif';
+    ctx.fillText(estateAddress, 36, 195);
+  }
+
+  // Perforation
+  ctx.fillStyle = '#F1F5F9';
+  ctx.beginPath(); ctx.arc(0, 250, 10, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(W, 250, 10, 0, Math.PI * 2); ctx.fill();
+  ctx.setLineDash([6, 5]); ctx.strokeStyle = 'rgba(15,23,42,0.14)'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(16, 250); ctx.lineTo(W - 16, 250); ctx.stroke();
   ctx.setLineDash([]);
-  ctx.fillStyle = '#94A3B8'; ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
-  ctx.fillText('ACCESS CODE', W / 2, 238);
-  ctx.fillStyle = ACCENT; ctx.font = 'bold 38px monospace';
-  ctx.fillText(v.visitorCode, W / 2, 288);
+
+  // Code + QR
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#94A3B8'; ctx.font = 'bold 11px sans-serif';
+  ctx.fillText('ACCESS CODE', W / 2, 288);
+  ctx.fillStyle = ACCENT; ctx.font = 'bold 42px monospace';
+  ctx.fillText(v.visitorCode, W / 2, 340);
+
   const qrCanvas = document.createElement('canvas');
   await QRCode.toCanvas(qrCanvas, v.visitorCode, { width: 200, margin: 2, color: { dark: '#0B1C3D', light: '#FFFFFF' } });
-  ctx.drawImage(qrCanvas, (W - 200) / 2, 308);
+  ctx.drawImage(qrCanvas, (W - 200) / 2, 365);
+
   ctx.fillStyle = '#94A3B8'; ctx.font = '11px sans-serif';
-  ctx.fillText('Scan at the security gate', W / 2, 528);
+  ctx.fillText('Scan at the security gate', W / 2, 590);
+
+  // Meta
   ctx.textAlign = 'left';
-  ctx.fillStyle = '#94A3B8'; ctx.font = '11px sans-serif'; ctx.fillText('Duration', 40, 568);
+  ctx.fillStyle = '#94A3B8'; ctx.font = 'bold 10px sans-serif'; ctx.fillText('DURATION', 40, 625);
   ctx.fillStyle = '#0F172A'; ctx.font = 'bold 13px sans-serif';
-  ctx.fillText(`${v.expectedDuration || 720} min`, 40, 586);
+  ctx.fillText(`${v.expectedDuration || 720} min`, 40, 646);
   if (v.visitorPhone) {
-    ctx.fillStyle = '#94A3B8'; ctx.font = '11px sans-serif'; ctx.fillText('Phone', W / 2, 568);
-    ctx.fillStyle = '#0F172A'; ctx.font = 'bold 13px sans-serif'; ctx.fillText(v.visitorPhone, W / 2, 586);
+    ctx.fillStyle = '#94A3B8'; ctx.font = 'bold 10px sans-serif'; ctx.fillText('PHONE', W / 2, 625);
+    ctx.fillStyle = '#0F172A'; ctx.font = 'bold 13px sans-serif'; ctx.fillText(v.visitorPhone, W / 2, 646);
   }
-  ctx.textAlign = 'center'; ctx.fillStyle = '#CBD5E1'; ctx.font = '11px sans-serif';
-  ctx.fillText('Show this pass at the security gate', W / 2, 640);
+  if (estateAddress) {
+    ctx.fillStyle = '#94A3B8'; ctx.font = 'bold 10px sans-serif'; ctx.fillText('LOCATION', 40, 685);
+    ctx.fillStyle = '#334155'; ctx.font = '12px sans-serif'; ctx.fillText(estateAddress, 40, 705);
+  }
+
+  // Brand footer
+  const fgrad = ctx.createLinearGradient(0, 740, W, 820);
+  fgrad.addColorStop(0, '#0F172A'); fgrad.addColorStop(1, '#1E293B');
+  ctx.fillStyle = fgrad;
+  ctx.fillRect(0, 740, W, 80);
+  ctx.fillStyle = ACCENT;
+  ctx.beginPath(); ctx.arc(44, 783, 5, 0, Math.PI * 2); ctx.fill();
+  ctx.textAlign = 'left';
+  ctx.fillStyle = 'rgba(255,255,255,0.50)'; ctx.font = 'bold 9px sans-serif';
+  ctx.fillText('POWERED BY', 60, 772);
+  ctx.fillStyle = '#FFFFFF'; ctx.font = 'bold 18px sans-serif';
+  ctx.fillText('AreaConnect', 60, 795);
+  ctx.textAlign = 'right';
+  ctx.fillStyle = ACCENT; ctx.font = 'bold 13px sans-serif';
+  ctx.fillText(BRAND_URL, W - 40, 775);
+  ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.font = '10px sans-serif';
+  ctx.fillText('Smart estate management', W - 40, 795);
+
+  ctx.textAlign = 'left';
   return canvas;
 };
 
-const shareVisitorPass = async (v) => {
+const shareVisitorPass = async (v, estate) => {
   const date = format(new Date(v.expectedDate), 'MMM d, yyyy · h:mm a');
-  const waText = `🏠 *Visitor Pass — ${v.visitorName}*\n\n*Code:* ${v.visitorCode}\n*Purpose:* ${v.purpose}\n*Expected:* ${date}`;
+  const estateLine = estate?.name ? `\n*Estate:* ${estate.name}` : '';
+  const waText = `🏠 *Visitor Pass — ${v.visitorName}*${estateLine}\n\n*Code:* ${v.visitorCode}\n*Purpose:* ${v.purpose}\n*Expected:* ${date}\n\n_Powered by AreaConnect — areaconnect.pro_`;
 
   let file = null;
   try {
-    const canvas = await generatePassCanvas(v);
+    const canvas = await generateBrandedPass(v, estate);
     const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
     if (blob) file = new File([blob], `visitor-pass-${v.visitorCode}.png`, { type: 'image/png' });
   } catch { /* image generation failed — we'll still share text */ }
@@ -397,6 +461,7 @@ function Drawer({ open, onClose, title, children }) {
 /*  Visitor Pass Sidebar                                   */
 /* ─────────────────────────────────────────────────────── */
 function VisitorPassDrawer({ visitor, onClose }) {
+  const { user } = useAuth();
   useEffect(() => {
     if (visitor) document.body.style.overflow = 'hidden';
     else document.body.style.overflow = '';
@@ -518,7 +583,7 @@ function VisitorPassDrawer({ visitor, onClose }) {
             <Share2 size={14} /> Copy Code
           </button>
           <button
-            onClick={() => shareVisitorPass(visitor)}
+            onClick={() => shareVisitorPass(visitor, user?.estateId)}
             className="flex items-center justify-center gap-2 rounded-[9px] px-3 py-2 text-sm font-semibold transition-all"
             style={{ background: '#25D366', color: 'white', border: 'none', cursor: 'pointer' }}>
             <WhatsAppIcon /> Share Pass
