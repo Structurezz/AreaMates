@@ -27,6 +27,51 @@ const truncate = (s, maxLen) => {
   return str.length > maxLen ? str.slice(0, maxLen - 1) + '…' : str;
 };
 
+const drawShieldLogo = (ctx, x, y, size, text, opts = {}) => {
+  const { outerStroke = 'rgba(255,255,255,0.5)', innerFill = 'rgba(255,255,255,0.18)', textColor = '#FFFFFF', bgGrad = null } = opts;
+  const s = size / 40;
+  ctx.save();
+  ctx.translate(x, y);
+  if (bgGrad) {
+    const g = ctx.createLinearGradient(0, 0, size, size);
+    g.addColorStop(0, bgGrad[0]); g.addColorStop(1, bgGrad[1]);
+    ctx.fillStyle = g;
+    const r = size * 0.22;
+    ctx.beginPath();
+    ctx.moveTo(r, 0);
+    ctx.arcTo(size, 0, size, r, r);
+    ctx.arcTo(size, size, size - r, size, r);
+    ctx.arcTo(0, size, 0, size - r, r);
+    ctx.arcTo(0, 0, r, 0, r);
+    ctx.closePath(); ctx.fill();
+  }
+  ctx.strokeStyle = outerStroke;
+  ctx.lineWidth = Math.max(1, 1.5 * s);
+  ctx.beginPath();
+  ctx.moveTo(20 * s, 4 * s);
+  ctx.lineTo(6 * s, 12 * s);
+  ctx.lineTo(6 * s, 28 * s);
+  ctx.lineTo(20 * s, 36 * s);
+  ctx.lineTo(34 * s, 28 * s);
+  ctx.lineTo(34 * s, 12 * s);
+  ctx.closePath(); ctx.stroke();
+  ctx.fillStyle = innerFill;
+  ctx.beginPath();
+  ctx.moveTo(20 * s, 9 * s);
+  ctx.lineTo(9 * s, 15.5 * s);
+  ctx.lineTo(9 * s, 28.5 * s);
+  ctx.lineTo(20 * s, 35 * s);
+  ctx.lineTo(31 * s, 28.5 * s);
+  ctx.lineTo(31 * s, 15.5 * s);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = textColor;
+  ctx.font = `bold ${13 * s}px system-ui, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, 20 * s, 22 * s);
+  ctx.restore();
+};
+
 const generatePassCanvas = async (v, estate) => {
   const W = 580, H = 820;
   const estateName    = truncate(estate?.name || 'Your Estate', 36);
@@ -52,7 +97,11 @@ const generatePassCanvas = async (v, estate) => {
   ctx.fillStyle = 'rgba(255,255,255,0.05)';
   ctx.beginPath(); ctx.arc(40, 220, 80, 0, Math.PI * 2); ctx.fill();
 
+  // Top-right AreaMates app logo
+  drawShieldLogo(ctx, W - 100, 32, 64, 'AM');
+
   // Estate name (small cap)
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.font = 'bold 11px sans-serif';
   ctx.fillText(estateName.toUpperCase(), 36, 46);
   // Divider pill
@@ -135,18 +184,19 @@ const generatePassCanvas = async (v, estate) => {
   ctx.fillStyle = fgrad;
   ctx.fillRect(0, 740, W, 80);
 
-  // Accent dot
-  ctx.fillStyle = ACCENT;
-  ctx.beginPath(); ctx.arc(44, 783, 5, 0, Math.PI * 2); ctx.fill();
+  // AreaConnect brand mark (always green, regardless of app accent)
+  drawShieldLogo(ctx, 32, 758, 44, 'AC', { bgGrad: ['#10B981', '#059669'] });
 
   // POWERED BY
-  ctx.textAlign = 'left';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   ctx.fillStyle = 'rgba(255,255,255,0.50)'; ctx.font = 'bold 9px sans-serif';
-  ctx.fillText('POWERED BY', 60, 772);
+  ctx.fillText('POWERED BY', 88, 772);
 
-  // AreaConnect
-  ctx.fillStyle = '#FFFFFF'; ctx.font = 'bold 18px sans-serif';
-  ctx.fillText('AreaConnect', 60, 795);
+  // AreaConnect — split for brand coloring
+  ctx.font = 'bold 18px sans-serif';
+  ctx.fillStyle = '#FFFFFF'; ctx.fillText('Area', 88, 795);
+  const areaW = ctx.measureText('Area').width;
+  ctx.fillStyle = '#34D399'; ctx.fillText('Connect', 88 + areaW, 795);
 
   // Website + tagline (right-aligned)
   ctx.textAlign = 'right';
