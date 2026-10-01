@@ -67,19 +67,38 @@ const generatePassCanvas = async (v) => {
   return canvas;
 };
 
-const shareVisitorPass = (v) => {
+const shareVisitorPass = async (v) => {
   const date = format(new Date(v.expectedDate), 'MMM d, yyyy · h:mm a');
   const waText = `🏠 *Visitor Pass — ${v.visitorName}*\n\n*Code:* ${v.visitorCode}\n*Purpose:* ${v.purpose}\n*Expected:* ${date}`;
+
+  let file = null;
+  try {
+    const canvas = await generatePassCanvas(v);
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+    if (blob) file = new File([blob], `visitor-pass-${v.visitorCode}.png`, { type: 'image/png' });
+  } catch { /* image generation failed — we'll still share text */ }
+
+  if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({
+        files: [file],
+        text: waText,
+        title: `Visitor Pass — ${v.visitorName}`,
+      });
+      return;
+    } catch (err) {
+      if (err?.name === 'AbortError') return;
+    }
+  }
+
   window.open(`https://wa.me/?text=${encodeURIComponent(waText)}`, '_blank');
-  generatePassCanvas(v)
-    .then(canvas => new Promise(resolve => canvas.toBlob(resolve, 'image/png')))
-    .then(blob => {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = 'visitor-pass.png'; a.click();
-      URL.revokeObjectURL(url);
-    })
-    .catch(() => {});
+  if (file) {
+    const url = URL.createObjectURL(file);
+    const a = document.createElement('a');
+    a.href = url; a.download = file.name; a.click();
+    URL.revokeObjectURL(url);
+    toast('Pass image downloaded — attach it in the WhatsApp chat.', { icon: '📎', duration: 5000 });
+  }
 };
 
 function PassTimer({ visitor }) {
