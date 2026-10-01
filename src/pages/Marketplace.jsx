@@ -92,12 +92,18 @@ function ChatPanel({ seller, listing, currentUser, onClose }) {
         >
           <ChevronLeft size={18} />
         </button>
-        <div
-          className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0"
-          style={{ background: 'rgba(16,185,129,0.10)', border: '1px solid rgba(16,185,129,0.22)', color: '#059669' }}
-        >
-          {seller.name?.[0]?.toUpperCase()}
-        </div>
+        {seller.profilePhoto ? (
+          <img src={seller.profilePhoto} alt=""
+            className="w-9 h-9 rounded-full object-cover flex-shrink-0"
+            style={{ border: '1px solid rgba(16,185,129,0.25)' }} />
+        ) : (
+          <div
+            className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0"
+            style={{ background: 'rgba(16,185,129,0.10)', border: '1px solid rgba(16,185,129,0.22)', color: '#059669' }}
+          >
+            {seller.name?.[0]?.toUpperCase()}
+          </div>
+        )}
         <div className="min-w-0">
           <div className="font-semibold text-sm truncate" style={{ color: '#0F172A' }}>{seller.name}</div>
           {listing && <div className="text-xs truncate" style={{ color: '#94A3B8' }}>Re: {listing.title}</div>}
@@ -212,12 +218,18 @@ function DetailModal({ listing, currentUserId, onClose, onMessage }) {
           <h2 className="text-xl font-bold mb-2 leading-tight" style={{ color: '#0F172A' }}>{listing.title}</h2>
           <p className="text-sm leading-relaxed mb-4" style={{ color: '#64748B' }}>{listing.description}</p>
           <div className="flex items-center gap-3 pb-4 mb-4" style={{ borderBottom: '1px solid #E2E8F0' }}>
-            <div
-              className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0"
-              style={{ background: 'rgba(16,185,129,0.10)', border: '1px solid rgba(16,185,129,0.22)', color: '#059669' }}
-            >
-              {listing.sellerId?.name?.[0]?.toUpperCase()}
-            </div>
+            {listing.sellerId?.profilePhoto ? (
+              <img src={listing.sellerId.profilePhoto} alt=""
+                className="w-9 h-9 rounded-full object-cover flex-shrink-0"
+                style={{ border: '1px solid rgba(16,185,129,0.25)' }} />
+            ) : (
+              <div
+                className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0"
+                style={{ background: 'rgba(16,185,129,0.10)', border: '1px solid rgba(16,185,129,0.22)', color: '#059669' }}
+              >
+                {listing.sellerId?.name?.[0]?.toUpperCase()}
+              </div>
+            )}
             <div>
               <div className="text-sm font-medium" style={{ color: '#0F172A' }}>{listing.sellerId?.name}</div>
               <div className="text-xs" style={{ color: '#CBD5E1' }}>
