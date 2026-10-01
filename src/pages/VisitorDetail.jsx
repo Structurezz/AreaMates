@@ -499,7 +499,7 @@ export default function VisitorDetailPage() {
         {/* ── Actions (fixed above the mobile bottom nav; static on desktop) ── */}
         <div
           className="fixed inset-x-0 z-30 lg:static lg:inset-x-auto lg:z-auto"
-          style={{ bottom: 'calc(env(safe-area-inset-bottom) + 48px)' }}>
+          style={{ bottom: 'calc(env(safe-area-inset-bottom) + 68px)' }}>
           <div
             className="max-w-xl mx-auto px-4 pt-3 pb-1 lg:px-0 lg:pt-1 lg:pb-8 space-y-2"
             style={{
