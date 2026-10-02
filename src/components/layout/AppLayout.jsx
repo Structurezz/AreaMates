@@ -10,6 +10,7 @@ import { useSocket } from '../../context/SocketContext';
 import { useAuth } from '../../context/AuthContext';
 import { usePlan } from '../../hooks/usePlan';
 import NotificationBell from '../ui/NotificationBell';
+import PodcastLivePill from '../PodcastLivePill';
 
 const SEVERITY_STYLE = {
   critical: { bar: 'bg-red-500',    badge: 'bg-red-50 text-red-600 border-red-200',    icon: Zap,           border: 'border-red-200',    title: 'text-red-600' },
@@ -163,6 +164,9 @@ export default function AppLayout({ children }) {
           {children}
         </main>
       </div>
+
+      {/* Floating "AreaConnect FM is LIVE" pill */}
+      <PodcastLivePill />
 
       {/* ── Mobile bottom navigation ── */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t"

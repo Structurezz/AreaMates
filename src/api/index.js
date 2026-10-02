@@ -118,6 +118,21 @@ export const loungeAPI = {
   remove: (suggestionId) => api.delete(`/lounge/suggest/${suggestionId}`),
 };
 
+// Live DJ sessions + mixtapes (per-estate)
+export const djAPI = {
+  getActive:     () => api.get('/dj/active'),
+  listMixtapes:  () => api.get('/dj/mixtapes'),
+  recordPlay:    (id) => api.post(`/dj/mixtapes/${id}/play`),
+};
+
+// Admin podcast — listener side (any authenticated user)
+export const podcastAPI = {
+  getLive:       () => api.get('/podcast/live'),
+  getUpcoming:   () => api.get('/podcast/upcoming'),
+  listEpisodes:  () => api.get('/podcast/episodes'),
+  recordPlay:    (id) => api.post(`/podcast/episodes/${id}/play`),
+};
+
 // Payments
 export const paymentAPI = {
   getMine: () => api.get('/payments/mine'),

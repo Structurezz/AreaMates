@@ -11,6 +11,9 @@ import { eventAPI, pollAPI, loungeAPI, postAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import DJLive from '../components/DJLive';
+import MixtapeArchive from '../components/MixtapeArchive';
+import GoLiveCTA from '../components/GoLiveCTA';
 
 // ── Helpers ────────────────────────────────────────────────────────
 const SERVER_URL = (import.meta.env.VITE_API_URL || 'https://areaconnectapi-production.up.railway.app/api').replace('/api', '');
@@ -918,6 +921,15 @@ function MusicTab({ userId }) {
   return (
     <div className="space-y-5">
       <audio ref={audioRef} onEnded={() => setPlaying(false)} onError={() => { setPlaying(false); setRadioLoading(false); }} />
+
+      {/* Live DJ (shows when the estate manager is on air) */}
+      <DJLive />
+
+      {/* Start-a-live-room CTA (hidden when someone else is already live) */}
+      <GoLiveCTA />
+
+      {/* Mixtape + podcast archive */}
+      <MixtapeArchive />
 
       {/* DJ Hero */}
       <div className="glass-card p-5 overflow-hidden">
