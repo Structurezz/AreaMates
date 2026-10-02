@@ -67,16 +67,21 @@ function loadStored() {
   catch { return []; }
 }
 
+const LIVE_TYPES = new Set(['live_dj', 'live_announcement', 'live_podcast']);
+
 export function NotificationProvider({ children }) {
   const { subscribe } = useSocket() || {};
   const [notifications, setNotifications] = useState(loadStored);
   const [unreadCount, setUnreadCount] = useState(() => loadStored().filter(n => !n.readAt).length);
   const [activeAlert, setActiveAlert] = useState(null);
+  const [activeLive, setActiveLive]   = useState(null);
 
   const dismissAlert = useCallback(() => {
     stopSiren();
     setActiveAlert(null);
   }, []);
+
+  const dismissLive = useCallback(() => setActiveLive(null), []);
 
   const addNotification = useCallback((notif) => {
     const entry = { ...notif, id: notif.id || String(Date.now()), createdAt: notif.createdAt || new Date().toISOString() };
@@ -92,6 +97,12 @@ export function NotificationProvider({ children }) {
     if (cfg.isAlert) {
       playSiren(60000);
       setActiveAlert(entry);
+      return;
+    }
+
+    // Live DJ/Announcement/Podcast → surface as a modal, not just a toast
+    if (LIVE_TYPES.has(entry.type)) {
+      setActiveLive(entry);
       return;
     }
 
@@ -204,7 +215,7 @@ export function NotificationProvider({ children }) {
   const alertCount = notifications.filter(n => !n.readAt && (TYPE_CONFIG[n.type]?.isAlert)).length;
 
   return (
-    <NotificationContext.Provider value={{ notifications, unreadCount, alertCount, activeAlert, dismissAlert, markAllRead, clearAll, stopSiren, TYPE_CONFIG }}>
+    <NotificationContext.Provider value={{ notifications, unreadCount, alertCount, activeAlert, dismissAlert, activeLive, dismissLive, markAllRead, clearAll, stopSiren, TYPE_CONFIG }}>
       {children}
     </NotificationContext.Provider>
   );
