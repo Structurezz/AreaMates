@@ -113,17 +113,40 @@ function ListenerModal({ session, onClose }) {
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px 18px', position: 'relative' }}>
         <div style={{ width: '100%', maxWidth: 820 }}>
           {isAnnounce ? (
-            <div style={{ textAlign: 'center', padding: '20px 10px' }}>
-              <div style={{ width: 100, height: 100, borderRadius: 26, background: `linear-gradient(135deg, ${RED}, ${RED_DARK})`, margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 20px 48px rgba(239,68,68,0.5)' }}>
-                <Megaphone size={44} color="#fff"/>
+            <div style={{ textAlign: 'center', padding: '12px 10px' }}>
+              {/* Background music, if set */}
+              {np?.videoId && (
+                <div style={{ position: 'relative', paddingBottom: '42%', background: '#000', borderRadius: 14, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', marginBottom: 18 }}>
+                  <iframe ref={iframeRef} key={np.videoId}
+                    src={`https://www.youtube.com/embed/${np.videoId}?autoplay=1&modestbranding=1&rel=0&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}&start=${Math.floor(np.seekSec || 0)}`}
+                    title={np.title || 'Background'}
+                    allow="autoplay; encrypted-media; fullscreen"
+                    onLoad={() => setTimeout(() => applyLocalVol(vol), 400)}
+                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 0 }} />
+                </div>
+              )}
+              <div style={{ width: np?.videoId ? 72 : 100, height: np?.videoId ? 72 : 100, borderRadius: np?.videoId ? 20 : 26, background: `linear-gradient(135deg, ${RED}, ${RED_DARK})`, margin: '0 auto 18px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 20px 48px rgba(239,68,68,0.5)' }}>
+                <Megaphone size={np?.videoId ? 32 : 44} color="#fff"/>
               </div>
               <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.16em', color: '#FCA5A5', textTransform: 'uppercase', marginBottom: 6 }}>
                 Message from {session.hostName}
               </div>
-              <h1 style={{ fontSize: 26, fontWeight: 800, color: '#fff', margin: 0, letterSpacing: '-0.01em', lineHeight: 1.25 }}>
+              <h1 style={{ fontSize: 24, fontWeight: 800, color: '#fff', margin: 0, letterSpacing: '-0.01em', lineHeight: 1.25 }}>
                 {session.message || session.title}
               </h1>
-              <div style={{ marginTop: 14, fontSize: 13, color: '#FCA5A5' }}>Audio is live — stay on this screen to listen.</div>
+              {np?.videoId && (
+                <>
+                  <div style={{ marginTop: 10, fontSize: 11, color: '#FCA5A5' }}>🎵 {np.title}{np.artist ? ` · ${np.artist}` : ''}</div>
+                  <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 10, maxWidth: 420, margin: '14px auto 0' }}>
+                    <Volume2 size={14} color="#FCA5A5"/>
+                    <input type="range" min="0" max="100" value={vol}
+                      onChange={e => applyLocalVol(Number(e.target.value))}
+                      style={{ flex: 1, accentColor: RED }} />
+                    <span style={{ color: '#FCA5A5', fontSize: 11, fontWeight: 700, width: 36, textAlign: 'right' }}>{vol}%</span>
+                  </div>
+                </>
+              )}
+              {!np?.videoId && <div style={{ marginTop: 14, fontSize: 13, color: '#FCA5A5' }}>Audio is live — stay on this screen to listen.</div>}
             </div>
           ) : (
             <div style={{ position: 'relative', paddingBottom: '56.25%', background: '#000', borderRadius: 16, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
