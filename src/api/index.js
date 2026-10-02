@@ -118,10 +118,15 @@ export const loungeAPI = {
   remove: (suggestionId) => api.delete(`/lounge/suggest/${suggestionId}`),
 };
 
-// Live DJ sessions + mixtapes (per-estate)
+// Live DJ sessions + mixtapes (per-estate). Any resident can host.
 export const djAPI = {
   getActive:     () => api.get('/dj/active'),
+  start:         (data) => api.post('/dj/start', data),
+  updateTrack:   (id, data) => api.patch(`/dj/${id}/track`, data),
+  end:           (id) => api.post(`/dj/${id}/end`),
   listMixtapes:  () => api.get('/dj/mixtapes'),
+  saveMixtape:   (data) => api.post('/dj/mixtapes', data),
+  deleteMixtape: (id) => api.delete(`/dj/mixtapes/${id}`),
   recordPlay:    (id) => api.post(`/dj/mixtapes/${id}/play`),
 };
 
