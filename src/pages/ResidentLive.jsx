@@ -132,10 +132,31 @@ export default function ResidentLive() {
       }
       toast.success(`You are LIVE 🎙️`);
     } catch (e) {
-      const msg = e.response?.data?.message;
-      if (msg?.includes('already')) toast.error(msg);
-      else if (e?.name === 'NotAllowedError') toast.error('Mic access required to go live');
-      else toast.error(msg || 'Could not start session');
+      console.error('[goLive]', e);
+      const serverMsg = e.response?.data?.message;
+      // Mic errors (DOMException from getUserMedia)
+      const micErrors = {
+        NotAllowedError:       'Mic blocked. Allow microphone access in your browser.',
+        NotFoundError:         'No microphone found on this device.',
+        NotReadableError:      'Your microphone is in use by another app.',
+        OverconstrainedError:  'Mic settings not supported on this device.',
+        SecurityError:         'Mic needs a secure (HTTPS) connection to work.',
+      };
+      if (micErrors[e?.name]) {
+        toast.error(micErrors[e.name]);
+      } else if (serverMsg?.toLowerCase().includes('already')) {
+        toast.error(serverMsg);
+      } else if (serverMsg) {
+        toast.error(serverMsg);
+      } else if (e?.response?.status === 404) {
+        toast.error('Live rooms not available yet — server may still be deploying.');
+      } else if (e?.response?.status === 403) {
+        toast.error('Not allowed to start this kind of room.');
+      } else if (!e?.response && e?.message) {
+        toast.error(`Network: ${e.message}`);
+      } else {
+        toast.error('Could not start session — check console for details.');
+      }
     } finally {
       setStarting(false);
     }
