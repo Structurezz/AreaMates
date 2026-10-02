@@ -4,15 +4,11 @@ import { podcastAPI } from '../api';
 import { useSocket } from '../context/SocketContext';
 import { useAuth }   from '../context/AuthContext';
 import { useLiveAudio } from '../hooks/useLiveAudio';
+import BoostedRemoteAudio from './BoostedRemoteAudio';
 
 const BRAND = '#8B5CF6';
 const BRAND_DARK = '#6D28D9';
 
-function RemoteAudio({ stream }) {
-  const ref = useRef(null);
-  useEffect(() => { if (ref.current && stream) { ref.current.srcObject = stream; ref.current.play().catch(()=>{}); } }, [stream]);
-  return <audio ref={ref} autoPlay playsInline />;
-}
 
 function ListenerModal({ show, onClose }) {
   const { user } = useAuth();
@@ -31,7 +27,7 @@ function ListenerModal({ show, onClose }) {
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 70, background: 'linear-gradient(180deg, #0F172A 0%, #1E1B4B 100%)', color: '#fff', display: 'flex', flexDirection: 'column' }}>
       <div style={{ width: 0, height: 0, overflow: 'hidden' }}>
-        {Array.from(live.remoteStreams.entries()).map(([id, s]) => <RemoteAudio key={id} stream={s}/>)}
+        {Array.from(live.remoteStreams.entries()).map(([id, s]) => <BoostedRemoteAudio key={id} stream={s}/>)}
       </div>
 
       {/* Header */}

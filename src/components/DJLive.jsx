@@ -4,6 +4,7 @@ import { djAPI } from '../api';
 import { useSocket } from '../context/SocketContext';
 import { useAuth }   from '../context/AuthContext';
 import { useLiveAudio } from '../hooks/useLiveAudio';
+import BoostedRemoteAudio from './BoostedRemoteAudio';
 
 const INDIGO       = '#6366F1';
 const INDIGO_DARK  = '#4F46E5';
@@ -15,20 +16,10 @@ function AudioSinks({ streams }) {
   return (
     <div style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden' }}>
       {Array.from(streams.entries()).map(([id, stream]) => (
-        <RemoteAudio key={id} stream={stream} />
+        <BoostedRemoteAudio key={id} stream={stream} />
       ))}
     </div>
   );
-}
-
-function RemoteAudio({ stream }) {
-  const ref = useRef(null);
-  useEffect(() => {
-    if (!ref.current) return;
-    ref.current.srcObject = stream;
-    ref.current.play().catch(() => {});
-  }, [stream]);
-  return <audio ref={ref} autoPlay playsInline />;
 }
 
 function ListenerModal({ session, onClose }) {
@@ -238,7 +229,13 @@ function ListenerModal({ session, onClose }) {
   );
 }
 
-export default function DJLive() {
+/**
+ * Live banner for an active DJ-type session in the estate.
+ *   only="announcement"  → only renders when the active session is an announcement
+ *   only="not-announcement" → renders for every other kind (dj, prayer, chat, podcast)
+ *   only omitted         → renders for any kind
+ */
+export default function DJLive({ only }) {
   const { subscribe, emit } = useSocket();
   const [session, setSession] = useState(null);
   const [open, setOpen]       = useState(false);
@@ -256,6 +253,9 @@ export default function DJLive() {
   }, [subscribe]);
 
   if (!session) return null;
+  const isAnnouncementKind = session.kind === 'announcement';
+  if (only === 'announcement' && !isAnnouncementKind) return null;
+  if (only === 'not-announcement' && isAnnouncementKind) return null;
 
   const isAnnounce = session.kind === 'announcement';
   const bannerBg   = isAnnounce

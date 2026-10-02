@@ -19,7 +19,7 @@ const VARIANTS = {
     accentDark: '#DC2626',
     gradient: 'linear-gradient(135deg, #7F1D1D 0%, #991B1B 55%, #DC2626 100%)',
     cta: 'Listen now',
-    target: '/lounge',
+    target: '/announcements',
   },
   live_podcast: {
     Icon: Radio,

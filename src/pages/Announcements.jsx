@@ -4,6 +4,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { announcementAPI } from '../api';
 import { useSocket } from '../context/SocketContext';
 import toast from 'react-hot-toast';
+import DJLive from '../components/DJLive';
 
 const CAT_META = {
   general:     { Icon: Megaphone,     color: '#2563EB', bg: '#EFF6FF', border: '#BFDBFE', label: 'General' },
@@ -71,6 +72,9 @@ export default function Announcements() {
           </div>
         </div>
       </div>
+
+      {/* Live announcement banner (if a manager is on air right now) */}
+      <DJLive only="announcement" />
 
       {items.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748B' }}>

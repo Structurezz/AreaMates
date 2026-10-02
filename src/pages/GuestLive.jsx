@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import axios from 'axios';
 import { Radio, Mic, MicOff, Loader2, AlertCircle, X, Users } from 'lucide-react';
+import BoostedRemoteAudio from '../components/BoostedRemoteAudio';
 
 const API  = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 const SOCK = import.meta.env.VITE_SOCKET_URL || API.replace(/\/api\/?$/, '');
@@ -11,11 +12,6 @@ const RTC_CONFIG = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { ur
 const BRAND = '#8B5CF6';
 const BRAND_DARK = '#6D28D9';
 
-function RemoteAudio({ stream }) {
-  const ref = useRef(null);
-  useEffect(() => { if (ref.current && stream) { ref.current.srcObject = stream; ref.current.play().catch(()=>{}); } }, [stream]);
-  return <audio ref={ref} autoPlay playsInline />;
-}
 
 export default function GuestLive() {
   const { token } = useParams();
@@ -196,7 +192,7 @@ export default function GuestLive() {
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(180deg, #0F172A 0%, #1E1B4B 100%)', color: '#fff', display: 'flex', flexDirection: 'column' }}>
       <div style={{ width: 0, height: 0, overflow: 'hidden' }}>
-        {Array.from(remoteStreams.entries()).map(([id, s]) => <RemoteAudio key={id} stream={s}/>)}
+        {Array.from(remoteStreams.entries()).map(([id, s]) => <BoostedRemoteAudio key={id} stream={s}/>)}
       </div>
 
       <div style={{ padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>

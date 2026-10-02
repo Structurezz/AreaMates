@@ -63,7 +63,7 @@ export default function ResidentLive() {
   const [mixTitle, setMixTitle] = useState('');
   const [saving, setSaving]     = useState(false);
   const [peak, setPeak]         = useState(0);
-  const [musicVol, setMusicVol] = useState(60);
+  const [musicVol, setMusicVol] = useState(45);  // voice must sit on top
 
   const recorderRef = useRef(createVoiceRecorder());
   const sessionStartRef = useRef(0);

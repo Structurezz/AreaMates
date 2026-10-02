@@ -922,8 +922,8 @@ function MusicTab({ userId }) {
     <div className="space-y-5">
       <audio ref={audioRef} onEnded={() => setPlaying(false)} onError={() => { setPlaying(false); setRadioLoading(false); }} />
 
-      {/* Live DJ (shows when the estate manager is on air) */}
-      <DJLive />
+      {/* Live DJ / Prayer / Chat / Podcast (announcements render on /announcements instead) */}
+      <DJLive only="not-announcement" />
 
       {/* Start-a-live-room CTA (hidden when someone else is already live) */}
       <GoLiveCTA />
