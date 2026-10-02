@@ -36,9 +36,16 @@ function ListenerModal({ session, onClose }) {
   const { subscribe } = useSocket();
   const [np, setNp]       = useState(session.nowPlaying);
   const [reactions, setR] = useState([]);  // ephemeral floating reactions
-  const [vol, setVol]     = useState(60);
+  // Volume is host-controlled, radio-station style — initialize from session
+  const [vol, setVol]     = useState(session.musicVolume ?? 60);
   const iframeRef         = useRef(null);
   const isAnnounce        = session.kind === 'announcement';
+
+  // Compute elapsed seconds since the track started → used as YouTube start
+  // param so new joiners drop in at the host's current playhead.
+  const trackStart = np?.videoId
+    ? Math.max(0, Math.floor((Date.now() - new Date(np.startedAt || Date.now()).getTime()) / 1000) + (np.seekSec || 0))
+    : 0;
 
   const live = useLiveAudio({
     roomType: 'dj',
@@ -118,7 +125,7 @@ function ListenerModal({ session, onClose }) {
               {np?.videoId && (
                 <div style={{ position: 'relative', paddingBottom: '42%', background: '#000', borderRadius: 14, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', marginBottom: 18 }}>
                   <iframe ref={iframeRef} key={np.videoId}
-                    src={`https://www.youtube.com/embed/${np.videoId}?autoplay=1&modestbranding=1&rel=0&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}&start=${Math.floor(np.seekSec || 0)}`}
+                    src={`https://www.youtube.com/embed/${np.videoId}?autoplay=1&modestbranding=1&rel=0&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}&start=${trackStart}`}
                     title={np.title || 'Background'}
                     allow="autoplay; encrypted-media; fullscreen"
                     onLoad={() => setTimeout(() => applyLocalVol(vol), 400)}
@@ -137,12 +144,12 @@ function ListenerModal({ session, onClose }) {
               {np?.videoId && (
                 <>
                   <div style={{ marginTop: 10, fontSize: 11, color: '#FCA5A5' }}>🎵 {np.title}{np.artist ? ` · ${np.artist}` : ''}</div>
-                  <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 10, maxWidth: 420, margin: '14px auto 0' }}>
-                    <Volume2 size={14} color="#FCA5A5"/>
-                    <input type="range" min="0" max="100" value={vol}
-                      onChange={e => applyLocalVol(Number(e.target.value))}
-                      style={{ flex: 1, accentColor: RED }} />
-                    <span style={{ color: '#FCA5A5', fontSize: 11, fontWeight: 700, width: 36, textAlign: 'right' }}>{vol}%</span>
+                  <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 10, maxWidth: 420, margin: '12px auto 0', fontSize: 11, color: '#FCA5A5' }}>
+                    <Volume2 size={12} />
+                    <div style={{ flex: 1, height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 999, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${vol}%`, background: `linear-gradient(90deg, ${RED}, ${RED_DARK})`, transition: 'width 0.2s' }} />
+                    </div>
+                    <span>mix {vol}%</span>
                   </div>
                 </>
               )}
@@ -152,7 +159,7 @@ function ListenerModal({ session, onClose }) {
             <div style={{ position: 'relative', paddingBottom: '56.25%', background: '#000', borderRadius: 16, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
               {np?.videoId ? (
                 <iframe ref={iframeRef} key={np.videoId}
-                  src={`https://www.youtube.com/embed/${np.videoId}?autoplay=1&modestbranding=1&rel=0&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}&start=${Math.floor(np.seekSec || 0)}`}
+                  src={`https://www.youtube.com/embed/${np.videoId}?autoplay=1&modestbranding=1&rel=0&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}&start=${trackStart}`}
                   title={np.title || 'Now playing'}
                   allow="autoplay; encrypted-media; fullscreen"
                   allowFullScreen
@@ -184,13 +191,13 @@ function ListenerModal({ session, onClose }) {
                 </div>
               </div>
 
-              {/* Local music volume (listener-controlled) */}
-              <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 10 }}>
-                <Volume2 size={14} color="#94A3B8" />
-                <input type="range" min="0" max="100" value={vol}
-                  onChange={e => applyLocalVol(Number(e.target.value))}
-                  style={{ flex: 1, accentColor: INDIGO }} />
-                <span style={{ color: '#94A3B8', fontSize: 11, fontWeight: 700, width: 36, textAlign: 'right' }}>{vol}%</span>
+              {/* Host-controlled music mix level (read-only indicator) */}
+              <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 10, fontSize: 11, color: '#94A3B8' }}>
+                <Volume2 size={12} />
+                <div style={{ flex: 1, height: 4, background: 'rgba(255,255,255,0.08)', borderRadius: 999, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${vol}%`, background: `linear-gradient(90deg, ${INDIGO}, ${INDIGO_DARK})`, transition: 'width 0.2s' }} />
+                </div>
+                <span>mix {vol}%</span>
               </div>
 
               {/* Reactions */}
