@@ -6,6 +6,7 @@ import {
   Banknote, Eye, RotateCcw, Siren, Lock, TrendingUp, MessageSquare, Calendar,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useSocket } from '../context/SocketContext';
 import { courtAPI, estateAPI } from '../api';
 import toast from 'react-hot-toast';
 
@@ -293,6 +294,7 @@ function CaseCard({ c, onClick, userId }) {
 function FileDisputeForm({ onFiled, residents }) {
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [files, setFiles] = useState([]);  // proof attachments to upload after filing
   const [form, setForm] = useState({
     title: '', type: '', severity: 'moderate',
     charges: [''], plaintiffStatement: '',
@@ -303,12 +305,27 @@ function FileDisputeForm({ onFiled, residents }) {
   const setCharge = (i, v) => { const c = [...form.charges]; c[i] = v; set('charges', c); };
   const addCharge    = () => set('charges', [...form.charges, '']);
   const removeCharge = (i) => set('charges', form.charges.filter((_, idx) => idx !== i));
+  const pickFiles = (fileList) => {
+    const picked = Array.from(fileList || []);
+    const combined = [...files, ...picked].slice(0, 6);
+    setFiles(combined);
+  };
+  const removeFile = (i) => setFiles(prev => prev.filter((_, idx) => idx !== i));
 
   const submit = async () => {
     setLoading(true);
     try {
-      await courtAPI.fileCase({ ...form, charges: form.charges.filter(c => c.trim()) });
-      toast.success('Case filed. The court is now open — your AI lawyer has been assigned.');
+      const { data } = await courtAPI.fileCase({ ...form, charges: form.charges.filter(c => c.trim()) });
+      const caseId = data?.data?._id;
+      if (caseId && files.length > 0) {
+        const fd = new FormData();
+        files.forEach(f => fd.append('files', f));
+        try { await courtAPI.attach(caseId, fd); }
+        catch (e) { toast('Case filed, but attachments failed to upload', { icon: '⚠️' }); }
+      }
+      toast.success(files.length > 0
+        ? 'Case filed. Your lawyer has your proof and will handle the rest.'
+        : 'Case filed. The court is now open — your AI lawyer has been assigned.');
       onFiled();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to file case');
@@ -428,6 +445,46 @@ function FileDisputeForm({ onFiled, residents }) {
               value={form.plaintiffStatement} onChange={e => set('plaintiffStatement', e.target.value)} style={{ resize: 'vertical' }} />
             <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 4 }}>{form.plaintiffStatement.length} characters (at least 30)</div>
           </div>
+
+          {/* Attach proof */}
+          <div>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>
+              Attach proof (optional)
+            </label>
+            <label style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              padding: '16px 14px', borderRadius: 12, border: '1.5px dashed #C7D2FE',
+              background: '#F5F3FF', color: PRIMARY_DARK, cursor: 'pointer', fontSize: 13, fontWeight: 600,
+            }}>
+              <Upload size={15} /> Pick images, PDFs, audio or video
+              <input type="file" multiple hidden
+                accept="image/*,application/pdf,.doc,.docx,audio/*,video/*"
+                onChange={e => { pickFiles(e.target.files); e.target.value = ''; }} />
+            </label>
+            {files.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                {files.map((f, i) => (
+                  <div key={i} style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    padding: '5px 10px', borderRadius: 999,
+                    background: '#EEF2FF', border: `1px solid ${PRIMARY}30`,
+                    fontSize: 11, color: PRIMARY_DARK, maxWidth: '100%',
+                  }}>
+                    <FileText size={11} />
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 140 }}>{f.name}</span>
+                    <button onClick={() => removeFile(i)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: PRIMARY_DARK, padding: 0, display: 'flex' }}>
+                      <XCircle size={11}/>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 6 }}>
+              Up to 6 files · 25 MB each. Your lawyer will table these as evidence automatically.
+            </div>
+          </div>
+
           <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 12, padding: '12px 14px', display: 'flex', gap: 10 }}>
             <AlertTriangle size={16} color="#D97706" style={{ flexShrink: 0, marginTop: 1 }} />
             <div style={{ fontSize: 12, color: '#92400E' }}>Only share what's true. Making up a story can get you in trouble under the estate's community rules.</div>
@@ -506,9 +563,11 @@ function VerdictDisplay({ verdict, fine, caseObj, onPayFine, payingFine, userId 
       background: isGuilty ? 'linear-gradient(135deg,#1C0A0A,#2D0A0A)' : isNotGuilty ? 'linear-gradient(135deg,#052E16,#064E3B)' : 'linear-gradient(135deg,#0F172A,#1E293B)',
       borderRadius: 16, padding: 24, marginBottom: 20,
       border: isGuilty ? '1px solid #DC2626' : isNotGuilty ? '1px solid #10B981' : '1px solid #334155',
+      animation: 'verdict-drop 0.7s cubic-bezier(.22,1,.36,1)',
+      position: 'relative', overflow: 'hidden',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-        <div style={{ background: isGuilty ? '#DC262620' : '#10B98120', borderRadius: 10, padding: '8px 10px' }}>
+        <div style={{ background: isGuilty ? '#DC262620' : '#10B98120', borderRadius: 10, padding: '8px 10px', animation: 'gavel-bang 0.5s ease-out' }}>
           <Gavel size={20} color={isGuilty ? '#DC2626' : isNotGuilty ? '#10B981' : '#64748B'} />
         </div>
         <div>
@@ -516,6 +575,10 @@ function VerdictDisplay({ verdict, fine, caseObj, onPayFine, payingFine, userId 
           <div style={{ fontSize: 22, fontWeight: 900, color: isGuilty ? '#FCA5A5' : isNotGuilty ? '#6EE7B7' : '#94A3B8' }}>
             {isGuilty ? 'GUILTY' : isNotGuilty ? 'NOT GUILTY' : verdict.decision.toUpperCase().replace('_', ' ')}
           </div>
+          <style>{`
+            @keyframes verdict-drop { from { transform: translateY(-14px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+            @keyframes gavel-bang { 0% { transform: rotate(-20deg) scale(0.9); } 60% { transform: rotate(10deg) scale(1.1); } 100% { transform: rotate(0deg) scale(1); } }
+          `}</style>
           {caseObj.isDefaultJudgment && (
             <div style={{ fontSize: 11, color: '#F87171', fontWeight: 600, marginTop: 3 }}>
               ⚠ Default judgment — defendant did not respond in time
@@ -711,6 +774,8 @@ function LawyerChatTab({ c, isPlaintiff, isDefendant, chatMsg, setChatMsg, chatL
 // ── Case detail ───────────────────────────────────────────────────────────────
 
 function CaseDetail({ caseId, onBack, user }) {
+  const { subscribe } = useSocket() || {};
+  const [commentary, setCommentary]           = useState([]);  // live play-by-play ticker
   const [c, setC]                             = useState(null);
   const [loading, setLoading]                 = useState(true);
   const [activeTab, setActiveTab]             = useState('proceedings');
@@ -738,6 +803,7 @@ function CaseDetail({ caseId, onBack, user }) {
   const [chatLoading, setChatLoading]         = useState(false);
   const [adjournReason, setAdjournReason]     = useState('');
   const [adjourning, setAdjourning]           = useState(false);
+  const [uploadingFiles, setUploadingFiles]   = useState(false);
 
   const procRef = useRef(null);
 
@@ -751,6 +817,23 @@ function CaseDetail({ caseId, onBack, user }) {
 
   useEffect(() => { load(); }, [caseId]);
   useEffect(() => { if (procRef.current) procRef.current.scrollTop = procRef.current.scrollHeight; }, [c?.proceedings?.length]);
+
+  // Live updates — merge server pushes without refresh
+  useEffect(() => {
+    if (!subscribe || !caseId) return;
+    const u1 = subscribe('court:case-updated', (updated) => {
+      if (String(updated?._id) !== String(caseId)) return;
+      setC(updated);
+    });
+    const u2 = subscribe('court:commentary', ({ caseId: cid, text, at }) => {
+      if (String(cid) !== String(caseId)) return;
+      const id = `${at}-${Math.random().toString(36).slice(2, 6)}`;
+      setCommentary(prev => [{ id, text, at }, ...prev].slice(0, 6));
+      // auto-fade after 10s
+      setTimeout(() => setCommentary(prev => prev.filter(x => x.id !== id)), 10000);
+    });
+    return () => { u1 && u1(); u2 && u2(); };
+  }, [subscribe, caseId]);
 
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 80 }}>
@@ -896,6 +979,70 @@ function CaseDetail({ caseId, onBack, user }) {
         style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#64748B', fontSize: 13, fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', marginBottom: 16, padding: 0 }}>
         <ArrowLeft size={15} /> Back to all cases
       </button>
+
+      {/* Phase progress bar */}
+      {(() => {
+        const phases = [
+          { key: 'filed',              label: 'Filed' },
+          { key: 'open',               label: 'Open' },
+          { key: 'in_hearing',         label: 'Hearing' },
+          { key: 'jury_deliberation',  label: 'Jury' },
+          { key: 'judge_deliberation', label: 'Judge' },
+          { key: 'verdict_delivered',  label: 'Verdict' },
+        ];
+        const idx = Math.max(0, phases.findIndex(p => p.key === c.status));
+        const settled = c.status === 'settled';
+        return (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '10px 14px', borderRadius: 12, background: '#F8FAFC',
+            border: '1px solid #E2E8F0', marginBottom: 10,
+            overflowX: 'auto',
+          }}>
+            {phases.map((p, i) => {
+              const isActive = i <= idx && !settled;
+              const isCurrent = i === idx && !settled;
+              return (
+                <div key={p.key} style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                  <div style={{
+                    width: 8, height: 8, borderRadius: '50%',
+                    background: isActive ? PRIMARY : '#CBD5E1',
+                    boxShadow: isCurrent ? `0 0 0 4px ${PRIMARY}22` : 'none',
+                    transition: 'all 0.3s',
+                  }} />
+                  <span style={{ fontSize: 11, fontWeight: isCurrent ? 800 : 600, color: isActive ? '#0F172A' : '#94A3B8' }}>
+                    {p.label}
+                  </span>
+                  {i < phases.length - 1 && (
+                    <div style={{ width: 18, height: 2, background: i < idx && !settled ? PRIMARY : '#E2E8F0', borderRadius: 2 }} />
+                  )}
+                </div>
+              );
+            })}
+            {settled && <span style={{ fontSize: 11, fontWeight: 800, color: '#059669', marginLeft: 'auto' }}>✓ Resolved amicably</span>}
+          </div>
+        );
+      })()}
+
+      {/* Live play-by-play ticker */}
+      {commentary.length > 0 && (
+        <div style={{
+          background: 'linear-gradient(135deg, #0F172A, #1E1B4B)',
+          borderRadius: 12, padding: '10px 14px', marginBottom: 10,
+          display: 'flex', alignItems: 'center', gap: 10, overflow: 'hidden',
+          border: '1px solid #312E81',
+        }}>
+          <span style={{ position: 'relative', display: 'inline-flex', width: 8, height: 8, flexShrink: 0 }}>
+            <span style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: '#EF4444', animation: 'ping 1.6s infinite' }} />
+            <span style={{ position: 'relative', width: 8, height: 8, borderRadius: '50%', background: '#EF4444' }} />
+          </span>
+          <span style={{ color: '#FCA5A5', fontSize: 10, fontWeight: 800, letterSpacing: '0.14em', flexShrink: 0 }}>LIVE</span>
+          <div style={{ color: '#E0E7FF', fontSize: 12.5, lineHeight: 1.4, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', flex: 1 }}>
+            {commentary[0].text}
+          </div>
+          <style>{`@keyframes ping { 75%,100% { transform: scale(2.4); opacity: 0; } }`}</style>
+        </div>
+      )}
 
       {/* Response deadline warning */}
       {showDeadline && (
@@ -1058,14 +1205,31 @@ function CaseDetail({ caseId, onBack, user }) {
             ? <div style={{ textAlign: 'center', color: '#94A3B8', padding: '40px 0', fontSize: 13 }}>Nothing has been shared yet. Add proof under the Actions tab.</div>
             : c.evidence.map((e, i) => (
               <div key={i} style={{ background: '#FAFAFA', border: '1px solid #E2E8F0', borderRadius: 12, padding: '14px 16px', marginBottom: 10 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
                   <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 999,
                     color: e.side === 'prosecution' ? '#DC2626' : e.side === 'defense' ? '#2563EB' : '#64748B',
                     background: e.side === 'prosecution' ? '#FEF2F2' : e.side === 'defense' ? '#EFF6FF' : '#F1F5F9' }}>{e.side?.toUpperCase()}</span>
                   <span style={{ fontWeight: 700, fontSize: 13, color: '#0F172A' }}>{e.label}</span>
+                  {e.mediaKind && (
+                    <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 999, color: PRIMARY_DARK, background: '#EEF2FF', border: `1px solid ${PRIMARY}30`, textTransform: 'uppercase' }}>{e.mediaKind}</span>
+                  )}
                   <span style={{ fontSize: 11, color: '#94A3B8', marginLeft: 'auto' }}>{new Date(e.submittedAt).toLocaleDateString('en-NG')}</span>
                 </div>
-                <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{e.content}</div>
+                <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6, marginBottom: e.mediaUrl ? 10 : 0 }}>{e.content}</div>
+                {e.mediaUrl && (() => {
+                  const src = `${API_BASE.replace(/\/api\/?$/, '')}${e.mediaUrl}`;
+                  if (e.mediaKind === 'image') {
+                    return <a href={src} target="_blank" rel="noreferrer"><img src={src} alt={e.label} style={{ maxWidth: '100%', maxHeight: 320, borderRadius: 10, border: '1px solid #E2E8F0' }}/></a>;
+                  }
+                  if (e.mediaKind === 'audio') return <audio src={src} controls style={{ width: '100%' }}/>;
+                  if (e.mediaKind === 'video') return <video src={src} controls style={{ width: '100%', maxHeight: 360, borderRadius: 10, background: '#000' }}/>;
+                  return (
+                    <a href={src} target="_blank" rel="noreferrer"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 10, background: '#fff', border: '1px solid #E2E8F0', color: PRIMARY_DARK, fontWeight: 600, fontSize: 12, textDecoration: 'none' }}>
+                      <FileText size={13}/> Open {e.mediaName || 'file'}
+                    </a>
+                  );
+                })()}
               </div>
             ))}
         </div>
@@ -1179,11 +1343,44 @@ function CaseDetail({ caseId, onBack, user }) {
             </div>
           )}
 
-          {/* Submit evidence */}
+          {/* Hand files to your lawyer (file upload) */}
           {canAct && isParty && (
             <div style={{ background: '#FAFAFA', border: '1px solid #E2E8F0', borderRadius: 14, padding: '16px 18px' }}>
-              <div style={{ fontWeight: 700, fontSize: 14, color: '#0F172A', marginBottom: 4 }}>Add Proof</div>
-              <div style={{ fontSize: 12, color: '#64748B', marginBottom: 12 }}>Screenshots, receipts, messages — anything that supports your side.</div>
+              <div style={{ fontWeight: 700, fontSize: 14, color: '#0F172A', marginBottom: 4 }}>Hand files to your lawyer</div>
+              <div style={{ fontSize: 12, color: '#64748B', marginBottom: 12 }}>Upload screenshots, PDFs, voice notes or short videos. Your lawyer tables them as evidence automatically.</div>
+              <label style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                padding: '16px 14px', borderRadius: 12, border: '1.5px dashed #C7D2FE',
+                background: '#F5F3FF', color: PRIMARY_DARK, cursor: uploadingFiles ? 'wait' : 'pointer', fontSize: 13, fontWeight: 600,
+                opacity: uploadingFiles ? 0.6 : 1,
+              }}>
+                {uploadingFiles ? <><Spinner size={14} color={PRIMARY}/> Uploading…</> : <><Upload size={15}/> Pick files to attach</>}
+                <input type="file" multiple hidden
+                  accept="image/*,application/pdf,.doc,.docx,audio/*,video/*"
+                  disabled={uploadingFiles}
+                  onChange={async e => {
+                    const picked = Array.from(e.target.files || []);
+                    e.target.value = '';
+                    if (!picked.length) return;
+                    setUploadingFiles(true);
+                    try {
+                      const fd = new FormData();
+                      picked.slice(0, 6).forEach(f => fd.append('files', f));
+                      await courtAPI.attach(c._id, fd);
+                      toast.success(`${picked.length} file${picked.length !== 1 ? 's' : ''} handed to your lawyer`);
+                    } catch (err) {
+                      toast.error(err.response?.data?.message || 'Upload failed');
+                    } finally { setUploadingFiles(false); }
+                  }} />
+              </label>
+            </div>
+          )}
+
+          {/* Manual argument-style evidence (power users) */}
+          {canAct && isParty && (
+            <div style={{ background: '#FAFAFA', border: '1px solid #E2E8F0', borderRadius: 14, padding: '16px 18px' }}>
+              <div style={{ fontWeight: 700, fontSize: 14, color: '#0F172A', marginBottom: 4 }}>Describe something in words</div>
+              <div style={{ fontSize: 12, color: '#64748B', marginBottom: 12 }}>No file? Just write what you want the court to see.</div>
               <input className="input-field" placeholder="What is it? (e.g. WhatsApp screenshot, payment receipt)" value={evidenceLabel}
                 onChange={e => setEvidenceLabel(e.target.value)} style={{ marginBottom: 8 }} />
               <textarea className="input-field" rows={3} placeholder="Describe it — what does it show?" value={evidenceContent}
@@ -1203,7 +1400,7 @@ function CaseDetail({ caseId, onBack, user }) {
                   background: evidenceLabel.trim() && evidenceContent.trim() ? 'linear-gradient(135deg,#D97706,#B45309)' : '#E2E8F0',
                   color: evidenceLabel.trim() && evidenceContent.trim() ? '#fff' : '#94A3B8', border: 'none', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                {submittingEvid ? <><Spinner size={14} color="#fff" />Uploading…</> : <><Upload size={14} /> Add proof</>}
+                {submittingEvid ? <><Spinner size={14} color="#fff" />Uploading…</> : <><Upload size={14} /> Submit text evidence</>}
               </button>
             </div>
           )}

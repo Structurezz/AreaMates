@@ -171,6 +171,9 @@ export const courtAPI = {
   payFine:           (id) => api.post(`/court/${id}/pay-fine`),
   chatWithLawyer:    (id, message) => api.post(`/court/${id}/chat`, { message }),
   requestAdjournment:(id, reason) => api.post(`/court/${id}/adjourn`, { reason }),
+  attach:            (id, formData) => api.post(`/court/${id}/attach`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
 };
 
 export const campaignAPI = {
