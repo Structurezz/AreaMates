@@ -10,6 +10,8 @@ import { useAuth }   from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import { djAPI, loungeAPI } from '../api';
 import { useLiveAudio } from '../hooks/useLiveAudio';
+import { Fader }      from '../components/MixerDeck';
+import AudiencePanel  from '../components/AudiencePanel';
 
 const INDIGO = '#6366F1';
 const INDIGO_DARK = '#4F46E5';
@@ -319,11 +321,27 @@ export default function ResidentLive() {
             </div>
           </div>
 
+          {/* Mic fader (no music in prayer/chat) */}
+          <div style={{ marginTop: 16, padding: 12, borderRadius: 12, background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <Fader label="Mic" value={Math.round((live.micGain || 1) * 100)} max={200} unit="%"
+              onChange={(v) => live.setMicGain((v || 0) / 100)}
+              color="#10B981"
+              icon={<Mic size={13}/>}
+              quickActions={[{ label: 'Low', value: 80 }, { label: 'Hot', value: 150 }]}
+            />
+          </div>
+
           <button onClick={endSession}
-            style={{ marginTop: 20, width: '100%', padding: '11px 0', borderRadius: 12, border: '1px solid rgba(255,255,255,0.3)', background: 'rgba(0,0,0,0.2)', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            style={{ marginTop: 16, width: '100%', padding: '11px 0', borderRadius: 12, border: '1px solid rgba(255,255,255,0.3)', background: 'rgba(0,0,0,0.2)', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
             <X size={14}/> End room
           </button>
         </div>
+
+        {/* Audience panel */}
+        <div style={{ marginTop: 14, background: 'linear-gradient(180deg, #0F172A, #1E1B4B)', borderRadius: 18, padding: 14, border: '1px solid #334155' }}>
+          <AudiencePanel roomType="dj" roomId={session._id} accent={modeMeta.color} />
+        </div>
+
         <style>{`@keyframes ping { 75%,100% { transform: scale(2.4); opacity: 0; } }`}</style>
       </div>
     );
@@ -383,21 +401,21 @@ export default function ResidentLive() {
               <div style={{ fontSize: 12, color: '#64748B' }}>{current?.artist || 'Spin something from the queue →'}</div>
             </div>
           </div>
-          <div style={{ padding: '12px 18px', borderTop: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', gap: 10 }}>
-            <button onClick={() => applyVolume(musicVol === 0 ? 60 : 0)}
-              style={{ width: 32, height: 32, borderRadius: 10, border: '1px solid #E2E8F0', background: '#fff', cursor: 'pointer', color: '#64748B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {musicVol === 0 ? <VolumeX size={14}/> : musicVol < 40 ? <Volume1 size={14}/> : <Volume2 size={14}/>}
-            </button>
-            <div style={{ flex: 1 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, fontWeight: 700, color: '#94A3B8', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>
-                <span>Music volume</span><span>{musicVol}%</span>
-              </div>
-              <input type="range" min="0" max="100" value={musicVol}
-                onChange={e => applyVolume(Number(e.target.value))}
-                style={{ width: '100%', accentColor: modeMeta.color }} />
-            </div>
-            <button onClick={() => applyVolume(20)} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid #E2E8F0', background: '#F8FAFC', color: '#64748B', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Duck</button>
-            <button onClick={() => applyVolume(80)} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid #E2E8F0', background: '#F8FAFC', color: '#64748B', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Up</button>
+          <div style={{ padding: '12px 18px', borderTop: '1px solid #F1F5F9', background: '#0F172A', display: 'flex', gap: 10 }}>
+            <Fader label="Music" value={musicVol} max={100} unit="%"
+              disabled={!current}
+              onChange={applyVolume}
+              color={modeMeta.color}
+              icon={musicVol === 0 ? <VolumeX size={13}/> : musicVol < 40 ? <Volume1 size={13}/> : <Volume2 size={13}/>}
+              quickActions={[{ label: 'Duck', value: 20 }, { label: 'Up', value: 60 }]}
+            />
+            <Fader label="Mic" value={Math.round((live.micGain || 1) * 100)} max={200} unit="%"
+              disabled={false}
+              onChange={(v) => live.setMicGain((v || 0) / 100)}
+              color="#10B981"
+              icon={<Mic size={13}/>}
+              quickActions={[{ label: 'Low', value: 80 }, { label: 'Hot', value: 150 }]}
+            />
           </div>
         </div>
 
@@ -422,6 +440,11 @@ export default function ResidentLive() {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Audience panel */}
+      <div style={{ marginTop: 14, background: 'linear-gradient(180deg, #0F172A, #1E1B4B)', borderRadius: 18, padding: 14, border: '1px solid #334155' }}>
+        <AudiencePanel roomType="dj" roomId={session._id} accent={modeMeta.color} />
       </div>
 
       {showSave && (

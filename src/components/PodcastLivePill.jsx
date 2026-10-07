@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { podcastAPI } from '../api';
 import { useSocket } from '../context/SocketContext';
-import PodcastLiveListener from './PodcastLiveListener';
+import LiveListenerModal from './LiveListenerModal';
 
 const BRAND      = '#8B5CF6';
 const BRAND_DARK = '#6D28D9';
@@ -19,6 +19,19 @@ export default function PodcastLivePill() {
   }, [subscribe]);
 
   if (!show) return null;
+
+  const room = {
+    type: 'podcast',
+    id:   show._id,
+    kind: 'podcast',
+    hostName:   show.hostName,
+    hostPhoto:  show.hostPhoto,
+    title:      show.title,
+    description:show.description,
+    coverImage: show.coverImage,
+    nowPlaying: show.nowPlaying,
+    musicVolume:show.musicVolume,
+  };
 
   return (
     <>
@@ -42,7 +55,7 @@ export default function PodcastLivePill() {
         </span>
       </button>
 
-      {open && <PodcastLiveListener show={show} onClose={() => setOpen(false)} />}
+      {open && <LiveListenerModal room={room} onClose={() => setOpen(false)} />}
 
       <style>{`
         @keyframes pill-pulse {
