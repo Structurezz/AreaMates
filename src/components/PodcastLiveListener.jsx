@@ -1,41 +1,44 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  Radio, X, Users, Hand, Mic, MicOff, Heart, Send, Flame, Sparkles,
-  PartyPopper, ThumbsUp,
-} from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { X, Users, Heart, Send, Hand, Mic, MicOff, Smile } from 'lucide-react';
 import { useSocket } from '../context/SocketContext';
 import { useAuth }   from '../context/AuthContext';
 import { useLiveAudio } from '../hooks/useLiveAudio';
 import BoostedRemoteAudio from './BoostedRemoteAudio';
 
-const VIOLET      = '#8B5CF6';
-const VIOLET_DARK = '#6D28D9';
-
 const REACTION_EMOJIS = ['❤️', '🔥', '😂', '👏', '💯', '🎉'];
-const REACTION_COLORS = {
-  '❤️': '#EC4899', '🔥': '#F97316', '😂': '#FACC15',
-  '👏': '#60A5FA', '💯': '#A78BFA', '🎉': '#F472B6',
-};
-
-const MAX_CHAT   = 100;
-const MAX_FLOATS = 40;
+const MAX_CHAT   = 50;   // visible overlay history
+const CHAT_LIFE  = 8000; // ms before a bubble fades
+const MAX_FLOATS = 60;
 
 /**
- * Twitch/IG-Live-style listener experience for AreaConnect FM shows.
- * Pulsing host avatar · scrolling chat · floating reactions · live
- * viewer and like counter · raise-hand to call in.
+ * Instagram-Live-style listener experience:
+ *  - Full-bleed background (host "stream")
+ *  - Overlay chat bubbles bottom-left that auto-fade
+ *  - Vertical reaction/heart column bottom-right; hearts spawn ONLY along the right edge
+ *  - Pill "Add a comment…" input along the bottom
  */
 export default function PodcastLiveListener({ show, onClose }) {
   const { user } = useAuth();
   const { subscribe, emit } = useSocket() || {};
 
-  const [chat, setChat]       = useState([]);     // {id, userName, userPhoto, text, at}
-  const [floats, setFloats]   = useState([]);     // {id, emoji, x, at}
+  const [chat, setChat]       = useState([]);     // visible chat (auto-expires)
+  const [floats, setFloats]   = useState([]);     // floating emojis (right rail)
   const [likes, setLikes]     = useState(0);
   const [input, setInput]     = useState('');
-  const [heartPulse, setHP]   = useState(0);
+  const [showEmojis, setShowEmojis] = useState(false);
+  const [heartKick, setHeartKick]   = useState(0);
 
-  const chatBoxRef = useRef(null);
+  // Host-synced background music
+  const [music, setMusic]     = useState(show.nowPlaying?.videoId ? show.nowPlaying : null);
+  const [musicVol, setMVol]   = useState(show.musicVolume ?? 35);
+  const musicIframeRef        = useRef(null);
+  const applyMusicVolume = (v) => {
+    setMVol(v);
+    try { musicIframeRef.current?.contentWindow?.postMessage(JSON.stringify({ event: 'command', func: 'setVolume', args: [v] }), '*'); } catch {}
+  };
+  const musicStartSec = music?.videoId && music.startedAt
+    ? Math.max(0, Math.floor((Date.now() - new Date(music.startedAt).getTime()) / 1000))
+    : 0;
 
   const live = useLiveAudio({
     roomType: 'podcast',
@@ -44,35 +47,49 @@ export default function PodcastLiveListener({ show, onClose }) {
     enabled:  true,
   });
 
-  // ── Socket subscriptions ──────────────────────────────────────────────────
+  // ── Sockets ────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!subscribe) return;
     const u1 = subscribe('podcast:chat', (msg) => {
       if (String(msg.showId) !== String(show._id)) return;
-      setChat(prev => [...prev.slice(-MAX_CHAT + 1), msg]);
+      setChat(prev => [...prev.slice(-(MAX_CHAT - 1)), msg]);
+      // Auto-expire this bubble
+      setTimeout(() => setChat(prev => prev.filter(m => m.id !== msg.id)), CHAT_LIFE);
     });
     const u2 = subscribe('podcast:reaction', ({ emoji, at }) => {
-      const id = `${at}-${Math.random().toString(36).slice(2, 6)}`;
-      const x  = 30 + Math.random() * 60;  // 30%–90% from left of FAB rail
-      setFloats(prev => [...prev.slice(-(MAX_FLOATS - 1)), { id, emoji, x, at }]);
-      setTimeout(() => setFloats(prev => prev.filter(f => f.id !== id)), 3800);
+      spawnFloat(emoji, at);
     });
-    const u3 = subscribe('podcast:like', () => {
+    const u3 = subscribe('podcast:like', ({ at }) => {
       setLikes(n => n + 1);
-      setHP(k => k + 1);
+      spawnFloat('❤️', at);
+      setHeartKick(k => k + 1);
     });
     const u4 = subscribe('podcast:ended', ({ showId }) => {
       if (String(showId) === String(show._id)) onClose();
     });
-    return () => { u1 && u1(); u2 && u2(); u3 && u3(); u4 && u4(); };
-  }, [subscribe, show._id, onClose]);
+    const u5 = subscribe('podcast:music-change', ({ showId, nowPlaying }) => {
+      if (String(showId) !== String(show._id)) return;
+      setMusic(nowPlaying && nowPlaying.videoId ? nowPlaying : null);
+    });
+    const u6 = subscribe('podcast:volume', ({ showId, volume }) => {
+      if (String(showId) !== String(show._id)) return;
+      applyMusicVolume(volume);
+    });
+    return () => { u1 && u1(); u2 && u2(); u3 && u3(); u4 && u4(); u5 && u5(); u6 && u6(); };
+    // eslint-disable-next-line
+  }, [subscribe, show._id]);
 
-  // Autoscroll chat
-  useEffect(() => {
-    if (chatBoxRef.current) chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight;
-  }, [chat.length]);
+  const spawnFloat = (emoji, at) => {
+    const id = `${at || Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    // horizontal drift — small sway along the right rail (0–60px from the edge)
+    const drift = Math.round(Math.random() * 60);
+    const scale = 0.9 + Math.random() * 0.5;
+    const dur   = 3200 + Math.round(Math.random() * 1600);
+    setFloats(prev => [...prev.slice(-(MAX_FLOATS - 1)), { id, emoji, drift, scale, dur }]);
+    setTimeout(() => setFloats(prev => prev.filter(f => f.id !== id)), dur + 100);
+  };
 
-  // ── Actions ───────────────────────────────────────────────────────────────
+  // ── Actions ────────────────────────────────────────────────────────────
   const sendChat = () => {
     const text = input.trim();
     if (!text || !emit) return;
@@ -84,14 +101,11 @@ export default function PodcastLiveListener({ show, onClose }) {
   };
 
   const sendReaction = (emoji) => {
-    if (!emit) return;
-    emit('podcast:reaction:send', { showId: show._id, emoji, userId: user?._id, userName: user?.name });
+    emit?.('podcast:reaction:send', { showId: show._id, emoji, userId: user?._id, userName: user?.name });
+    setShowEmojis(false);
   };
 
-  const sendLike = () => {
-    if (!emit) return;
-    emit('podcast:like:send', { showId: show._id, userId: user?._id });
-  };
+  const sendLike = () => emit?.('podcast:like:send', { showId: show._id, userId: user?._id });
 
   const toggleHand = () => {
     if (live.handRaised) live.lowerHand();
@@ -99,162 +113,198 @@ export default function PodcastLiveListener({ show, onClose }) {
   };
 
   const initial = (show.hostName?.[0] || 'A').toUpperCase();
+  const bgImage = show.coverImage || null;
 
   return (
     <div style={{
-      position: 'fixed', inset: 0, zIndex: 70,
-      background: 'linear-gradient(170deg, #0B0B14 0%, #1E1B4B 30%, #4C1D95 100%)',
-      color: '#fff', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+      position: 'fixed', inset: 0, zIndex: 70, overflow: 'hidden', color: '#fff',
+      background: bgImage
+        ? `url(${bgImage}) center/cover no-repeat`
+        : 'linear-gradient(180deg, #1E1B4B 0%, #4C1D95 50%, #312E81 100%)',
     }}>
-      {/* Hidden audio sinks (routed through Web Audio for boost) */}
+      {/* Hidden audio sinks */}
       <div style={{ width: 0, height: 0, overflow: 'hidden' }}>
-        {Array.from(live.remoteStreams.entries()).map(([id, s]) => <BoostedRemoteAudio key={id} stream={s}/>)}
+        {Array.from(live.remoteStreams.entries()).map(([id, s]) => <BoostedRemoteAudio key={id} stream={s} />)}
       </div>
 
-      {/* ── Header ── */}
-      <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.06)', position: 'relative', zIndex: 2 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 999, background: '#EF4444', color: '#fff', fontSize: 10, fontWeight: 800, letterSpacing: '0.14em' }}>
-            <span style={{ position: 'relative', display: 'inline-flex', width: 6, height: 6 }}>
-              <span style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: '#fff', animation: 'pll-ping 1.4s infinite' }} />
-              <span style={{ position: 'relative', width: 6, height: 6, borderRadius: '50%', background: '#fff' }} />
-            </span>
-            LIVE
-          </div>
-          <div style={{ fontSize: 12, fontWeight: 700 }}>AreaConnect FM</div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: '#CBD5E1', fontSize: 12 }}>
-            <Users size={13}/> {live.listenerCount}
-          </div>
-          {likes > 0 && (
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: '#FDA4AF', fontSize: 12 }}>
-              <Heart size={13} fill="#F43F5E"/> {likes}
-            </div>
-          )}
-          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 10, padding: 8, color: '#fff', cursor: 'pointer' }}>
-            <X size={16}/>
-          </button>
-        </div>
-      </div>
+      {/* Hidden synced music iframe (if host picked a background track) */}
+      {music?.videoId && (
+        <iframe ref={musicIframeRef} key={music.videoId}
+          src={`https://www.youtube.com/embed/${music.videoId}?autoplay=1&modestbranding=1&rel=0&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}&start=${musicStartSec}`}
+          onLoad={() => setTimeout(() => applyMusicVolume(musicVol), 400)}
+          allow="autoplay; encrypted-media"
+          title="background music"
+          style={{ position: 'absolute', width: 1, height: 1, border: 0, opacity: 0, pointerEvents: 'none' }} />
+      )}
 
-      {/* ── Center: host avatar + show info ── */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px 16px', position: 'relative', minHeight: 0 }}>
-        {/* Pulsing rings */}
-        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -70%)', pointerEvents: 'none' }}>
-          <div style={{ position: 'absolute', inset: 0, width: 180, height: 180, borderRadius: '50%', marginLeft: -90, marginTop: -90, border: `2px solid ${VIOLET}66`, animation: 'pll-rings 2.6s ease-out infinite' }}/>
-          <div style={{ position: 'absolute', inset: 0, width: 180, height: 180, borderRadius: '50%', marginLeft: -90, marginTop: -90, border: `2px solid ${VIOLET}44`, animation: 'pll-rings 2.6s ease-out 0.9s infinite' }}/>
-        </div>
+      {/* Backdrop blur layer (if cover image) */}
+      {bgImage && <div style={{ position: 'absolute', inset: 0, backdropFilter: 'blur(28px)', background: 'rgba(10,8,28,0.55)' }} />}
 
-        {/* Avatar */}
+      {/* Top gradient fade */}
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 140, background: 'linear-gradient(180deg, rgba(0,0,0,0.65), rgba(0,0,0,0))', pointerEvents: 'none' }} />
+      {/* Bottom gradient fade */}
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 260, background: 'linear-gradient(0deg, rgba(0,0,0,0.75), rgba(0,0,0,0))', pointerEvents: 'none' }} />
+
+      {/* ── Top bar: avatar · title · LIVE · viewers · X ───────────────── */}
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: '14px 14px 0', display: 'flex', alignItems: 'center', gap: 10, zIndex: 3 }}>
         <div style={{
-          position: 'relative', zIndex: 1,
-          width: 128, height: 128, borderRadius: 32,
-          background: show.coverImage ? `url(${show.coverImage}) center/cover` : `linear-gradient(135deg, ${VIOLET}, ${VIOLET_DARK})`,
+          width: 40, height: 40, borderRadius: '50%',
+          background: show.coverImage ? `url(${show.coverImage}) center/cover` : 'linear-gradient(135deg, #F472B6, #EC4899, #8B5CF6)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: `0 20px 48px ${VIOLET}66, 0 0 60px rgba(139,92,246,0.3)`,
-          border: '3px solid rgba(255,255,255,0.12)',
+          border: '2px solid #fff', flexShrink: 0, fontWeight: 900, fontSize: 15,
         }}>
-          {!show.coverImage && <span style={{ fontSize: 44, fontWeight: 900, color: '#fff' }}>{initial}</span>}
+          {!show.coverImage && initial}
         </div>
-
-        <div style={{ marginTop: 20, textAlign: 'center' }}>
-          <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.14em', color: '#C4B5FD', textTransform: 'uppercase' }}>{show.hostName}</div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.02em', margin: '4px 0 2px', lineHeight: 1.2 }}>{show.title}</h1>
-          {show.description && <p style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.72)', margin: '2px 0 0', lineHeight: 1.5, maxWidth: 440, marginInline: 'auto' }}>{show.description}</p>}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textShadow: '0 1px 2px rgba(0,0,0,0.6)' }}>
+            {show.hostName}
+          </div>
+          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.78)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textShadow: '0 1px 2px rgba(0,0,0,0.6)' }}>
+            {music?.title ? <>🎵 {music.title}</> : show.title}
+          </div>
         </div>
+        <div style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 8px', borderRadius: 6, background: '#DC2626', fontSize: 10, fontWeight: 800, letterSpacing: '0.08em', flexShrink: 0 }}>
+          LIVE
+        </div>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 999, background: 'rgba(0,0,0,0.45)', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
+          <Users size={12} /> {live.listenerCount}
+        </div>
+        <button onClick={onClose}
+          style={{ background: 'rgba(0,0,0,0.45)', border: 'none', borderRadius: '50%', width: 32, height: 32, color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <X size={16} />
+        </button>
+      </div>
 
-        {/* Call-in */}
-        <div style={{ marginTop: 20 }}>
-          {live.calledIn ? (
-            <button onClick={live.toggleMic}
-              style={{ padding: '10px 20px', borderRadius: 999, border: 'none', cursor: 'pointer',
-                background: live.micOn ? `linear-gradient(135deg, ${VIOLET}, ${VIOLET_DARK})` : '#334155',
-                color: '#fff', fontWeight: 700, fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 7 }}>
-              {live.micOn ? <><Mic size={14}/> You're on air</> : <><MicOff size={14}/> Muted</>}
-            </button>
-          ) : (
-            <button onClick={toggleHand}
-              style={{ padding: '9px 18px', borderRadius: 999, border: 'none', cursor: 'pointer',
-                background: live.handRaised ? '#FBBF24' : 'rgba(255,255,255,0.1)',
-                color: live.handRaised ? '#0F172A' : '#fff',
-                fontWeight: 700, fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 7,
-                border: live.handRaised ? 'none' : '1px solid rgba(255,255,255,0.14)' }}>
-              <Hand size={14}/> {live.handRaised ? 'Hand raised — waiting' : 'Raise hand to speak'}
-            </button>
-          )}
+      {/* ── Center: host hero (audio-only "stream") ───────────────────── */}
+      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', zIndex: 2 }}>
+        <div style={{ position: 'relative' }}>
+          {/* Pulsing rings */}
+          <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 220, height: 220, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.25)', animation: 'ig-rings 2.4s ease-out infinite' }} />
+          <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 220, height: 220, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.15)', animation: 'ig-rings 2.4s ease-out 0.8s infinite' }} />
+
+          <div style={{
+            width: 160, height: 160, borderRadius: '50%',
+            background: show.coverImage ? `url(${show.coverImage}) center/cover` : 'linear-gradient(135deg, #F472B6, #EC4899, #8B5CF6)',
+            border: '4px solid rgba(255,255,255,0.2)',
+            boxShadow: '0 30px 60px rgba(0,0,0,0.5), 0 0 100px rgba(236,72,153,0.3)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 56, fontWeight: 900,
+          }}>
+            {!show.coverImage && initial}
+          </div>
         </div>
       </div>
 
-      {/* ── Chat panel (overlay bottom) ── */}
+      {/* ── Overlay chat (bottom-left) — bubbles, auto-fade ───────────── */}
       <div style={{
-        position: 'relative', borderTop: '1px solid rgba(255,255,255,0.08)',
-        background: 'linear-gradient(180deg, rgba(2,6,23,0) 0%, rgba(2,6,23,0.55) 50%, rgba(2,6,23,0.85) 100%)',
-        padding: '10px 12px 10px', paddingBottom: 'calc(10px + env(safe-area-inset-bottom))',
-        maxHeight: '42%',
-        display: 'flex', flexDirection: 'column',
+        position: 'absolute', bottom: 76, left: 10, right: 68, zIndex: 4,
+        display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 320,
+        overflow: 'hidden', pointerEvents: 'none',
+        maskImage: 'linear-gradient(180deg, transparent 0%, black 25%)',
+        WebkitMaskImage: 'linear-gradient(180deg, transparent 0%, black 25%)',
       }}>
-        <div ref={chatBoxRef} style={{ flex: 1, overflowY: 'auto', paddingRight: 4, display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 180 }}>
-          {chat.length === 0 && (
-            <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12, textAlign: 'center', padding: '20px 0', fontStyle: 'italic' }}>
-              Say hi 👋 — the room is listening.
-            </div>
-          )}
-          {chat.map(m => (
-            <ChatLine key={m.id} msg={m} />
-          ))}
-        </div>
+        {chat.map(m => <ChatBubble key={m.id} msg={m} />)}
+      </div>
 
-        {/* Composer + actions */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }}>
-          <input
-            value={input} onChange={e => setInput(e.target.value)}
+      {/* ── Right rail: heart FAB + reaction popover + hand ───────────── */}
+      <div style={{ position: 'absolute', right: 10, bottom: 76, zIndex: 5, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+        {/* Reaction picker popover */}
+        {showEmojis && (
+          <div style={{
+            display: 'flex', flexDirection: 'column', gap: 4, padding: 6, borderRadius: 22,
+            background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)',
+            animation: 'ig-pop 0.18s ease-out',
+          }}>
+            {REACTION_EMOJIS.map(e => (
+              <button key={e} onClick={() => sendReaction(e)}
+                style={{ width: 36, height: 36, border: 'none', background: 'transparent', fontSize: 20, cursor: 'pointer', borderRadius: '50%' }}
+                onMouseEnter={ev => ev.currentTarget.style.background = 'rgba(255,255,255,0.14)'}
+                onMouseLeave={ev => ev.currentTarget.style.background = 'transparent'}>
+                {e}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Hand raise */}
+        <button onClick={toggleHand} title={live.handRaised ? 'Lower hand' : 'Raise hand'}
+          style={{
+            width: 42, height: 42, borderRadius: '50%', border: 'none', cursor: 'pointer',
+            background: live.handRaised ? '#FBBF24' : 'rgba(0,0,0,0.5)',
+            color: live.handRaised ? '#1E293B' : '#fff',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            backdropFilter: 'blur(8px)',
+          }}>
+          {live.calledIn ? (live.micOn ? <Mic size={18}/> : <MicOff size={18}/>) : <Hand size={18}/>}
+        </button>
+
+        {/* Emoji toggle */}
+        <button onClick={() => setShowEmojis(s => !s)}
+          style={{
+            width: 42, height: 42, borderRadius: '50%', border: 'none', cursor: 'pointer',
+            background: 'rgba(0,0,0,0.5)', color: '#fff',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            backdropFilter: 'blur(8px)',
+          }}>
+          <Smile size={18} />
+        </button>
+
+        {/* Heart FAB */}
+        <button onClick={sendLike} key={heartKick}
+          style={{
+            width: 54, height: 54, borderRadius: '50%', border: 'none', cursor: 'pointer',
+            background: 'linear-gradient(135deg, #F43F5E, #BE123C)',
+            color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 10px 24px rgba(244,63,94,0.6)',
+            animation: heartKick ? 'ig-kick 0.5s ease-out' : undefined,
+          }}>
+          <Heart size={22} fill="#fff"/>
+        </button>
+        {likes > 0 && (
+          <div style={{ fontSize: 10, fontWeight: 800, color: '#fff', textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>
+            {likes}
+          </div>
+        )}
+      </div>
+
+      {/* ── Bottom bar: "Add a comment…" pill ─────────────────────────── */}
+      <div style={{
+        position: 'absolute', left: 10, right: 10, bottom: 10, zIndex: 6,
+        display: 'flex', alignItems: 'center', gap: 8,
+      }}>
+        <div style={{
+          flex: 1, minWidth: 0, display: 'flex', alignItems: 'center',
+          background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)',
+          border: '1px solid rgba(255,255,255,0.22)', borderRadius: 999,
+          padding: '4px 4px 4px 16px',
+        }}>
+          <input value={input} onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') sendChat(); }}
-            placeholder="Say something…"
+            placeholder="Add a comment…"
             style={{
-              flex: 1, minWidth: 0, padding: '10px 14px', borderRadius: 999,
-              background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)',
-              color: '#fff', fontSize: 13, outline: 'none',
-            }}
-          />
+              flex: 1, minWidth: 0, background: 'transparent', border: 'none', outline: 'none',
+              color: '#fff', fontSize: 14, padding: '8px 4px',
+            }} />
           <button onClick={sendChat} disabled={!input.trim()}
-            style={{ width: 38, height: 38, borderRadius: '50%', border: 'none', cursor: input.trim() ? 'pointer' : 'default',
-              background: input.trim() ? `linear-gradient(135deg, ${VIOLET}, ${VIOLET_DARK})` : 'rgba(255,255,255,0.08)',
+            style={{
+              width: 34, height: 34, borderRadius: '50%', border: 'none', cursor: input.trim() ? 'pointer' : 'default',
+              background: input.trim() ? 'linear-gradient(135deg, #F472B6, #8B5CF6)' : 'rgba(255,255,255,0.1)',
               color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              opacity: input.trim() ? 1 : 0.5 }}>
-            <Send size={15}/>
+              opacity: input.trim() ? 1 : 0.5, flexShrink: 0,
+            }}>
+            <Send size={14} />
           </button>
-          <button onClick={() => { sendLike(); setHP(k => k + 1); }}
-            style={{ width: 38, height: 38, borderRadius: '50%', border: 'none', cursor: 'pointer',
-              background: 'linear-gradient(135deg, #F43F5E, #BE123C)', color: '#fff',
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: `0 6px 18px rgba(244,63,94,0.5)`, animation: heartPulse ? 'pll-heart 0.4s ease-out' : undefined, position: 'relative' }}
-            onAnimationEnd={() => setHP(0)}>
-            <Heart size={15} fill="#fff"/>
-          </button>
-        </div>
-
-        {/* Emoji reaction rail */}
-        <div style={{ display: 'flex', gap: 6, marginTop: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
-          {REACTION_EMOJIS.map(e => (
-            <button key={e} onClick={() => sendReaction(e)}
-              style={{ padding: '6px 12px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.14)',
-                background: 'rgba(255,255,255,0.06)', fontSize: 16, cursor: 'pointer', transition: 'all 0.15s' }}
-              onMouseEnter={ev => ev.currentTarget.style.background = 'rgba(255,255,255,0.14)'}
-              onMouseLeave={ev => ev.currentTarget.style.background = 'rgba(255,255,255,0.06)'}>
-              {e}
-            </button>
-          ))}
         </div>
       </div>
 
-      {/* ── Floating reactions overlay (above everything but non-blocking) ── */}
-      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 3, overflow: 'hidden' }}>
+      {/* ── Floating hearts/emojis — only along the right edge ────────── */}
+      <div style={{ position: 'absolute', bottom: 60, right: 0, width: 120, top: 0, pointerEvents: 'none', zIndex: 7, overflow: 'hidden' }}>
         {floats.map(f => (
           <div key={f.id} style={{
-            position: 'absolute', bottom: '42%', left: `${f.x}%`,
-            fontSize: 28, animation: 'pll-float 3.6s ease-out forwards',
-            textShadow: `0 0 20px ${REACTION_COLORS[f.emoji] || '#fff'}66`,
+            position: 'absolute', bottom: 0, right: `${f.drift + 20}px`,
+            fontSize: `${Math.round(26 * f.scale)}px`,
+            animation: `ig-rise ${f.dur}ms cubic-bezier(.22,1,.36,1) forwards`,
+            filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.4))',
           }}>
             {f.emoji}
           </div>
@@ -262,34 +312,39 @@ export default function PodcastLiveListener({ show, onClose }) {
       </div>
 
       <style>{`
-        @keyframes pll-ping  { 75%,100% { transform: scale(2.4); opacity: 0; } }
-        @keyframes pll-rings { 0% { transform: scale(0.7); opacity: 0.9; } 100% { transform: scale(1.9); opacity: 0; } }
-        @keyframes pll-float {
-          0%   { transform: translateY(0) scale(0.7) rotate(-6deg); opacity: 0; }
-          15%  { transform: translateY(-30px) scale(1.15) rotate(4deg); opacity: 1; }
-          80%  { opacity: 1; }
-          100% { transform: translateY(-320px) scale(1) rotate(-8deg); opacity: 0; }
+        @keyframes ig-rings { 0% { transform: translate(-50%,-50%) scale(0.6); opacity: 0.9; } 100% { transform: translate(-50%,-50%) scale(1.6); opacity: 0; } }
+        @keyframes ig-rise {
+          0%   { transform: translateY(0) translateX(0) scale(0.7) rotate(-8deg); opacity: 0; }
+          12%  { transform: translateY(-30px) translateX(-6px) scale(1) rotate(6deg);  opacity: 1; }
+          40%  { transform: translateY(-180px) translateX(14px) scale(1) rotate(-4deg); opacity: 1; }
+          70%  { transform: translateY(-360px) translateX(-10px) scale(0.95) rotate(5deg); opacity: 0.9; }
+          100% { transform: translateY(-520px) translateX(8px)  scale(0.85) rotate(-6deg); opacity: 0; }
         }
-        @keyframes pll-heart { 0% { transform: scale(1); } 40% { transform: scale(1.35); } 100% { transform: scale(1); } }
+        @keyframes ig-kick { 0% { transform: scale(1); } 40% { transform: scale(1.3); } 100% { transform: scale(1); } }
+        @keyframes ig-pop  { 0% { transform: translateY(6px) scale(0.9); opacity: 0; } 100% { transform: translateY(0) scale(1); opacity: 1; } }
       `}</style>
     </div>
   );
 }
 
-function ChatLine({ msg }) {
-  const you = msg.userName || 'Listener';
-  const initial = (you[0] || 'L').toUpperCase();
+function ChatBubble({ msg }) {
+  const name = msg.userName || 'Listener';
+  const initial = (name[0] || 'L').toUpperCase();
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '6px 8px', borderRadius: 10, background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(4px)' }}>
+    <div style={{
+      display: 'inline-flex', alignItems: 'center', gap: 8,
+      maxWidth: '100%', animation: 'ig-slide-in 0.25s ease-out',
+    }}>
       {msg.userPhoto ? (
-        <img src={msg.userPhoto} alt="" style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}/>
+        <img src={msg.userPhoto} alt="" style={{ width: 26, height: 26, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '1.5px solid rgba(255,255,255,0.3)' }} />
       ) : (
-        <div style={{ width: 22, height: 22, borderRadius: '50%', background: 'rgba(255,255,255,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 10, fontWeight: 800 }}>{initial}</div>
+        <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'linear-gradient(135deg, #F472B6, #8B5CF6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: '#fff', flexShrink: 0, border: '1.5px solid rgba(255,255,255,0.3)' }}>{initial}</div>
       )}
-      <div style={{ fontSize: 13, color: '#fff', lineHeight: 1.4, minWidth: 0, flex: 1 }}>
-        <span style={{ fontWeight: 700, color: '#C4B5FD', marginRight: 6 }}>{you}</span>
-        <span style={{ wordBreak: 'break-word' }}>{msg.text}</span>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.75)', textShadow: '0 1px 2px rgba(0,0,0,0.6)', lineHeight: 1 }}>{name}</div>
+        <div style={{ fontSize: 14, color: '#fff', textShadow: '0 1px 2px rgba(0,0,0,0.6)', lineHeight: 1.3, wordBreak: 'break-word' }}>{msg.text}</div>
       </div>
+      <style>{`@keyframes ig-slide-in { 0% { transform: translateY(16px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }`}</style>
     </div>
   );
 }
