@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Radio, Headphones, Megaphone } from 'lucide-react';
 import { djAPI } from '../api';
 import { useSocket } from '../context/SocketContext';
@@ -18,6 +19,8 @@ const RED_DARK     = '#DC2626';
  */
 export default function DJLive({ only }) {
   const { subscribe } = useSocket();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [session, setSession] = useState(null);
   const [open, setOpen]       = useState(false);
 
@@ -29,6 +32,21 @@ export default function DJLive({ only }) {
       setSession(prev => prev && String(prev._id) === String(sessionId) ? { ...prev, nowPlaying } : prev));
     return () => { u1 && u1(); u2 && u2(); u3 && u3(); };
   }, [subscribe]);
+
+  // Deep link support — the email blast ships residents to
+  // /announcements?listen=<sessionId>. When this banner's session matches
+  // the id in the URL, auto-open the listener modal and strip the query.
+  useEffect(() => {
+    if (!session) return;
+    const params = new URLSearchParams(location.search);
+    const listenId = params.get('listen');
+    if (listenId && String(listenId) === String(session._id)) {
+      setOpen(true);
+      params.delete('listen');
+      const rest = params.toString();
+      navigate(location.pathname + (rest ? `?${rest}` : ''), { replace: true });
+    }
+  }, [session, location.search, location.pathname, navigate]);
 
   if (!session) return null;
   const isAnnouncementKind = session.kind === 'announcement';
