@@ -75,7 +75,22 @@ export default function PodcastLiveListener({ show, onClose }) {
       if (String(showId) !== String(show._id)) return;
       applyMusicVolume(volume);
     });
-    return () => { u1 && u1(); u2 && u2(); u3 && u3(); u4 && u4(); u5 && u5(); u6 && u6(); };
+    // Server replays the last 50 chat messages + current music + likes count
+    // whenever we join (or reconnect). Fades the welcome quietly into the room
+    // so the first-time listener sees activity instead of a dead screen.
+    const u7 = subscribe('podcast:state-sync', (sync) => {
+      if (!sync || String(sync.showId) !== String(show._id)) return;
+      if (Array.isArray(sync.chat) && sync.chat.length) {
+        // Keep the newest N and let each expire like normal
+        const recent = sync.chat.slice(-MAX_CHAT);
+        setChat(recent);
+        recent.forEach(m => setTimeout(() => setChat(prev => prev.filter(x => x.id !== m.id)), CHAT_LIFE));
+      }
+      if (typeof sync.likes === 'number') setLikes(sync.likes);
+      if (sync.nowPlaying && sync.nowPlaying.videoId) setMusic(sync.nowPlaying);
+      if (typeof sync.musicVolume === 'number') applyMusicVolume(sync.musicVolume);
+    });
+    return () => { u1 && u1(); u2 && u2(); u3 && u3(); u4 && u4(); u5 && u5(); u6 && u6(); u7 && u7(); };
     // eslint-disable-next-line
   }, [subscribe, show._id]);
 

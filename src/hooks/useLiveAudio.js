@@ -116,6 +116,23 @@ export function useLiveAudio({ roomType, roomId, role, enabled = true, meta = {}
     micCtxRef.current = null;
   }, []);
 
+  // Listener re-announce helper — used when a peer silently fails so the host
+  // sends us a fresh offer. The scope guard avoids rejoin storms.
+  const rejoiningRef = useRef(false);
+  const rejoinAsListener = useCallback(() => {
+    if (rejoiningRef.current) return;
+    rejoiningRef.current = true;
+    try {
+      peersRef.current.forEach(pc => { try { pc.close(); } catch {} });
+      peersRef.current.clear();
+      setRemote(new Map());
+      emit(`${roomType}:listener-ready`, { [idKey(roomType)]: roomId });
+    } finally {
+      // Short cooldown so a flapping connection doesn't carpet the host
+      setTimeout(() => { rejoiningRef.current = false; }, 2000);
+    }
+  }, [emit, roomType, roomId]);
+
   const createPeer = useCallback(async (remoteSocketId, isInitiator) => {
     if (peersRef.current.has(remoteSocketId)) return peersRef.current.get(remoteSocketId);
     const pc = new RTCPeerConnection(RTC_CONFIG);
@@ -129,9 +146,17 @@ export function useLiveAudio({ roomType, roomId, role, enabled = true, meta = {}
       setRemote(prev => { const n = new Map(prev); n.set(remoteSocketId, stream); return n; });
     };
     pc.onconnectionstatechange = () => {
-      if (['disconnected', 'failed', 'closed'].includes(pc.connectionState)) {
+      const s = pc.connectionState;
+      if (['disconnected', 'failed', 'closed'].includes(s)) {
         peersRef.current.delete(remoteSocketId);
         setRemote(prev => { const n = new Map(prev); n.delete(remoteSocketId); return n; });
+        // Listener-side recovery — ask the host for a new peer. Host-side has
+        // its own reconnect flow via `host-ready` → listeners re-announce.
+        if (roleRef.current === 'listener' && s !== 'closed') {
+          setTimeout(() => {
+            if (!peersRef.current.has(remoteSocketId)) rejoinAsListener();
+          }, 1500);
+        }
       }
     };
 
@@ -146,7 +171,7 @@ export function useLiveAudio({ roomType, roomId, role, enabled = true, meta = {}
       emit('rtc:offer', { to: remoteSocketId, sdp: pc.localDescription, meta: metaRef.current });
     }
     return pc;
-  }, [emit, getLocalStream]);
+  }, [emit, getLocalStream, rejoinAsListener]);
 
   const closePeer = useCallback((socketId) => {
     const pc = peersRef.current.get(socketId);
@@ -239,6 +264,25 @@ export function useLiveAudio({ roomType, roomId, role, enabled = true, meta = {}
       setRemote(new Map());
       emit(`${roomType}:listener-ready`, { [idKey(roomType)]: roomId });
     }));
+
+    // Socket.io "connect" fires on initial connect AND every reconnect. Both
+    // sides re-announce their room role so the server re-adds us to the live
+    // rooms and resends the state sync. Listeners also throw away stale peers
+    // so the host sends a fresh offer.
+    const onConnect = () => {
+      const r = roleRef.current;
+      if (r === 'host')     emit(`${roomType}:host-ready`,     { [idKey(roomType)]: roomId });
+      else if (r === 'guest' && roomType === 'podcast')
+                            emit('podcast:guest-ready',        { showId: roomId, guestId: metaRef.current?.guestId, name: metaRef.current?.name });
+      else                  emit(`${roomType}:listener-ready`, { [idKey(roomType)]: roomId });
+      if (r === 'listener' || r === 'caller') {
+        peersRef.current.forEach(pc => { try { pc.close(); } catch {} });
+        peersRef.current.clear();
+        setRemote(new Map());
+      }
+    };
+    socket.on('connect', onConnect);
+    unsubs.push(() => socket.off('connect', onConnect));
 
     return () => {
       unsubs.forEach(fn => fn && fn());
