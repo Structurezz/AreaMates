@@ -1,8 +1,97 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
+import { authAPI } from '../../api';
+import { Eye, EyeOff, AlertCircle, CheckCircle, KeyRound, Mail, ShieldCheck, X } from 'lucide-react';
 import toast from 'react-hot-toast';
+
+/**
+ * Forgot-password modal. Residents (and security) submit their email →
+ * backend creates a pending PasswordResetRequest and emails every estate
+ * manager of their estate. The manager approves/denies in-app. We never
+ * confirm whether the email actually exists — same message either way.
+ */
+function ForgotPasswordModal({ initialEmail = '', onClose }) {
+  const [email, setEmail] = useState(initialEmail);
+  const [submitting, setSubmitting] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  const submit = async (e) => {
+    e?.preventDefault();
+    if (!email.includes('@')) { toast.error('Enter a valid email'); return; }
+    setSubmitting(true);
+    try {
+      await authAPI.requestPasswordReset({ email });
+      setSent(true);
+    } catch {
+      // Backend always responds 200; keep the UX positive even on error
+      setSent(true);
+    } finally { setSubmitting(false); }
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 90, background: 'rgba(2,6,23,0.72)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      <div style={{ width: '100%', maxWidth: 420, background: '#fff', borderRadius: 22, overflow: 'hidden', boxShadow: '0 30px 60px -20px rgba(0,0,0,0.5)', position: 'relative' }}>
+        <button onClick={onClose} aria-label="Close"
+          style={{ position: 'absolute', top: 12, right: 12, width: 32, height: 32, borderRadius: 10, border: 'none', cursor: 'pointer', background: '#F1F5F9', color: '#64748B', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}>
+          <X size={14}/>
+        </button>
+
+        {sent ? (
+          <div style={{ padding: '36px 28px 28px', textAlign: 'center' }}>
+            <div style={{ width: 68, height: 68, borderRadius: 20, background: 'linear-gradient(135deg,#10B981,#059669)', color: '#fff', margin: '0 auto 14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <ShieldCheck size={30}/>
+            </div>
+            <h2 style={{ fontSize: 20, fontWeight: 900, color: '#0F172A', margin: '0 0 6px' }}>Request sent</h2>
+            <p style={{ fontSize: 14, color: '#475569', lineHeight: 1.6, margin: '0 0 20px' }}>
+              If an account exists for <strong>{email}</strong>, your estate manager has been notified and will approve the reset. You'll receive a temporary password by email once approved.
+            </p>
+            <button onClick={onClose}
+              style={{ background: 'linear-gradient(135deg,#6366F1,#4F46E5)', color: '#fff', border: 'none', borderRadius: 12, padding: '12px 32px', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>
+              Got it
+            </button>
+          </div>
+        ) : (
+          <>
+            <div style={{ background: 'linear-gradient(135deg,#1E1B4B,#4338CA)', padding: '28px 28px 22px', color: '#fff', position: 'relative' }}>
+              <div style={{ width: 54, height: 54, borderRadius: 16, background: 'rgba(255,255,255,0.14)', border: '1px solid rgba(255,255,255,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+                <KeyRound size={24}/>
+              </div>
+              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.16em', textTransform: 'uppercase', opacity: 0.75, marginBottom: 2 }}>
+                Password help
+              </div>
+              <h2 style={{ fontSize: 22, fontWeight: 900, letterSpacing: '-0.02em', margin: 0, lineHeight: 1.2 }}>Ask your estate manager to reset it</h2>
+              <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', margin: '8px 0 0', lineHeight: 1.5 }}>
+                Enter your account email — your estate manager will approve a reset and we'll email you a temporary password.
+              </p>
+            </div>
+            <form onSubmit={submit} style={{ padding: '20px 28px 28px' }}>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 800, letterSpacing: '0.08em', color: '#64748B', textTransform: 'uppercase', marginBottom: 8 }}>
+                Email address
+              </label>
+              <div style={{ position: 'relative', marginBottom: 18 }}>
+                <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  style={{ width: '100%', background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 12, padding: '12px 14px 12px 40px', fontSize: 14, color: '#0F172A', outline: 'none' }} />
+                <Mail size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }}/>
+              </div>
+              <button type="submit" disabled={submitting}
+                style={{ width: '100%', padding: 14, borderRadius: 14, border: 'none',
+                  background: submitting ? '#94A3B8' : 'linear-gradient(135deg,#6366F1,#4F46E5)',
+                  color: '#fff', fontWeight: 800, fontSize: 15,
+                  boxShadow: '0 6px 16px rgba(99,102,241,0.4)', cursor: submitting ? 'wait' : 'pointer' }}>
+                {submitting ? 'Sending request…' : 'Request password reset'}
+              </button>
+              <p style={{ fontSize: 11, color: '#94A3B8', margin: '12px 0 0', textAlign: 'center', lineHeight: 1.55 }}>
+                Your estate manager must approve the reset — this prevents stranger-driven password resets.
+              </p>
+            </form>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
 
 /* ── Ad sidebar slides (desktop only) ── */
 const AD_SLIDES = [
@@ -177,7 +266,7 @@ const MOBILE_CSS = `
   .am-input::placeholder { color: rgba(255,255,255,0.3); }
 `;
 
-function MobileLogin({ form, setForm, showPw, setShowPw, loading, error, handleSubmit }) {
+function MobileLogin({ form, setForm, showPw, setShowPw, loading, error, handleSubmit, openForgot }) {
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(160deg,#05091A 0%,#08103A 100%)', position: 'relative', overflow: 'hidden' }}>
       <style>{MOBILE_CSS}</style>
@@ -291,7 +380,7 @@ function MobileLogin({ form, setForm, showPw, setShowPw, loading, error, handleS
               required autoComplete="email"/>
           </div>
 
-          <div style={{ marginBottom: 22 }}>
+          <div style={{ marginBottom: 10 }}>
             <label style={{ display: 'block', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', marginBottom: 8 }}>
               Password
             </label>
@@ -304,6 +393,13 @@ function MobileLogin({ form, setForm, showPw, setShowPw, loading, error, handleS
                 {showPw ? <EyeOff size={16}/> : <Eye size={16}/>}
               </button>
             </div>
+          </div>
+
+          <div style={{ textAlign: 'right', marginBottom: 18 }}>
+            <button type="button" onClick={openForgot}
+              style={{ background: 'none', border: 'none', color: '#A5B4FC', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0 }}>
+              Forgot password?
+            </button>
           </div>
 
           <button type="submit" disabled={loading} style={{
@@ -343,8 +439,17 @@ export default function Login() {
   const [showPw, setShowPw]   = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState('');
+  const [forgotOpen, setForgotOpen] = useState(false);
   const { login }  = useAuth();
   const navigate   = useNavigate();
+
+  // Auto-open the forgot-password modal when linked via /login?forgot=1
+  useEffect(() => {
+    try {
+      const q = new URLSearchParams(window.location.search);
+      if (q.get('forgot') === '1') setForgotOpen(true);
+    } catch {}
+  }, []);
 
   const handleSubmit = async (e) => {
     e?.preventDefault();
@@ -353,7 +458,13 @@ export default function Login() {
     try {
       const user = await login(form.email, form.password);
       toast.success(`Welcome back, ${user.name.split(' ')[0]}!`);
-      navigate('/dashboard');
+      // Force a password change immediately for admin-reset accounts
+      if (user?.mustChangePassword) {
+        toast('Please set a new password to continue.', { icon: '🔐' });
+        navigate('/settings');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Invalid credentials');
     } finally {
@@ -361,10 +472,20 @@ export default function Login() {
     }
   };
 
-  const shared = { form, setForm, showPw, setShowPw, loading, error, handleSubmit };
+  const openForgot = () => setForgotOpen(true);
+
+  const shared = { form, setForm, showPw, setShowPw, loading, error, handleSubmit, openForgot };
 
   return (
     <>
+      {/* Shared forgot-password modal */}
+      {forgotOpen && (
+        <ForgotPasswordModal
+          initialEmail={form.email}
+          onClose={() => setForgotOpen(false)}
+        />
+      )}
+
       {/* ── Mobile ── */}
       <div className="lg:hidden">
         <MobileLogin {...shared}/>
@@ -427,6 +548,12 @@ export default function Login() {
                     {showPw ? <EyeOff size={16}/> : <Eye size={16}/>}
                   </button>
                 </div>
+              </div>
+              <div className="flex justify-end -mt-1">
+                <button type="button" onClick={openForgot}
+                  style={{ background: 'none', border: 'none', color: '#4F46E5', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0 }}>
+                  Forgot password?
+                </button>
               </div>
               <button type="submit" disabled={loading} className="btn-primary w-full mt-2"
                 style={{ background: loading ? 'rgba(99,102,241,0.5)' : 'linear-gradient(135deg,#6366F1,#4F46E5)' }}>

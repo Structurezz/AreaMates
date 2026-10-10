@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { authAPI } from '../api';
-import { Camera, Save, Eye, EyeOff, User as UserIcon, Phone, Mail, Home, X } from 'lucide-react';
+import { Camera, Save, Eye, EyeOff, User as UserIcon, Phone, Mail, Home, X, Lock, KeyRound, ShieldCheck } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 // Resize + compress an image File to a square base64 data URL (<= ~60KB typical).
@@ -32,7 +33,8 @@ function resizeToDataUrl(file, size = 320) {
 }
 
 export default function Settings() {
-  const { user, fetchMe } = useAuth();
+  const { user, fetchMe, logout } = useAuth();
+  const navigate = useNavigate();
   const fileRef = useRef(null);
 
   const [form, setForm] = useState({
@@ -43,6 +45,29 @@ export default function Settings() {
   });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+
+  // ── Change password ────────────────────────────────────────────────────
+  const [pw, setPw] = useState({ current: '', next: '', confirm: '' });
+  const [showPw, setShowPw] = useState(false);
+  const [pwSaving, setPwSaving] = useState(false);
+  const mustReset = user?.mustChangePassword;
+
+  const submitPw = async () => {
+    if (!pw.next || pw.next.length < 6) { toast.error('New password must be at least 6 characters'); return; }
+    if (pw.next !== pw.confirm)         { toast.error('Passwords don\'t match'); return; }
+    if (!mustReset && !pw.current)       { toast.error('Enter your current password'); return; }
+    setPwSaving(true);
+    try {
+      await authAPI.changePassword({ currentPassword: pw.current, newPassword: pw.next });
+      toast.success('Password changed — please sign in again');
+      setPw({ current: '', next: '', confirm: '' });
+      // Server rotated the refresh token; the client should re-login.
+      try { await logout?.(); } catch {}
+      navigate('/login', { replace: true });
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Could not change password');
+    } finally { setPwSaving(false); }
+  };
 
   useEffect(() => {
     if (user) {
@@ -296,6 +321,81 @@ export default function Settings() {
         <p className="text-[11px] mt-3 leading-relaxed" style={{ color: '#94A3B8' }}>
           Group chat and estate broadcasts are unaffected — only the resident search for direct messages.
         </p>
+      </div>
+
+      {/* ── Change Password ─────────────────────────────────────────── */}
+      <div className="rounded-3xl p-5" style={{ background: '#FFFFFF', border: '1px solid #E2E8F0' }}>
+        <h2 className="text-sm font-black uppercase tracking-wider mb-4 flex items-center gap-2" style={{ color: '#475569', letterSpacing: '0.08em' }}>
+          <KeyRound size={14} style={{ color: '#6366F1' }} /> Password
+        </h2>
+
+        {mustReset && (
+          <div className="rounded-2xl p-3 mb-3 flex items-start gap-2"
+               style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)' }}>
+            <ShieldCheck size={16} style={{ color: '#D97706', flexShrink: 0, marginTop: 1 }} />
+            <div style={{ fontSize: 12, color: '#92400E', lineHeight: 1.55 }}>
+              <strong>Temporary password detected.</strong> You must set a new password before you can use the rest of the app.
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-2.5">
+          {!mustReset && (
+            <div style={{ position: 'relative' }}>
+              <input
+                type={showPw ? 'text' : 'password'}
+                className="w-full rounded-xl px-3.5 py-2.5 text-sm outline-none"
+                style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', color: '#0F172A' }}
+                placeholder="Current password"
+                value={pw.current}
+                onChange={e => setPw({ ...pw, current: e.target.value })}
+              />
+            </div>
+          )}
+          <input
+            type={showPw ? 'text' : 'password'}
+            className="w-full rounded-xl px-3.5 py-2.5 text-sm outline-none"
+            style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', color: '#0F172A' }}
+            placeholder="New password (min. 6 characters)"
+            value={pw.next}
+            onChange={e => setPw({ ...pw, next: e.target.value })}
+          />
+          <input
+            type={showPw ? 'text' : 'password'}
+            className="w-full rounded-xl px-3.5 py-2.5 text-sm outline-none"
+            style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', color: '#0F172A' }}
+            placeholder="Confirm new password"
+            value={pw.confirm}
+            onChange={e => setPw({ ...pw, confirm: e.target.value })}
+          />
+          <label className="flex items-center gap-2 text-xs" style={{ color: '#64748B' }}>
+            <input type="checkbox" checked={showPw} onChange={e => setShowPw(e.target.checked)} />
+            Show passwords
+          </label>
+          <button
+            onClick={submitPw}
+            disabled={pwSaving}
+            className="w-full flex items-center justify-center gap-2 rounded-xl font-bold text-white transition-all active:scale-[0.98]"
+            style={{
+              background: pwSaving ? '#94A3B8' : 'linear-gradient(135deg, #6366F1, #4F46E5)',
+              padding: '12px', fontSize: 13,
+              boxShadow: '0 6px 16px rgba(99,102,241,0.3)',
+              cursor: pwSaving ? 'not-allowed' : 'pointer',
+            }}
+          >
+            <Lock size={14} /> {pwSaving ? 'Changing…' : 'Change password'}
+          </button>
+          <p className="text-[11px] mt-1" style={{ color: '#94A3B8' }}>
+            Forgot your current password?&nbsp;
+            <button
+              type="button"
+              onClick={async () => { try { await logout?.(); } catch {} navigate('/login?forgot=1', { replace: true }); }}
+              style={{ background: 'none', border: 'none', color: '#4F46E5', fontWeight: 700, cursor: 'pointer', padding: 0 }}
+            >
+              Request a reset from your estate manager
+            </button>
+          </p>
+        </div>
       </div>
 
       {/* Save bar */}
