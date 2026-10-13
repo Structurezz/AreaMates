@@ -147,6 +147,7 @@ export const paymentAPI = {
   getMine: () => api.get('/payments/mine'),
   initialize: (paymentId) => api.post(`/payments/${paymentId}/initialize`),
   verify: (reference) => api.get(`/payments/verify/${reference}`),
+  getInvoice: (paymentId) => api.get(`/payments/${paymentId}/invoice`),
 };
 
 // Social posts (Lounge feed)
