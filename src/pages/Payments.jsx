@@ -219,8 +219,8 @@ export default function Payments() {
       {/* Header */}
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-2xl font-display font-bold text-slate-900" style={{ letterSpacing: '-0.03em' }}>Payments</h1>
-          <p className="text-slate-400 text-sm hidden sm:block">Your estate bills, payments and receipts</p>
+          <h1 className="text-lg sm:text-xl font-display font-bold text-slate-900" style={{ letterSpacing: '-0.02em' }}>Payments</h1>
+          <p className="text-slate-400 text-xs hidden sm:block">Your estate bills, payments and receipts</p>
         </div>
         <button onClick={load} aria-label="Refresh"
           className="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors">
