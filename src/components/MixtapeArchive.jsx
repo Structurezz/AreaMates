@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Play, Pause, X, Headphones, Users, Clock, Share2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { djAPI } from '../api';
+import Portal from './ui/Portal';
 
 const INDIGO = '#6366F1';
 const INDIGO_DARK = '#4F46E5';
@@ -49,7 +50,8 @@ function MixtapePlayer({ mixtape, onClose }) {
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 70, background: 'rgba(2,6,23,0.9)', display: 'flex', flexDirection: 'column', color: '#fff' }}>
+    <Portal>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(2,6,23,0.9)', display: 'flex', flexDirection: 'column', color: '#fff' }}>
       <div style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
         <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.14em', color: '#A5B4FC', textTransform: 'uppercase' }}>Mixtape</div>
         <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 10, padding: 8, color: '#fff', cursor: 'pointer' }}><X size={16}/></button>
@@ -105,6 +107,7 @@ function MixtapePlayer({ mixtape, onClose }) {
         </div>
       </div>
     </div>
+    </Portal>
   );
 }
 

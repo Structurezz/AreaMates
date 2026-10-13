@@ -14,6 +14,7 @@ import toast from 'react-hot-toast';
 import DJLive from '../components/DJLive';
 import MixtapeArchive from '../components/MixtapeArchive';
 import GoLiveCTA from '../components/GoLiveCTA';
+import Portal from '../components/ui/Portal';
 
 // ── Helpers ────────────────────────────────────────────────────────
 const SERVER_URL = (import.meta.env.VITE_API_URL || 'https://areaconnectapi-production.up.railway.app/api').replace('/api', '');
@@ -618,7 +619,8 @@ function ActivitiesTab() {
       </div>
 
       {showForm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <Portal>
+        <div className="fixed inset-0 overlay-scrim z-[100] flex items-center justify-center p-4">
           <div className="w-full max-w-md rounded-2xl p-6 bg-white shadow-2xl">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-bold" style={{ color:'#0F172A' }}>New Activity</h2>
@@ -667,6 +669,7 @@ function ActivitiesTab() {
             </form>
           </div>
         </div>
+        </Portal>
       )}
     </div>
   );

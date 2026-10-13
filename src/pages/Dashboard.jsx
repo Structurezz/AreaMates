@@ -13,6 +13,7 @@ import Spinner from '../components/ui/Spinner';
 import CampaignModal from '../components/ui/CampaignModal';
 import EstateMap from '../components/EstateMap';
 import toast from 'react-hot-toast';
+import Portal from '../components/ui/Portal';
 
 const CATEGORY_COLORS = {
   general:     '#3B82F6',
@@ -385,8 +386,9 @@ export default function ResidentDashboard() {
 
       {/* ── Alert Confirm Modal ── */}
       {showAlertConfirm && (
+        <Portal>
         <div style={{
-          position: 'fixed', inset: 0, zIndex: 9999,
+          position: 'fixed', inset: 0, zIndex: 100,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           padding: 16,
           background: 'rgba(0,0,0,0.70)',
@@ -450,6 +452,7 @@ export default function ResidentDashboard() {
             </div>
           </div>
         </div>
+        </Portal>
       )}
     </div>
   );

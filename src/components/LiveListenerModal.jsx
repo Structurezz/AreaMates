@@ -4,6 +4,7 @@ import { useSocket } from '../context/SocketContext';
 import { useAuth }   from '../context/AuthContext';
 import { useLiveAudio } from '../hooks/useLiveAudio';
 import BoostedRemoteAudio from './BoostedRemoteAudio';
+import Portal from './ui/Portal';
 
 const REACTION_EMOJIS = ['❤️', '🔥', '😂', '👏', '💯', '🎉'];
 const MAX_CHAT   = 50;
@@ -149,8 +150,9 @@ export default function LiveListenerModal({ room, onClose }) {
   const isAnnounce = room.kind === 'announcement';
 
   return (
+    <Portal>
     <div style={{
-      position: 'fixed', inset: 0, zIndex: 70, overflow: 'hidden', color: '#fff',
+      position: 'fixed', inset: 0, zIndex: 200, overflow: 'hidden', color: '#fff',
       background: bgImage
         ? `url(${bgImage}) center/cover no-repeat`
         : isAnnounce
@@ -351,6 +353,7 @@ export default function LiveListenerModal({ room, onClose }) {
         @keyframes ll-pop  { 0% { transform: translateY(6px) scale(0.9); opacity: 0; } 100% { transform: translateY(0) scale(1); opacity: 1; } }
       `}</style>
     </div>
+    </Portal>
   );
 }
 

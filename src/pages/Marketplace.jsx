@@ -7,6 +7,7 @@ import { marketplaceAPI, messageAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import toast from 'react-hot-toast';
+import Portal from '../components/ui/Portal';
 
 // ── Config ─────────────────────────────────────────────────────────
 
@@ -178,8 +179,9 @@ function DetailModal({ listing, currentUserId, onClose, onMessage }) {
   const isMine = (listing.sellerId?._id || listing.sellerId)?.toString() === currentUserId?.toString();
 
   return (
+    <Portal>
     <div
-      className="fixed inset-0 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
       style={{ background: 'rgba(15,23,42,0.5)' }}
       onClick={onClose}
     >
@@ -250,6 +252,7 @@ function DetailModal({ listing, currentUserId, onClose, onMessage }) {
         </div>
       </div>
     </div>
+    </Portal>
   );
 }
 
@@ -293,8 +296,9 @@ function CreateModal({ open, onClose, onCreated }) {
   if (!open) return null;
 
   return (
+    <Portal>
     <div
-      className="fixed inset-0 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
       style={{ background: 'rgba(15,23,42,0.5)' }}
     >
       <div
@@ -397,6 +401,7 @@ function CreateModal({ open, onClose, onCreated }) {
         </form>
       </div>
     </div>
+    </Portal>
   );
 }
 

@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 import { djAPI, podcastAPI } from '../api';
 import { useSocket } from '../context/SocketContext';
 import DJLive from '../components/DJLive';
+import Portal from '../components/ui/Portal';
 
 const VIOLET      = '#8B5CF6';
 const VIOLET_DARK = '#6D28D9';
@@ -63,7 +64,8 @@ function AudioPlayer({ item, kind, onClose }) {
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 70, background: 'linear-gradient(180deg, #0F172A, #1E1B4B)', display: 'flex', flexDirection: 'column', color: '#fff' }}>
+    <Portal>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'linear-gradient(180deg, #0F172A, #1E1B4B)', display: 'flex', flexDirection: 'column', color: '#fff' }}>
       <div style={{ padding: '14px 18px', display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
         <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.14em', color: '#C4B5FD', textTransform: 'uppercase' }}>{label}</div>
         <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 10, padding: 8, color: '#fff', cursor: 'pointer' }}><X size={16}/></button>
@@ -117,6 +119,7 @@ function AudioPlayer({ item, kind, onClose }) {
         </div>
       </div>
     </div>
+    </Portal>
   );
 }
 

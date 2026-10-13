@@ -12,6 +12,7 @@ import { djAPI, loungeAPI } from '../api';
 import { useLiveAudio } from '../hooks/useLiveAudio';
 import { Fader }      from '../components/MixerDeck';
 import AudiencePanel  from '../components/AudiencePanel';
+import Portal from '../components/ui/Portal';
 
 const INDIGO = '#6366F1';
 const INDIGO_DARK = '#4F46E5';
@@ -448,7 +449,8 @@ export default function ResidentLive() {
       </div>
 
       {showSave && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: 16 }}>
+        <Portal>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 16 }}>
           <div style={{ background: '#fff', borderRadius: 18, padding: 22, width: '100%', maxWidth: 440 }}>
             <div style={{ fontSize: 16, fontWeight: 800, color: '#0F172A', marginBottom: 10 }}>Save to the archive?</div>
             <input value={mixTitle} onChange={e => setMixTitle(e.target.value)}
@@ -467,6 +469,7 @@ export default function ResidentLive() {
             </div>
           </div>
         </div>
+        </Portal>
       )}
 
       <style>{`

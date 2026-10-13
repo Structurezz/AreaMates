@@ -3,6 +3,7 @@ import { useSocket } from '../../context/SocketContext';
 import { visitorAPI } from '../../api';
 import { UserCheck, Clock, X, Shield, CheckCircle2, Phone } from 'lucide-react';
 import toast from 'react-hot-toast';
+import Portal from './Portal';
 
 /**
  * EarlyEntryModal — fires when the guard scans a visitor who's too early.
@@ -65,8 +66,9 @@ export default function EarlyEntryModal() {
     : '';
 
   return (
+    <Portal>
     <div style={{
-      position: 'fixed', inset: 0, zIndex: 10000,
+      position: 'fixed', inset: 0, zIndex: 300,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       padding: 16,
       background: 'rgba(0,0,0,0.70)',
@@ -175,5 +177,6 @@ export default function EarlyEntryModal() {
         </div>
       </div>
     </div>
+    </Portal>
   );
 }

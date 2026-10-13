@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { format, isToday, isYesterday, isSameDay } from 'date-fns';
 import toast from 'react-hot-toast';
+import Portal from '../components/ui/Portal';
 
 const NKECHI_AVATAR = '🌸';
 const NKECHI_NAME = 'Nkechi';
@@ -138,7 +139,8 @@ function NewDMModal({ onClose, onSelect }) {
   }, [query]);
 
   return (
-    <div className="fixed inset-0 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+    <Portal>
+    <div className="fixed inset-0 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
       style={{ background: 'rgba(15,23,42,0.4)' }}
       onClick={onClose}>
       <div
@@ -207,6 +209,7 @@ function NewDMModal({ onClose, onSelect }) {
         </div>
       </div>
     </div>
+    </Portal>
   );
 }
 

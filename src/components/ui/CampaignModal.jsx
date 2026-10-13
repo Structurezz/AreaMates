@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X } from 'lucide-react';
 import { campaignAPI } from '../../api';
+import Portal from './Portal';
 
 export default function CampaignModal() {
   const [campaign, setCampaign] = useState(null);
@@ -54,11 +55,12 @@ export default function CampaignModal() {
   };
 
   return (
+    <Portal>
     <div
       style={{
         position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.72)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        zIndex: 9999, padding: 16, backdropFilter: 'blur(6px)',
+        zIndex: 100, padding: 16, backdropFilter: 'blur(6px)',
       }}
       onClick={close}
     >
@@ -148,5 +150,6 @@ export default function CampaignModal() {
         </div>
       </div>
     </div>
+    </Portal>
   );
 }

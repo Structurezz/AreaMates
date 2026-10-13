@@ -4,6 +4,7 @@ import { Radio, Megaphone, Mic, X, Headphones, Zap } from 'lucide-react';
 import { useNotifications } from '../context/NotificationContext';
 import { djAPI, podcastAPI } from '../api';
 import LiveListenerModal from './LiveListenerModal';
+import Portal from './ui/Portal';
 
 const VARIANTS = {
   live_dj: {
@@ -148,8 +149,9 @@ export default function LiveNotificationModal() {
   const dramatic = !!v.dramatic;
 
   return (
+    <Portal>
     <div style={{
-      position: 'fixed', inset: 0, zIndex: 80,
+      position: 'fixed', inset: 0, zIndex: 200,
       background: dramatic ? 'rgba(2,6,23,0.85)' : 'rgba(2,6,23,0.72)',
       backdropFilter: 'blur(4px)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -269,5 +271,6 @@ export default function LiveNotificationModal() {
         `}</style>
       </div>
     </div>
+    </Portal>
   );
 }

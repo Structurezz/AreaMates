@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Music, Mic, Volume2, Volume1, VolumeX, X, Sliders } from 'lucide-react';
 import { loungeAPI } from '../api';
+import Portal from './ui/Portal';
 
 /**
  * Classic broadcast mixer deck used by all host pages (DJ, prayer, podcast,
@@ -89,7 +90,8 @@ export default function MixerDeck({
       </div>
 
       {showPicker && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.72)', zIndex: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+        <Portal>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.72)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
           <div style={{ background: '#fff', borderRadius: 18, width: '100%', maxWidth: 480, maxHeight: '80vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', color: dark }}>
             <div style={{ padding: '14px 18px', borderBottom: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ fontSize: 14, fontWeight: 800 }}>Pick a background track</div>
@@ -112,6 +114,7 @@ export default function MixerDeck({
             </div>
           </div>
         </div>
+        </Portal>
       )}
     </div>
   );
