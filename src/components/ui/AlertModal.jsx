@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Siren, X, Radio, Shield, UserRound, Briefcase, Home, Phone } from 'lucide-react';
+import { Siren, X, Radio, Shield, UserRound, Briefcase, Home, Phone, MapPin, ShieldAlert } from 'lucide-react';
 import { useNotifications } from '../../context/NotificationContext';
 import Portal from './Portal';
 
@@ -119,9 +119,29 @@ export default function AlertModal() {
             {activeAlert.body}
           </p>
 
+          {(meta.location || meta.actionRequired || meta.contactNumber) && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, margin: '-6px 0 18px' }}>
+              {meta.location && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#475569' }}>
+                  <MapPin size={14} style={{ color: '#94A3B8', flexShrink: 0 }} /> {meta.location}
+                </div>
+              )}
+              {meta.actionRequired && (
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 13, fontWeight: 600, color: '#92400E', background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 10, padding: '8px 10px' }}>
+                  <ShieldAlert size={14} style={{ flexShrink: 0, marginTop: 2 }} /> {meta.actionRequired}
+                </div>
+              )}
+              {meta.contactNumber && (
+                <a href={`tel:${meta.contactNumber}`} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, color: '#2563EB', textDecoration: 'none' }}>
+                  <Phone size={14} style={{ flexShrink: 0 }} /> Call {meta.contactNumber}
+                </a>
+              )}
+            </div>
+          )}
+
           <button ref={btnRef} onClick={dismissAlert}
             style={{ width: '100%', padding: '13px', background: btnColor, color: '#fff', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
-            Acknowledge &amp; Dismiss
+            Got it
           </button>
         </div>
       </div>

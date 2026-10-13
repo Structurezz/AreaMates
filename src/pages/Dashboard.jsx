@@ -59,8 +59,9 @@ export default function ResidentDashboard() {
     setAlerting(true);
     setShowAlertConfirm(false);
     try {
-      await alertAPI.create({ type: 'security', note: 'Resident triggered alert from dashboard' });
-      toast.success('Security alerted! Help is on the way.', { duration: 5000 });
+      // One-tap panic: goes to everyone on duty (security + management).
+      const { data } = await alertAPI.create({ type: 'security', audience: 'staff', note: 'Panic button pressed from the AreaMates dashboard' });
+      toast.success(data?.message || 'Help is on the way.', { duration: 5000 });
     } catch {
       toast.error('Failed to send alert. Try again.');
     } finally {
@@ -421,12 +422,16 @@ export default function ResidentDashboard() {
               }}>
                 <Siren size={26} color="#fff" />
               </div>
-              <h2 style={{ color: '#fff', fontSize: 17, fontWeight: 800, margin: 0 }}>Send Security Alert?</h2>
+              <h2 style={{ color: '#fff', fontSize: 17, fontWeight: 800, margin: 0 }}>Send Emergency Alert?</h2>
             </div>
 
             <div style={{ padding: '18px 20px 22px' }}>
               <p style={{ fontSize: 13, color: '#4B5563', lineHeight: 1.6, margin: '0 0 18px', textAlign: 'center' }}>
-                Security will be notified immediately with your name and unit number.
+                Security and estate management will be alerted immediately with your name, unit and phone number.
+              </p>
+              <p style={{ fontSize: 12, color: '#94A3B8', margin: '-8px 0 16px', textAlign: 'center' }}>
+                Fire, medical or want to choose who's alerted?{' '}
+                <Link to="/alerts" onClick={() => setShowAlertConfirm(false)} style={{ color: '#4F46E5', fontWeight: 600 }}>Use the full alert page</Link>
               </p>
               <div style={{ display: 'flex', gap: 10 }}>
                 <button
@@ -446,7 +451,7 @@ export default function ResidentDashboard() {
                     fontSize: 14, fontWeight: 700, cursor: 'pointer',
                   }}
                 >
-                  {alerting ? 'Sending...' : 'Yes, Alert Security'}
+                  {alerting ? 'Sending...' : 'Yes, send alert'}
                 </button>
               </div>
             </div>

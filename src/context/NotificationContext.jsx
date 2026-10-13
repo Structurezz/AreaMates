@@ -7,6 +7,8 @@ import {
 import { useSocket } from './SocketContext';
 import { useAuth }   from './AuthContext';
 import toast from 'react-hot-toast';
+import { playSiren, stopSiren } from '../utils/siren';
+import { isStatusUpdate, isOwnAlert, isIncomingAlert, unitLabelOf } from '../utils/alertEvents';
 
 const NotificationContext = createContext(null);
 
@@ -41,27 +43,6 @@ export const TYPE_CONFIG = {
 
 const DEFAULT_CFG = { Icon: Bell, label: 'Notification', color: '#6366F1', isAlert: false };
 
-const SIREN_URL = 'https://areaconnectapi-production.up.railway.app/public/engyclick-police-siren-sound-effect-317645.mp3';
-
-let _sirenAudio = null;
-let _sirenTimer = null;
-
-function playSiren(durationMs = 60000) {
-  try {
-    if (_sirenAudio) { _sirenAudio.pause(); _sirenAudio.currentTime = 0; }
-    clearTimeout(_sirenTimer);
-    _sirenAudio = new Audio(SIREN_URL);
-    _sirenAudio.play().catch(() => {});
-    _sirenTimer = setTimeout(() => stopSiren(), durationMs);
-  } catch (_) {}
-}
-
-function stopSiren() {
-  try {
-    clearTimeout(_sirenTimer);
-    if (_sirenAudio) { _sirenAudio.pause(); _sirenAudio.currentTime = 0; _sirenAudio = null; }
-  } catch (_) {}
-}
 
 function loadStored() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
@@ -98,7 +79,7 @@ export function NotificationProvider({ children }) {
     setUnreadCount(n => n + 1);
 
     if (cfg.isAlert) {
-      playSiren(60000);
+      playSiren({ durationMs: 60000 });
       setActiveAlert(entry);
       return;
     }
@@ -148,18 +129,28 @@ export function NotificationProvider({ children }) {
       }),
 
       subscribe('new_alert', (alert) => {
+        if (isStatusUpdate(alert)) {
+          // Staff responding to an alert this resident raised.
+          if (isOwnAlert(alert, currentUserId)) {
+            const who = alert.actedBy?.name || (alert.actedBy?.role === 'security' ? 'Security' : 'Estate management');
+            if (alert.action === 'acknowledged') toast.success(`${who} is responding to your alert`, { duration: 6000 });
+            else if (alert.action === 'resolved') toast.success(`${who} marked your alert as resolved`, { duration: 6000 });
+          }
+          return;
+        }
+        if (!isIncomingAlert(alert, currentUserId)) return; // our own alert echoing back
         const isBroadcast = !!alert.isEmergencyBroadcast;
-        const role = alert.raisedByRole || alert.residentId?.role || 'resident';
-        const name = alert.residentId?.name;
-        const phone = alert.residentId?.phone;
-        const unit = alert.unitId
-          ? `${alert.unitId.block ? `Block ${alert.unitId.block} · ` : ''}Unit ${alert.unitId.unitNumber}`
-          : null;
         addNotification({
           type: isBroadcast ? 'alert_broadcast' : 'new_alert',
           title: alert.title || (isBroadcast ? 'Estate Broadcast' : 'Security Alert'),
           body: alert.note || alert.message || (isBroadcast ? 'Emergency broadcast from estate management' : 'A security alert was raised in your estate'),
-          meta: { alertId: alert._id, raisedByRole: role, raisedByName: name, raisedByPhone: phone, raisedByUnit: unit },
+          meta: {
+            alertId: alert._id, alertType: alert.type, severity: alert.severity,
+            location: alert.location, actionRequired: alert.actionRequired, contactNumber: alert.contactNumber,
+            raisedByRole: alert.raisedByRole || alert.residentId?.role || 'resident',
+            raisedByName: alert.residentId?.name, raisedByPhone: alert.residentId?.phone,
+            raisedByUnit: unitLabelOf(alert),
+          },
         });
       }),
 

@@ -1,24 +1,17 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { NavLink, useNavigate, Link } from 'react-router-dom';
 import {
-  Menu, X, AlertTriangle, MapPin, Phone, Shield, Info, Zap,
+  Menu,
   LayoutDashboard, UserCheck, CreditCard, MessageSquare, Bell, Lock,
 } from 'lucide-react';
 import Sidebar from './Sidebar';
 import { Toaster } from 'react-hot-toast';
-import { useSocket } from '../../context/SocketContext';
 import { useAuth } from '../../context/AuthContext';
 import { usePlan } from '../../hooks/usePlan';
 import NotificationBell from '../ui/NotificationBell';
 import PodcastLivePill from '../PodcastLivePill';
 import LiveNotificationModal from '../LiveNotificationModal';
 
-const SEVERITY_STYLE = {
-  critical: { bar: 'bg-red-500',    badge: 'bg-red-50 text-red-600 border-red-200',    icon: Zap,           border: 'border-red-200',    title: 'text-red-600' },
-  high:     { bar: 'bg-orange-500', badge: 'bg-orange-50 text-orange-600 border-orange-200', icon: AlertTriangle, border: 'border-orange-200', title: 'text-orange-600' },
-  medium:   { bar: 'bg-amber-500',  badge: 'bg-amber-50 text-amber-600 border-amber-200',  icon: AlertTriangle, border: 'border-amber-200',  title: 'text-amber-600' },
-  low:      { bar: 'bg-blue-500',   badge: 'bg-blue-50 text-blue-600 border-blue-200',    icon: Info,          border: 'border-blue-200',   title: 'text-blue-600' },
-};
 
 const BOTTOM_NAV = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Home' },
@@ -28,95 +21,14 @@ const BOTTOM_NAV = [
   { to: '/alerts',    icon: Bell,            label: 'Alerts',   feature: 'securityPortal' },
 ];
 
-function BroadcastPopup({ alert, onDismiss }) {
-  const sev = alert.severity || 'high';
-  const style = SEVERITY_STYLE[sev] || SEVERITY_STYLE.high;
-  const Icon = style.icon;
-
-  useEffect(() => {
-    if (sev === 'critical') return;
-    const t = setTimeout(onDismiss, sev === 'high' ? 20000 : 12000);
-    return () => clearTimeout(t);
-  }, [sev, onDismiss]);
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center px-4 pt-6 pointer-events-none">
-      <div className={`pointer-events-auto w-full max-w-md rounded-2xl bg-white border ${style.border} shadow-2xl shadow-black/10 overflow-hidden animate-slide-down`}>
-        <div className={`h-1 w-full ${style.bar}`} />
-        <div className="p-5">
-          <div className="flex items-start justify-between gap-3 mb-4">
-            <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${style.badge}`}>
-                <Icon size={18} />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className={`text-xs font-bold uppercase tracking-wider ${style.title}`}>{sev} severity</span>
-                  <span className="text-slate-300 text-xs">·</span>
-                  <span className="text-slate-400 text-xs">Estate Broadcast</span>
-                </div>
-                <p className="text-slate-900 font-bold text-base mt-0.5 leading-tight">
-                  {alert.title || alert.type?.replace('_', ' ') || 'Estate Broadcast'}
-                </p>
-              </div>
-            </div>
-            <button onClick={onDismiss} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all flex-shrink-0 mt-0.5">
-              <X size={16} />
-            </button>
-          </div>
-          {alert.note && (
-            <p className="text-slate-600 text-sm leading-relaxed mb-4 bg-slate-50 rounded-xl px-4 py-3 border border-slate-100">
-              {alert.note}
-            </p>
-          )}
-          <div className="space-y-2">
-            {alert.location && (
-              <div className="flex items-center gap-2 text-sm text-slate-500">
-                <MapPin size={13} className="text-slate-400 flex-shrink-0" />
-                <span>{alert.location}</span>
-              </div>
-            )}
-            {alert.actionRequired && (
-              <div className="flex items-start gap-2 text-sm">
-                <Shield size={13} className="text-amber-500 flex-shrink-0 mt-0.5" />
-                <span className="text-amber-700 font-medium">{alert.actionRequired}</span>
-              </div>
-            )}
-            {alert.contactNumber && (
-              <div className="flex items-center gap-2 text-sm text-slate-500">
-                <Phone size={13} className="text-slate-400 flex-shrink-0" />
-                <span>{alert.contactNumber}</span>
-              </div>
-            )}
-          </div>
-          <button onClick={onDismiss} className="mt-4 w-full py-2 rounded-xl text-sm font-medium bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-800 transition-all">
-            Dismiss
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default function AppLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [broadcast, setBroadcast] = useState(null);
-  const { subscribe } = useSocket() || {};
   const { can } = usePlan();
 
-  const handleDismiss = useCallback(() => setBroadcast(null), []);
-
-  useEffect(() => {
-    if (!subscribe) return;
-    const unsub = subscribe('new_alert', (alert) => {
-      if (alert.isEmergencyBroadcast) setBroadcast(alert);
-    });
-    return unsub;
-  }, [subscribe]);
 
   return (
     <div className="flex h-screen bg-[#F8FAFC] overflow-hidden">
-      {broadcast && <BroadcastPopup alert={broadcast} onDismiss={handleDismiss} />}
 
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (

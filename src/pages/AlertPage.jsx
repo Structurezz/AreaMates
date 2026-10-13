@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { alertAPI } from '../api';
 import Badge, { alertTypeBadge, alertStatusBadge } from '../components/ui/Badge';
-import { Bell, Shield, Flame, Heart, Volume2, AlertTriangle, Megaphone, MapPin, Phone } from 'lucide-react';
+import { Bell, Shield, Flame, Heart, Volume2, AlertTriangle, Megaphone, MapPin, Phone, Users, Briefcase } from 'lucide-react';
+import { useSocket } from '../context/SocketContext';
+import { upsertAlert } from '../utils/alertEvents';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import Spinner from '../components/ui/Spinner';
@@ -22,10 +24,22 @@ const ALERT_TYPES = [
   { type: 'other',    icon: AlertTriangle, label: 'Other',             color: 'text-slate-500' },
 ];
 
+// Who a resident's alert goes to. Residents can't alert other residents —
+// estate-wide broadcasts are for security / management only.
+const TARGETS = [
+  { value: 'staff',          label: 'Security + Management', sub: 'Everyone on duty',  Icon: Users,     button: 'ALERT SECURITY + MANAGEMENT' },
+  { value: 'security',       label: 'Security only',         sub: 'Gate & patrol team', Icon: Shield,    button: 'ALERT SECURITY NOW' },
+  { value: 'estate_manager', label: 'Management only',       sub: 'Estate manager',     Icon: Briefcase, button: 'ALERT MANAGEMENT' },
+];
+const TARGET_LABEL = { staff: 'Security + Management', security: 'Security', estate_manager: 'Management', all: 'Everyone' };
+
 const PAGE_SIZE = 10;
 
 export default function AlertPage() {
   const [selectedType, setSelectedType] = useState('security');
+  const [target, setTarget] = useState('staff');
+  const { subscribe } = useSocket() || {};
+  const targetCfg = TARGETS.find((t) => t.value === target) || TARGETS[0];
   const [note, setNote] = useState('');
   const [sending, setSending] = useState(false);
   const [myAlerts, setMyAlerts] = useState([]);
@@ -46,11 +60,18 @@ export default function AlertPage() {
 
   useEffect(() => { loadAlerts(1); }, []);
 
+  // Live status on the resident's own alerts (acknowledged / resolved) and
+  // new estate broadcasts.
+  useEffect(() => {
+    if (!subscribe) return;
+    return subscribe('new_alert', (alert) => setMyAlerts((prev) => upsertAlert(prev, alert)));
+  }, [subscribe]);
+
   const handleAlert = async () => {
     setSending(true);
     try {
-      await alertAPI.create({ type: selectedType, note });
-      toast.success('Security alerted! Help is on the way.', { duration: 4000 });
+      const { data } = await alertAPI.create({ type: selectedType, note, audience: target });
+      toast.success(data?.message || 'Alert sent. Help is on the way.', { duration: 5000 });
       setNote('');
       setPage(1);
       loadAlerts(1);
@@ -65,9 +86,9 @@ export default function AlertPage() {
     <div className="max-w-lg mx-auto space-y-6 animate-fade-in">
       <div>
         <h1 className="text-3xl font-display font-bold mb-1" style={{ color: '#0F172A', letterSpacing: '-0.03em' }}>
-          Alert Security
+          Raise an Alert
         </h1>
-        <p className="text-sm" style={{ color: '#64748B' }}>Send an immediate alert to estate security</p>
+        <p className="text-sm" style={{ color: '#64748B' }}>Choose what's happening and who should respond</p>
       </div>
 
       {/* Alert type selection */}
@@ -95,6 +116,30 @@ export default function AlertPage() {
         </div>
 
         <div className="mb-4">
+          <h2 className="text-sm font-semibold uppercase tracking-wider mb-2" style={{ color: '#94A3B8' }}>
+            Send to
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {TARGETS.map(({ value, label, sub, Icon }) => {
+              const active = target === value;
+              return (
+                <button key={value} type="button" onClick={() => setTarget(value)}
+                  className="flex sm:flex-col items-center sm:items-start gap-3 sm:gap-1.5 p-3 rounded-xl border text-left transition-all"
+                  style={active
+                    ? { borderColor: 'rgba(99,102,241,0.45)', background: 'rgba(99,102,241,0.08)' }
+                    : { borderColor: '#E2E8F0', background: '#F8FAFC' }}>
+                  <Icon size={18} style={{ color: active ? '#4F46E5' : '#64748B', flexShrink: 0 }} />
+                  <span className="min-w-0">
+                    <span className="block text-xs font-semibold" style={{ color: active ? '#3730A3' : '#334155' }}>{label}</span>
+                    <span className="block text-[11px]" style={{ color: '#94A3B8' }}>{sub}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="mb-4">
           <label className="text-sm mb-1.5 block font-medium" style={{ color: '#475569' }}>
             Add a note (optional)
           </label>
@@ -115,11 +160,12 @@ export default function AlertPage() {
         >
           {!sending && <div className="pulse-ring" />}
           <Bell size={24} />
-          {sending ? 'Sending Alert...' : 'ALERT SECURITY NOW'}
+          {sending ? 'Sending Alert...' : targetCfg.button}
         </button>
 
         <p className="text-center text-xs mt-3" style={{ color: '#CBD5E1' }}>
-          Security personnel will be notified immediately with your name, unit, and location.
+          {TARGET_LABEL[target]} will be alerted immediately with your name, unit and phone number.
+          {['security', 'fire', 'medical'].includes(selectedType) && ' They also get an email.'} In immediate danger, call 112.
         </p>
       </div>
 
@@ -127,7 +173,7 @@ export default function AlertPage() {
       <div className="glass-card overflow-hidden">
         <div className="px-5 py-4" style={{ borderBottom: '1px solid rgba(15,23,42,0.06)' }}>
           <h2 className="text-base font-semibold" style={{ color: '#0F172A' }}>Alerts &amp; Broadcasts</h2>
-          <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>Your alerts and estate-wide announcements</p>
+          <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>Your alerts (with live status) and estate-wide broadcasts</p>
         </div>
 
         {loadingAlerts ? (
@@ -210,6 +256,7 @@ export default function AlertPage() {
                     {a.note && <div className="text-xs truncate" style={{ color: '#94A3B8' }}>{a.note}</div>}
                     <div className="text-xs" style={{ color: '#CBD5E1' }}>
                       {format(new Date(a.createdAt), 'MMM d · HH:mm')}
+                      {a.audience && ` · to ${TARGET_LABEL[a.audience] || a.audience}`}
                     </div>
                   </div>
                   <Badge variant={alertStatusBadge(a.status)}>{a.status}</Badge>
