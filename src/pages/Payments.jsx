@@ -216,18 +216,6 @@ export default function Payments() {
 
   return (
     <div className="space-y-5 animate-fade-in">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="text-base sm:text-lg font-display font-bold text-slate-900" style={{ letterSpacing: '-0.02em' }}>Payments</h1>
-          <p className="text-slate-400 text-xs hidden sm:block">Your estate bills, payments and receipts</p>
-        </div>
-        <button onClick={load} aria-label="Refresh"
-          className="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors">
-          <RefreshCw size={17} className={loading ? 'animate-spin' : ''} />
-        </button>
-      </div>
-
       {/* Desktop: account column left, bills/history right. Phones stack. */}
       <div className="space-y-5 xl:space-y-0 xl:grid xl:grid-cols-[minmax(360px,420px)_1fr] xl:gap-6 xl:items-start">
         <aside className="space-y-5 xl:sticky xl:top-0">
@@ -245,6 +233,13 @@ export default function Payments() {
                 <button onClick={toggleHide} aria-label={hideBalance ? 'Show amounts' : 'Hide amounts'}
                   className="ml-1 w-7 h-7 rounded-full flex items-center justify-center hover:bg-white/10">
                   {hideBalance ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
+                <button
+                  onClick={load}
+                  aria-label="Refresh"
+                  className="ml-auto -mr-1 w-8 h-8 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 transition-colors"
+                >
+                  <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
                 </button>
               </div>
 
