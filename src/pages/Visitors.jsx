@@ -169,16 +169,16 @@ const generateBrandedPass = async (v, estate) => {
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   ctx.fillStyle = 'rgba(255,255,255,0.50)'; ctx.font = 'bold 9px sans-serif';
   ctx.fillText('POWERED BY', 88, 772);
-  ctx.font = 'bold 18px sans-serif';
-  ctx.fillStyle = '#FFFFFF'; ctx.fillText('Area', 88, 795);
-  const areaW = ctx.measureText('Area').width;
-  ctx.fillStyle = '#34D399'; ctx.fillText('Connect', 88 + areaW, 795);
+  ctx.font = 'bold 16px sans-serif';
+  ctx.fillStyle = '#FFFFFF'; ctx.fillText('Area ', 88, 795);
+  const areaW = ctx.measureText('Area ').width;
+  ctx.fillStyle = '#34D399'; ctx.fillText('Connector Technologies', 88 + areaW, 795);
 
   ctx.textAlign = 'right';
   ctx.fillStyle = ACCENT; ctx.font = 'bold 13px sans-serif';
   ctx.fillText(BRAND_URL, W - 40, 775);
   ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.font = '10px sans-serif';
-  ctx.fillText('Smart estate management', W - 40, 795);
+  ctx.fillText('RC 9607864', W - 40, 795);
 
   ctx.textAlign = 'left';
   return canvas;
@@ -187,7 +187,7 @@ const generateBrandedPass = async (v, estate) => {
 const shareVisitorPass = async (v, estate) => {
   const date = format(new Date(v.expectedDate), 'MMM d, yyyy · h:mm a');
   const estateLine = estate?.name ? `\n*Estate:* ${estate.name}` : '';
-  const waText = `🏠 *Visitor Pass — ${v.visitorName}*${estateLine}\n\n*Code:* ${v.visitorCode}\n*Purpose:* ${v.purpose}\n*Expected:* ${date}\n\n_Powered by AreaConnect — areaconnect.pro_`;
+  const waText = `🏠 *Visitor Pass — ${v.visitorName}*${estateLine}\n\n*Code:* ${v.visitorCode}\n*Purpose:* ${v.purpose}\n*Expected:* ${date}\n\n_Powered by Area Connector Technologies · RC 9607864_\n${BRAND_URL}`;
 
   let file = null;
   try {
