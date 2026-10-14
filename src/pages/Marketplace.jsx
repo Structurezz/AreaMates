@@ -1,681 +1,259 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
-import {
-  Search, Plus, Heart, MessageCircle, X, Send, ShoppingBag,
-  ImageIcon, ChevronLeft, RefreshCw,
-} from 'lucide-react';
-import { marketplaceAPI, messageAPI } from '../api';
-import { useAuth } from '../context/AuthContext';
-import { useSocket } from '../context/SocketContext';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Search, Plus, X, ShoppingBag, ShieldCheck, SlidersHorizontal, Ban, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
-import Portal from '../components/ui/Portal';
+import { marketplaceAPI } from '../api';
+import { useAuth } from '../context/AuthContext';
+import Portal, { Z, useScrollLock } from '../components/ui/Portal';
+import ListingCard from '../components/market/ListingCard';
+import ListingDetail from '../components/market/ListingDetail';
+import ChatPanel from '../components/market/ChatPanel';
+import { SellSheet, ReportSheet, RateSheet } from '../components/market/Sheets';
+import { CAT, CATEGORIES, STATUS, naira } from '../components/market/shared';
+import { imgUrl } from '../components/lounge/shared';
 
-// ── Config ─────────────────────────────────────────────────────────
+const SORTS = [
+  { id: 'newest', label: 'Newest' },
+  { id: 'price_asc', label: 'Price: low to high' },
+  { id: 'price_desc', label: 'Price: high to low' },
+  { id: 'popular', label: 'Most viewed' },
+];
+const TABS = [{ id: 'browse', label: 'Browse' }, { id: 'mine', label: 'My listings' }, { id: 'saved', label: 'Saved' }];
 
-const CAT = {
-  food:          { label: 'Food',     emoji: '🍽️', color: '#F59E0B' },
-  services:      { label: 'Services', emoji: '🔧', color: '#60A5FA' },
-  skills:        { label: 'Skills',   emoji: '💡', color: '#A78BFA' },
-  items_for_sale:{ label: 'For Sale', emoji: '🏷️', color: '#34D399' },
-  rentals:       { label: 'Rentals',  emoji: '🏠', color: '#F472B6' },
-};
-const CATEGORIES = Object.keys(CAT);
-
-const getImg = (listing) =>
-  listing.images?.[0] || `https://picsum.photos/seed/${listing._id}/600/400`;
-
-// ── Chat Panel ─────────────────────────────────────────────────────
-
-function ChatPanel({ seller, listing, currentUser, onClose }) {
-  const [messages, setMessages] = useState([]);
-  const [text, setText] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
-  const bottomRef = useRef(null);
-  const { subscribe } = useSocket();
-
-  useEffect(() => {
-    setLoading(true);
-    messageAPI.getDM(seller._id)
-      .then(({ data }) => setMessages(data.data || []))
-      .catch(() => setMessages([]))
-      .finally(() => setLoading(false));
-  }, [seller._id]);
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  useEffect(() => {
-    const unsub = subscribe?.('new_message', (msg) => {
-      const from = msg.senderId?._id || msg.senderId;
-      if (from?.toString() === seller._id?.toString()) {
-        setMessages(prev => [...prev, msg]);
-      }
-    });
-    return unsub;
-  }, [seller._id, subscribe]);
-
-  const handleSend = async (e) => {
-    e.preventDefault();
-    const content = text.trim();
-    if (!content) return;
-    setText('');
-    const opt = { _id: `opt-${Date.now()}`, senderId: currentUser, content, createdAt: new Date().toISOString(), _opt: true };
-    setMessages(prev => [...prev, opt]);
-    setSending(true);
-    try {
-      const { data } = await messageAPI.send({ to: seller._id, content });
-      setMessages(prev => prev.map(m => m._id === opt._id ? (data.data || m) : m));
-    } catch {
-      setMessages(prev => prev.filter(m => m._id !== opt._id));
-      setText(content);
-      toast.error('Message failed to send');
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const isMe = (msg) => {
-    const id = msg.senderId?._id || msg.senderId;
-    return id?.toString() === currentUser._id?.toString();
-  };
-
-  return (
-    <div className="flex flex-col h-full bg-white" style={{ borderLeft: '1px solid #E2E8F0' }}>
-      {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3.5 flex-shrink-0" style={{ borderBottom: '1px solid #E2E8F0' }}>
-        <button
-          onClick={onClose}
-          className="p-1.5 rounded-lg transition-all"
-          style={{ color: '#94A3B8' }}
-          onMouseEnter={e => { e.currentTarget.style.color = '#0F172A'; e.currentTarget.style.background = '#F1F5F9'; }}
-          onMouseLeave={e => { e.currentTarget.style.color = '#94A3B8'; e.currentTarget.style.background = 'transparent'; }}
-        >
-          <ChevronLeft size={18} />
-        </button>
-        {seller.profilePhoto ? (
-          <img src={seller.profilePhoto} alt=""
-            className="w-9 h-9 rounded-full object-cover flex-shrink-0"
-            style={{ border: '1px solid rgba(16,185,129,0.25)' }} />
-        ) : (
-          <div
-            className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0"
-            style={{ background: 'rgba(16,185,129,0.10)', border: '1px solid rgba(16,185,129,0.22)', color: '#059669' }}
-          >
-            {seller.name?.[0]?.toUpperCase()}
-          </div>
-        )}
-        <div className="min-w-0">
-          <div className="font-semibold text-sm truncate" style={{ color: '#0F172A' }}>{seller.name}</div>
-          {listing && <div className="text-xs truncate" style={{ color: '#94A3B8' }}>Re: {listing.title}</div>}
-        </div>
-      </div>
-
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-1.5" style={{ background: '#F8FAFC' }}>
-        {loading ? (
-          <div className="flex justify-center py-10"><RefreshCw size={16} className="text-emerald-400 animate-spin" /></div>
-        ) : messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center py-8">
-            <MessageCircle size={28} className="mb-3" style={{ color: '#CBD5E1' }} />
-            <p className="text-sm" style={{ color: '#94A3B8' }}>No messages yet</p>
-            {listing && <p className="text-xs mt-1" style={{ color: '#CBD5E1' }}>Ask about "{listing.title.slice(0, 30)}"</p>}
-          </div>
-        ) : (
-          messages.map((msg) => {
-            const mine = isMe(msg);
-            return (
-              <div key={msg._id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-                <div
-                  className={`max-w-[80%] px-3.5 py-2 rounded-2xl text-sm leading-relaxed ${msg._opt ? 'opacity-60' : ''} ${
-                    mine ? 'rounded-br-sm text-white font-medium' : 'rounded-bl-sm'
-                  }`}
-                  style={mine
-                    ? { background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)' }
-                    : { background: '#FFFFFF', border: '1px solid #E2E8F0', color: '#0F172A' }
-                  }
-                >
-                  {msg.content}
-                  <div className="text-xs mt-0.5" style={{ color: mine ? 'rgba(255,255,255,0.6)' : '#CBD5E1' }}>
-                    {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </div>
-                </div>
-              </div>
-            );
-          })
-        )}
-        <div ref={bottomRef} />
-      </div>
-
-      {/* Input */}
-      <form onSubmit={handleSend} className="flex gap-2 p-3 flex-shrink-0 bg-white" style={{ borderTop: '1px solid #E2E8F0' }}>
-        <input
-          value={text}
-          onChange={e => setText(e.target.value)}
-          placeholder={listing ? `Ask about "${listing.title.slice(0, 22)}…"` : 'Type a message…'}
-          className="flex-1 px-3 py-2 rounded-xl text-sm focus:outline-none"
-          style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', color: '#0F172A' }}
-          onFocus={e => e.target.style.borderColor = '#10B981'}
-          onBlur={e => e.target.style.borderColor = '#E2E8F0'}
-        />
-        <button
-          type="submit"
-          disabled={!text.trim() || sending}
-          className="w-9 h-9 rounded-xl flex items-center justify-center text-white flex-shrink-0 transition-opacity disabled:opacity-35 hover:opacity-90"
-          style={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)' }}
-        >
-          <Send size={14} />
-        </button>
-      </form>
-    </div>
-  );
-}
-
-// ── Detail Modal ───────────────────────────────────────────────────
-
-function DetailModal({ listing, currentUserId, onClose, onMessage }) {
-  const [imgErr, setImgErr] = useState(false);
-  const cat = CAT[listing.category] || { label: listing.category, emoji: '📦', color: '#6B7280' };
-  const isMine = (listing.sellerId?._id || listing.sellerId)?.toString() === currentUserId?.toString();
-
+function ChatOverlay({ chat, me, onClose }) {
+  useScrollLock(true);
   return (
     <Portal>
-    <div
-      className="fixed inset-0 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
-      style={{ background: 'rgba(15,23,42,0.5)' }}
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-md overflow-hidden rounded-2xl bg-white animate-fade-in"
-        style={{ border: '1px solid #E2E8F0', boxShadow: '0 20px 48px rgba(15,23,42,0.14)' }}
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="relative">
-          <img
-            src={imgErr ? `https://picsum.photos/seed/${listing._id}b/600/400` : getImg(listing)}
-            onError={() => setImgErr(true)}
-            alt={listing.title}
-            className="w-full h-52 object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-          <button
-            onClick={onClose}
-            className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/70 transition-colors"
-          >
-            <X size={14} />
-          </button>
-          <span
-            className="absolute top-3 left-3 text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1.5"
-            style={{ background: cat.color, color: '#111' }}
-          >
-            {cat.emoji} {cat.label}
-          </span>
-          <div className="absolute bottom-3 right-3 bg-black/60 backdrop-blur-sm px-3 py-1 rounded-xl">
-            <span className="font-bold text-xl text-white">
-              {listing.price === 0 ? 'Free' : `₦${listing.price.toLocaleString()}`}
-            </span>
-          </div>
-        </div>
-        <div className="p-5">
-          <h2 className="text-xl font-bold mb-2 leading-tight" style={{ color: '#0F172A' }}>{listing.title}</h2>
-          <p className="text-sm leading-relaxed mb-4" style={{ color: '#64748B' }}>{listing.description}</p>
-          <div className="flex items-center gap-3 pb-4 mb-4" style={{ borderBottom: '1px solid #E2E8F0' }}>
-            {listing.sellerId?.profilePhoto ? (
-              <img src={listing.sellerId.profilePhoto} alt=""
-                className="w-9 h-9 rounded-full object-cover flex-shrink-0"
-                style={{ border: '1px solid rgba(16,185,129,0.25)' }} />
-            ) : (
-              <div
-                className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0"
-                style={{ background: 'rgba(16,185,129,0.10)', border: '1px solid rgba(16,185,129,0.22)', color: '#059669' }}
-              >
-                {listing.sellerId?.name?.[0]?.toUpperCase()}
-              </div>
-            )}
-            <div>
-              <div className="text-sm font-medium" style={{ color: '#0F172A' }}>{listing.sellerId?.name}</div>
-              <div className="text-xs" style={{ color: '#CBD5E1' }}>
-                Listed {new Date(listing.createdAt).toLocaleDateString('en-NG', { month: 'short', day: 'numeric', year: 'numeric' })}
-              </div>
-            </div>
-          </div>
-          {!isMine ? (
-            <button
-              onClick={() => { onClose(); onMessage(listing); }}
-              className="btn-primary w-full"
-            >
-              <MessageCircle size={15} /> Message Seller
-            </button>
-          ) : (
-            <div className="text-center text-sm py-1" style={{ color: '#94A3B8' }}>This is your listing</div>
-          )}
+      <div className={`fixed inset-0 ${Z.drawer} flex justify-end`}>
+        <div className="overlay-backdrop hidden sm:block" onClick={onClose} aria-hidden="true" />
+        <div className="relative w-full sm:w-96 h-full shadow-2xl animate-fade-in">
+          <ChatPanel seller={chat.seller} listing={chat.listing} currentUser={me} onClose={onClose} />
         </div>
       </div>
-    </div>
     </Portal>
   );
 }
 
-// ── Create Modal ───────────────────────────────────────────────────
-
-function CreateModal({ open, onClose, onCreated }) {
-  const [form, setForm] = useState({ title: '', description: '', price: '', category: 'food' });
-  const [imageFile, setImageFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState('');
-  const [saving, setSaving] = useState(false);
-
-  const handleFile = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
-  };
-
-  const clearImage = () => { setImageFile(null); setImagePreview(''); };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-    try {
-      const fd = new FormData();
-      fd.append('title', form.title);
-      fd.append('description', form.description);
-      fd.append('price', form.price || 0);
-      fd.append('category', form.category);
-      if (imageFile) fd.append('images', imageFile);
-      const { data } = await marketplaceAPI.create(fd);
-      onCreated(data.data);
-      toast.success('Listing posted!');
-      onClose();
-      setForm({ title: '', description: '', price: '', category: 'food' });
-      clearImage();
-    } catch { toast.error('Failed to post listing'); }
-    finally { setSaving(false); }
-  };
-
-  if (!open) return null;
-
+// Row for "My listings": status and management's reason are what matter here.
+function MyRow({ l, onOpen }) {
+  const st = STATUS[l.status] || STATUS.active;
   return (
-    <Portal>
-    <div
-      className="fixed inset-0 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
-      style={{ background: 'rgba(15,23,42,0.5)' }}
-    >
-      <div
-        className="w-full max-w-md p-6 max-h-[92vh] overflow-y-auto animate-fade-in rounded-2xl bg-white"
-        style={{ border: '1px solid #E2E8F0', boxShadow: '0 20px 48px rgba(15,23,42,0.14)' }}
-      >
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-bold" style={{ color: '#0F172A' }}>Post a Listing</h2>
-          <button
-            onClick={onClose}
-            style={{ color: '#94A3B8' }}
-            onMouseEnter={e => e.currentTarget.style.color = '#0F172A'}
-            onMouseLeave={e => e.currentTarget.style.color = '#94A3B8'}
-          >
-            <X size={18} />
-          </button>
-        </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Image upload */}
-          <div>
-            <label className="text-xs block mb-2 font-medium" style={{ color: '#64A3B8' }}>Photo (optional)</label>
-            <label className="block cursor-pointer">
-              <div
-                className={`w-full h-36 rounded-xl border-2 border-dashed flex items-center justify-center overflow-hidden transition-all ${
-                  imagePreview ? 'border-transparent' : ''
-                }`}
-                style={!imagePreview ? { borderColor: '#E2E8F0' } : {}}
-                onMouseEnter={e => { if (!imagePreview) e.currentTarget.style.borderColor = '#10B981'; }}
-                onMouseLeave={e => { if (!imagePreview) e.currentTarget.style.borderColor = '#E2E8F0'; }}
-              >
-                {imagePreview ? (
-                  <img src={imagePreview} alt="preview" className="w-full h-full object-cover rounded-xl" />
-                ) : (
-                  <div className="text-center select-none">
-                    <ImageIcon size={22} className="mx-auto mb-1.5" style={{ color: '#CBD5E1' }} />
-                    <span className="text-xs" style={{ color: '#94A3B8' }}>Click to upload a photo</span>
-                  </div>
-                )}
-              </div>
-              <input type="file" accept="image/*" className="hidden" onChange={handleFile} />
-            </label>
-            {imagePreview && (
-              <button type="button" onClick={clearImage} className="text-xs text-red-500 hover:text-red-600 mt-1.5 transition-colors">
-                Remove photo
-              </button>
-            )}
-          </div>
-
-          <div>
-            <label className="text-xs block mb-1 font-medium" style={{ color: '#475569' }}>Title *</label>
-            <input
-              required
-              value={form.title}
-              onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
-              placeholder="What are you selling?"
-              className="input-field"
-            />
-          </div>
-          <div>
-            <label className="text-xs block mb-1 font-medium" style={{ color: '#475569' }}>Description *</label>
-            <textarea
-              required
-              rows={3}
-              value={form.description}
-              onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
-              placeholder="Describe your item or service…"
-              className="input-field"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs block mb-1 font-medium" style={{ color: '#475569' }}>Price ₦ (0 = Free)</label>
-              <input
-                type="number"
-                min="0"
-                value={form.price}
-                onChange={e => setForm(p => ({ ...p, price: e.target.value }))}
-                placeholder="0"
-                className="input-field"
-              />
-            </div>
-            <div>
-              <label className="text-xs block mb-1 font-medium" style={{ color: '#475569' }}>Category *</label>
-              <select
-                required
-                value={form.category}
-                onChange={e => setForm(p => ({ ...p, category: e.target.value }))}
-                className="input-field"
-              >
-                {CATEGORIES.map(c => <option key={c} value={c}>{CAT[c].emoji} {CAT[c].label}</option>)}
-              </select>
-            </div>
-          </div>
-          <div className="flex gap-3 pt-1">
-            <button type="button" onClick={onClose} className="btn-outline flex-1">Cancel</button>
-            <button type="submit" disabled={saving} className="btn-primary flex-1">
-              {saving ? <><RefreshCw size={13} className="animate-spin" /> Posting…</> : 'Post Listing'}
-            </button>
-          </div>
-        </form>
+    <button onClick={() => onOpen(l)} className="w-full flex gap-3 items-center p-3 rounded-2xl bg-white border border-slate-200 text-left active:bg-slate-50">
+      <div className="w-16 h-16 rounded-xl overflow-hidden bg-slate-100 shrink-0 flex items-center justify-center text-2xl">
+        {l.images?.[0] ? <img src={imgUrl(l.images[0])} alt="" className="w-full h-full object-cover" /> : CAT[l.category]?.emoji}
       </div>
-    </div>
-    </Portal>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className={`text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full border ${st.cls}`}>{st.label}</span>
+          <span className="text-[11px] text-slate-400">{l.views || 0} views · {(l.savedBy || []).length} saves</span>
+        </div>
+        <p className="text-sm font-semibold text-slate-900 truncate mt-1">{l.title}</p>
+        <p className="text-sm font-bold text-slate-700">{naira(l.price)}</p>
+        {['rejected', 'removed'].includes(l.status) && l.moderation?.reason && (
+          <p className="text-xs text-red-600 truncate">{l.moderation.reason}</p>
+        )}
+        {l.status === 'pending_approval' && <p className="text-xs text-amber-700 truncate">Waiting for estate management</p>}
+      </div>
+      <ChevronRight size={18} className="text-slate-300 shrink-0" />
+    </button>
   );
 }
-
-// ── Listing Card ───────────────────────────────────────────────────
-
-function ListingCard({ listing, currentUserId, onMessage, onDetail, liked, onLike }) {
-  const [imgErr, setImgErr] = useState(false);
-  const cat = CAT[listing.category] || { label: listing.category, emoji: '📦', color: '#6B7280' };
-  const isMine = (listing.sellerId?._id || listing.sellerId)?.toString() === currentUserId?.toString();
-
-  return (
-    <div className="glass-card overflow-hidden group transition-all duration-200 hover:-translate-y-0.5 flex flex-col">
-      {/* Image */}
-      <div className="relative overflow-hidden cursor-pointer" onClick={() => onDetail(listing)}>
-        <img
-          src={imgErr ? `https://picsum.photos/seed/alt${listing._id}/600/400` : getImg(listing)}
-          onError={() => setImgErr(true)}
-          alt={listing.title}
-          className="w-full h-44 object-cover group-hover:scale-[1.04] transition-transform duration-500"
-          loading="lazy"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
-        {/* Category */}
-        <span
-          className="absolute top-2.5 left-2.5 text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1"
-          style={{ background: cat.color, color: '#111' }}
-        >
-          {cat.emoji} {cat.label}
-        </span>
-        {/* Like */}
-        <button
-          onClick={e => { e.stopPropagation(); onLike(listing._id); }}
-          className={`absolute top-2.5 right-2.5 w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-sm transition-all active:scale-90 ${
-            liked ? 'bg-red-500 text-white shadow-lg' : 'bg-black/30 text-white/70 hover:bg-red-500/70 hover:text-white'
-          }`}
-        >
-          <Heart size={13} fill={liked ? 'currentColor' : 'none'} />
-        </button>
-        {/* Price */}
-        <div className="absolute bottom-2.5 right-2.5 bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded-lg">
-          <span className="font-bold text-sm text-white">
-            {listing.price === 0 ? 'Free' : `₦${listing.price.toLocaleString()}`}
-          </span>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="p-4 flex flex-col flex-1">
-        <h3
-          className="font-semibold leading-snug mb-1 truncate cursor-pointer transition-colors hover:text-emerald-600"
-          style={{ color: '#0F172A' }}
-          onClick={() => onDetail(listing)}
-        >
-          {listing.title}
-        </h3>
-        <p className="text-xs leading-relaxed line-clamp-2 flex-1 mb-3" style={{ color: '#94A3B8' }}>{listing.description}</p>
-
-        <div className="flex items-center justify-between mt-auto pt-3" style={{ borderTop: '1px solid rgba(15,23,42,0.06)' }}>
-          <div className="flex items-center gap-1.5 min-w-0">
-            <div
-              className="w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px] flex-shrink-0"
-              style={{ background: 'rgba(16,185,129,0.10)', border: '1px solid rgba(16,185,129,0.22)', color: '#059669' }}
-            >
-              {listing.sellerId?.name?.[0]?.toUpperCase() || '?'}
-            </div>
-            <span className="text-xs truncate max-w-[90px]" style={{ color: '#94A3B8' }}>
-              {listing.sellerId?.name?.split(' ')[0]}
-            </span>
-            {isMine && <span className="text-xs ml-0.5 flex-shrink-0" style={{ color: '#D97706' }}>· you</span>}
-          </div>
-          {!isMine && (
-            <button
-              onClick={() => onMessage(listing)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex-shrink-0"
-              style={{ background: '#ECFDF5', color: '#059669', border: '1px solid rgba(16,185,129,0.22)' }}
-              onMouseEnter={e => { e.currentTarget.style.background = '#D1FAE5'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = '#ECFDF5'; }}
-            >
-              <MessageCircle size={11} /> Chat
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Main Page ──────────────────────────────────────────────────────
 
 export default function Marketplace() {
   const { user } = useAuth();
+  const [tab, setTab] = useState('browse');
   const [listings, setListings] = useState([]);
+  const [mine, setMine] = useState([]);
+  const [saved, setSaved] = useState([]);
+  const [rules, setRules] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [catFilter, setCatFilter] = useState('');
-  const [liked, setLiked] = useState(new Set());
-  const [activeChat, setActiveChat] = useState(null); // { seller, listing }
-  const [detailItem, setDetailItem] = useState(null);
-  const [showCreate, setShowCreate] = useState(false);
+  const [q, setQ] = useState('');
+  const [debounced, setDebounced] = useState('');
+  const [cat, setCat] = useState('');
+  const [sort, setSort] = useState('newest');
+  const [showSort, setShowSort] = useState(false);
 
-  const load = useCallback(() => {
+  const [open, setOpen] = useState(null);
+  const [chat, setChat] = useState(null);
+  const [sell, setSell] = useState(null); // null | 'new' | listing (editing)
+  const [reportFor, setReportFor] = useState(null);
+  const [rateFor, setRateFor] = useState(null);
+
+  useEffect(() => { const t = setTimeout(() => setDebounced(q), 300); return () => clearTimeout(t); }, [q]);
+
+  const loadBrowse = useCallback(() => {
     setLoading(true);
-    marketplaceAPI.getAll(catFilter ? { category: catFilter } : {})
-      .then(({ data }) => setListings(data.data))
-      .catch(() => toast.error('Failed to load marketplace'))
+    marketplaceAPI.getAll({ category: cat || undefined, q: debounced || undefined, sort, limit: 60 })
+      .then(({ data }) => setListings(data.data || []))
+      .catch(() => toast.error('Couldn\'t load the marketplace'))
       .finally(() => setLoading(false));
-  }, [catFilter]);
+  }, [cat, debounced, sort]);
+  const loadMine = useCallback(() => marketplaceAPI.mine().then(({ data }) => setMine(data.data || [])).catch(() => {}), []);
+  const loadSaved = useCallback(() => marketplaceAPI.saved().then(({ data }) => setSaved(data.data || [])).catch(() => {}), []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { loadBrowse(); }, [loadBrowse]);
+  useEffect(() => { marketplaceAPI.rules().then(({ data }) => setRules(data.data)).catch(() => {}); loadMine(); }, [loadMine]);
+  useEffect(() => { if (tab === 'saved') loadSaved(); if (tab === 'mine') loadMine(); }, [tab, loadSaved, loadMine]);
 
-  const openChat = (listing) => {
-    const seller = listing.sellerId;
-    if (!seller) { toast.error('Seller info unavailable'); return; }
-    setActiveChat({ seller, listing });
+  // Keep every list in sync after a change made in a sheet/detail view.
+  const applyChange = (l) => {
+    const upd = (arr) => (l._deleted ? arr.filter((x) => x._id !== l._id) : arr.map((x) => (x._id === l._id ? { ...x, ...l } : x)));
+    setListings((a) => upd(a).filter((x) => x.status === 'active' || x.status === 'sold'));
+    setMine(upd);
+    setSaved((a) => upd(a).filter((x) => (x.savedBy || []).some((id) => String(id) === String(user?._id))));
   };
 
-  const toggleLike = (id) => {
-    setLiked(prev => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
+  const toggleSave = async (l) => {
+    try {
+      const { data } = await marketplaceAPI.toggleSave(l._id);
+      applyChange({ ...l, savedBy: data.data.savedBy });
+      if (data.saved) toast.success('Saved', { icon: '❤️', duration: 1500 });
+    } catch { toast.error('Couldn\'t save'); }
   };
 
-  const filtered = listings.filter(l => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return l.title?.toLowerCase().includes(q) || l.description?.toLowerCase().includes(q);
-  });
+  const onSaved = (l) => {
+    if (sell === 'new') {
+      setMine((m) => [l, ...m]);
+      if (l.status === 'active') setListings((a) => [l, ...a]);
+      if (l.status !== 'active') setTab('mine');
+    } else {
+      applyChange(l);
+      if (open?._id === l._id) setOpen(null);
+    }
+  };
 
-  const catCounts = CATEGORIES.reduce((acc, c) => {
-    acc[c] = listings.filter(l => l.category === c).length;
-    return acc;
-  }, {});
+  const startSell = () => {
+    if (rules?.suspended) return toast.error(`Your marketplace access is suspended${rules.suspended.reason ? `: ${rules.suspended.reason}` : ''}`);
+    setSell('new');
+  };
+
+  const pending = mine.filter((l) => ['pending_approval', 'rejected'].includes(l.status)).length;
+  const shown = tab === 'browse' ? listings : tab === 'saved' ? saved : mine;
+  const sortLabel = useMemo(() => SORTS.find((s) => s.id === sort)?.label, [sort]);
 
   return (
-    <div className="animate-fade-in">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2" style={{ color: '#0F172A', letterSpacing: '-0.03em' }}>
-            <ShoppingBag size={22} className="text-emerald-500" /> Marketplace
-          </h1>
-          <p className="text-sm mt-0.5" style={{ color: '#94A3B8' }}>
-            {listings.length} listing{listings.length !== 1 ? 's' : ''} in your estate
-          </p>
+    <div className="animate-fade-in -mx-4 md:mx-0 -mt-4 md:mt-0 pb-10">
+      {/* Hero */}
+      <div className="px-4 md:px-6 pt-5 pb-4 md:rounded-3xl text-white" style={{ background: 'linear-gradient(135deg,#4F46E5 0%,#6366F1 55%,#7C3AED 100%)' }}>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h1 className="text-[22px] font-extrabold tracking-tight flex items-center gap-2"><ShoppingBag size={21} /> Marketplace</h1>
+            <p className="text-[13px] text-indigo-100 mt-0.5 flex items-center gap-1"><ShieldCheck size={13} /> Neighbours only · protected by estate management</p>
+          </div>
+          <button onClick={startSell} className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-white text-indigo-700 font-bold text-sm px-4 py-2 shadow active:scale-95 transition-transform">
+            <Plus size={16} /> Sell
+          </button>
         </div>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="btn-primary"
-        >
-          <Plus size={15} /> Post
-        </button>
-      </div>
-
-      {/* Search */}
-      <div className="relative mb-4">
-        <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: '#94A3B8' }} />
-        <input
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Search listings…"
-          className="input-field pl-10"
-        />
-        {search && (
-          <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: '#94A3B8' }}>
-            <X size={14} />
-          </button>
-        )}
-      </div>
-
-      {/* Category filter */}
-      <div className="flex gap-2 overflow-x-auto pb-1 mb-6 scrollbar-hide">
-        <button
-          onClick={() => setCatFilter('')}
-          className="flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all"
-          style={!catFilter
-            ? { background: '#10B981', color: '#FFFFFF' }
-            : { background: '#F1F5F9', color: '#64748B' }
-          }
-          onMouseEnter={e => { if (catFilter) e.currentTarget.style.background = '#E2E8F0'; }}
-          onMouseLeave={e => { if (catFilter) e.currentTarget.style.background = '#F1F5F9'; }}
-        >
-          All {listings.length > 0 && <span className="ml-1 opacity-70">{listings.length}</span>}
-        </button>
-        {CATEGORIES.map(c => (
-          <button
-            key={c}
-            onClick={() => setCatFilter(catFilter === c ? '' : c)}
-            className="flex-shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all"
-            style={catFilter === c
-              ? { background: CAT[c].color, color: '#111' }
-              : { background: '#F1F5F9', color: '#64748B' }
-            }
-            onMouseEnter={e => { if (catFilter !== c) e.currentTarget.style.background = '#E2E8F0'; }}
-            onMouseLeave={e => { if (catFilter !== c) e.currentTarget.style.background = '#F1F5F9'; }}
-          >
-            {CAT[c].emoji} {CAT[c].label}
-            {catCounts[c] > 0 && (
-              <span style={{ opacity: catFilter === c ? 0.7 : 0.5 }}>{catCounts[c]}</span>
-            )}
-          </button>
-        ))}
-      </div>
-
-      {/* Grid */}
-      {loading ? (
-        <div className="flex justify-center py-20"><RefreshCw size={22} className="text-emerald-500 animate-spin" /></div>
-      ) : filtered.length === 0 ? (
-        <div className="glass-card p-16 text-center">
-          <ShoppingBag size={32} className="mx-auto mb-3" style={{ color: '#CBD5E1' }} />
-          <p className="font-medium" style={{ color: '#64748B' }}>No listings found</p>
-          <p className="text-sm mt-1" style={{ color: '#94A3B8' }}>
-            {search ? `No results for "${search}"` : 'Be the first to post something!'}
-          </p>
-          {!search && (
-            <button
-              onClick={() => setShowCreate(true)}
-              className="btn-primary mt-4"
-            >
-              Post a Listing
+        <div className="relative mt-4">
+          <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input value={q} onChange={(e) => { setQ(e.target.value); setTab('browse'); }} placeholder="Search food, services, items…"
+            className="w-full rounded-2xl bg-white text-slate-900 placeholder:text-slate-400 pl-10 pr-10 py-3 text-[15px] outline-none shadow-sm" />
+          {q && <button onClick={() => setQ('')} aria-label="Clear" className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"><X size={16} /></button>}
+        </div>
+        <div className="flex gap-1 mt-3 bg-white/15 rounded-xl p-1">
+          {TABS.map((t) => (
+            <button key={t.id} onClick={() => setTab(t.id)}
+              className={`flex-1 py-1.5 rounded-lg text-[13px] font-semibold transition-colors relative ${tab === t.id ? 'bg-white text-indigo-700 shadow-sm' : 'text-white/90'}`}>
+              {t.label}
+              {t.id === 'mine' && pending > 0 && <span className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-amber-400 text-amber-950 text-[10px] font-bold px-1">{pending}</span>}
             </button>
-          )}
-        </div>
-      ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 pb-12">
-          {filtered.map(l => (
-            <ListingCard
-              key={l._id}
-              listing={l}
-              currentUserId={user?._id}
-              onMessage={openChat}
-              onDetail={setDetailItem}
-              liked={liked.has(l._id)}
-              onLike={toggleLike}
-            />
           ))}
         </div>
+      </div>
+
+      {rules?.suspended && (
+        <div className="mx-4 md:mx-0 mt-3 rounded-2xl bg-red-50 border border-red-200 p-3 flex gap-2.5 text-sm text-red-800">
+          <Ban size={17} className="shrink-0 mt-0.5" />
+          <div><p className="font-semibold">You can't list items right now</p><p>{rules.suspended.reason}{rules.suspended.until ? ` · until ${new Date(rules.suspended.until).toLocaleDateString('en-NG', { day: 'numeric', month: 'short' })}` : ''}</p></div>
+        </div>
       )}
 
-      {/* Chat slide-in */}
-      <div className={`fixed inset-y-0 right-0 w-full sm:w-96 z-50 shadow-2xl shadow-slate-900/10 transition-transform duration-300 ease-out ${
-        activeChat ? 'translate-x-0' : 'translate-x-full'
-      }`}>
-        {activeChat && (
-          <ChatPanel
-            seller={activeChat.seller}
-            listing={activeChat.listing}
-            currentUser={user}
-            onClose={() => setActiveChat(null)}
-          />
+      {tab === 'browse' && (
+        <div className="sticky -top-4 md:-top-6 lg:-top-8 z-10 bg-[#F8FAFC]/95 backdrop-blur pt-3 pb-2">
+          <div className="flex gap-2 overflow-x-auto no-scrollbar px-4 md:px-0">
+            {[['', 'All', '✨'], ...CATEGORIES.map((c) => [c, CAT[c].label, CAT[c].emoji])].map(([id, label, emoji]) => (
+              <button key={id || 'all'} onClick={() => setCat(id)}
+                className={`shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[13px] font-semibold border transition-colors ${cat === id ? 'bg-slate-900 border-slate-900 text-white' : 'bg-white border-slate-200 text-slate-700'}`}>
+                <span>{emoji}</span>{label}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center justify-between px-4 md:px-0 mt-2.5">
+            <p className="text-[13px] text-slate-500">{loading ? 'Loading…' : `${listings.length} listing${listings.length === 1 ? '' : 's'}`}</p>
+            <div className="relative">
+              <button onClick={() => setShowSort((s) => !s)} className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-slate-700">
+                <SlidersHorizontal size={14} /> {sortLabel}
+              </button>
+              {showSort && (
+                <div className="absolute right-0 top-7 z-20 w-48 rounded-xl bg-white shadow-xl border border-slate-100 overflow-hidden">
+                  {SORTS.map((s) => (
+                    <button key={s.id} onClick={() => { setSort(s.id); setShowSort(false); }}
+                      className={`w-full text-left px-4 py-2.5 text-sm ${sort === s.id ? 'text-indigo-700 font-semibold bg-indigo-50' : 'text-slate-700'}`}>{s.label}</button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="px-4 md:px-0 mt-3">
+        {tab === 'mine' ? (
+          mine.length === 0 ? (
+            <Empty title="You're not selling anything yet" body="Home-cooked food, a service you offer, things you no longer need. List it for your neighbours." cta="Sell something" onCta={startSell} />
+          ) : (
+            <div className="space-y-2.5">{mine.map((l) => <MyRow key={l._id} l={l} onOpen={setOpen} />)}</div>
+          )
+        ) : loading && tab === 'browse' ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-3 gap-y-5">
+            {Array.from({ length: 6 }, (_, i) => (
+              <div key={i}><div className="aspect-square rounded-2xl bg-slate-200/70 animate-pulse" /><div className="h-4 w-16 bg-slate-200/70 rounded mt-2 animate-pulse" /><div className="h-3 w-28 bg-slate-200/60 rounded mt-1.5 animate-pulse" /></div>
+            ))}
+          </div>
+        ) : shown.length === 0 ? (
+          tab === 'saved'
+            ? <Empty title="Nothing saved yet" body="Tap the ♥ on a listing to keep it here." />
+            : <Empty title={q ? `No results for "${q}"` : 'No listings yet'} body={q || cat ? 'Try another search or category.' : 'Be the first to sell something in your estate.'} cta={!q && !cat ? 'Sell something' : null} onCta={startSell} />
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-3 gap-y-5">
+            {shown.map((l) => <ListingCard key={l._id} listing={l} me={user} onOpen={setOpen} onToggleSave={toggleSave} />)}
+          </div>
         )}
       </div>
-      {/* Backdrop for chat */}
-      {activeChat && (
-        <div className="fixed inset-0 bg-slate-900/20 z-40 sm:hidden" onClick={() => setActiveChat(null)} />
-      )}
 
-      {/* Detail Modal */}
-      {detailItem && (
-        <DetailModal
-          listing={detailItem}
-          currentUserId={user?._id}
-          onClose={() => setDetailItem(null)}
-          onMessage={(l) => { setDetailItem(null); openChat(l); }}
+      {/* Floating Sell button (mobile) */}
+      <button onClick={startSell} aria-label="Sell something"
+        className="sm:hidden fixed right-4 z-30 inline-flex items-center gap-2 rounded-full text-white font-bold px-5 py-3.5 shadow-lg shadow-indigo-600/30 active:scale-95 transition-transform"
+        style={{ bottom: 'calc(5.5rem + env(safe-area-inset-bottom))', background: 'linear-gradient(135deg,#6366F1,#4F46E5)' }}>
+        <Plus size={19} strokeWidth={2.6} /> Sell
+      </button>
+
+      {open && (
+        <ListingDetail
+          listing={open} me={user}
+          onClose={() => setOpen(null)}
+          onChat={(l) => setChat({ seller: l.sellerId, listing: l })}
+          onChanged={applyChange}
+          onEdit={(l) => setSell(l)}
+          onReport={(l, done) => setReportFor({ ...l, done })}
+          onRate={(l, done) => setRateFor({ ...l, done })}
         />
       )}
-
-      {/* Create Modal */}
-      <CreateModal
-        open={showCreate}
-        onClose={() => setShowCreate(false)}
-        onCreated={(newListing) => setListings(prev => [newListing, ...prev])}
-      />
+      {chat && <ChatOverlay chat={chat} me={user} onClose={() => setChat(null)} />}
+      <SellSheet open={!!sell} editing={sell && sell !== 'new' ? sell : null} rules={rules} onClose={() => setSell(null)} onSaved={onSaved} />
+      <ReportSheet listing={reportFor} onClose={() => setReportFor(null)} onDone={() => reportFor?.done?.()} />
+      <RateSheet listing={rateFor} onClose={() => setRateFor(null)} onDone={(r, rev) => rateFor?.done?.(r, rev)} />
     </div>
   );
 }
+
+function Empty({ title, body, cta, onCta }) {
+  return (
+    <div className="text-center py-14 px-6">
+      <div className="w-16 h-16 mx-auto rounded-2xl bg-indigo-50 flex items-center justify-center mb-4"><ShoppingBag size={28} className="text-indigo-500" /></div>
+      <p className="font-bold text-slate-900">{title}</p>
+      <p className="text-sm text-slate-500 mt-1 max-w-xs mx-auto">{body}</p>
+      {cta && <button onClick={onCta} className="mt-5 inline-flex items-center gap-1.5 rounded-full text-white font-semibold text-sm px-5 py-2.5" style={{ background: 'linear-gradient(135deg,#6366F1,#4F46E5)' }}><Plus size={16} /> {cta}</button>}
+    </div>
+  );
+}
+

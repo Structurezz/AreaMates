@@ -75,6 +75,12 @@ export const marketplaceAPI = {
   }),
   update: (id, data) => api.patch(`/marketplace/${id}`, data),
   delete: (id) => api.delete(`/marketplace/${id}`),
+  mine: () => api.get('/marketplace/mine'),
+  saved: () => api.get('/marketplace/saved'),
+  rules: () => api.get('/marketplace/rules'),
+  toggleSave: (id) => api.post(`/marketplace/${id}/save`),
+  report: (id, reason, note) => api.post(`/marketplace/${id}/report`, { reason, note }),
+  review: (id, rating, comment) => api.post(`/marketplace/${id}/review`, { rating, comment }),
 };
 
 // Messages
