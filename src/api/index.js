@@ -205,3 +205,15 @@ export const callAPI = {
   buzzes:      () => api.get('/calls/buzz'),
   receipt:     (txId) => api.get(`/calls/credits/receipt/${txId}`, { responseType: 'blob' }),
 };
+
+// Personal safety: blocks, "I'm being followed", live location
+export const safetyAPI = {
+  searchResidents: (q) => api.get('/safety/residents', { params: { q } }),
+  blocks:          () => api.get('/safety/blocks'),
+  block:           (userId, reason, gateWatch = true) => api.post('/safety/blocks', { userId, reason, gateWatch }),
+  setGateWatch:    (id, gateWatch) => api.patch(`/safety/blocks/${id}`, { gateWatch }),
+  unblock:         (id) => api.delete(`/safety/blocks/${id}`),
+  followed:        (payload) => api.post('/safety/followed', payload),
+  startLocation:   () => api.post('/safety/location/start'),
+  stopLocation:    () => api.post('/safety/location/stop'),
+};

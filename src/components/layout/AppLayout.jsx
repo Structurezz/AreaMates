@@ -9,6 +9,7 @@ import { Toaster } from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 import { usePlan } from '../../hooks/usePlan';
 import NotificationBell from '../ui/NotificationBell';
+import SafetyShareBanner from '../SafetyShareBanner';
 import PodcastLivePill from '../PodcastLivePill';
 import LiveNotificationModal from '../LiveNotificationModal';
 
@@ -79,6 +80,8 @@ export default function AppLayout({ children }) {
         </header>
 
         {/* Page content — pb-20 on mobile to clear bottom nav */}
+        {/* Live-location reminder (only while sharing with security) */}
+        <SafetyShareBanner />
         <main className="flex-1 overflow-y-auto p-4 pb-24 md:p-6 lg:p-8 lg:pb-8">
           {children}
         </main>

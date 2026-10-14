@@ -1,6 +1,6 @@
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { PhoneCall, LayoutDashboard, UserCheck, ShoppingBag, MessageSquare, Bell, LogOut, CreditCard, Music, Calendar, BarChart2, Lock, Scale, Settings as SettingsIcon, Radio, Megaphone } from 'lucide-react';
+import { PhoneCall, ShieldAlert, LayoutDashboard, UserCheck, ShoppingBag, MessageSquare, Bell, LogOut, CreditCard, Music, Calendar, BarChart2, Lock, Scale, Settings as SettingsIcon, Radio, Megaphone } from 'lucide-react';
 import { usePlan } from '../../hooks/usePlan';
 import NotificationBell from '../ui/NotificationBell';
 
@@ -30,6 +30,7 @@ const NAV = [
     section: 'Safety',
     links: [
       { to: '/alerts',    icon: Bell,  label: 'Alert Security', feature: 'securityPortal' },
+      { to: '/safety',    icon: ShieldAlert, label: 'Personal Safety' },
       { to: '/courtroom', icon: Scale, label: 'Courtroom' },
     ],
   },

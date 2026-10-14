@@ -20,6 +20,8 @@ import Marketplace from './pages/Marketplace';
 import Chat from './pages/Chat';
 import AlertPage from './pages/AlertPage';
 import Neighbours from './pages/Neighbours';
+import Safety from './pages/Safety';
+import { SafetyProvider } from './context/SafetyContext';
 import { CallProvider } from './context/CallContext';
 import CallOverlay from './components/calls/CallOverlay';
 import Payments from './pages/Payments';
@@ -66,6 +68,7 @@ function AppRoutes() {
       <Route path="/visitors/:id" element={<RequireResident><PlanGate feature="visitorManagement" featureName="Visitor Management"><VisitorDetail /></PlanGate></RequireResident>} />
       <Route path="/marketplace" element={<RequireResident><PlanGate feature="marketplace" featureName="Marketplace"><Marketplace /></PlanGate></RequireResident>} />
       <Route path="/neighbours" element={<RequireResident><Neighbours /></RequireResident>} />
+      <Route path="/safety" element={<RequireResident><Safety /></RequireResident>} />
       <Route path="/chat" element={<RequireResident><PlanGate feature="communityChat" featureName="Community Chat"><Chat /></PlanGate></RequireResident>} />
       <Route path="/payments" element={<RequireResident><PlanGate feature="paymentSystem" featureName="Payments"><Payments /></PlanGate></RequireResident>} />
       <Route path="/alerts" element={<RequireResident><PlanGate feature="securityPortal" featureName="Security & Alerts"><AlertPage /></PlanGate></RequireResident>} />
@@ -90,6 +93,7 @@ export default function App() {
       <AuthProvider>
         <SocketProvider>
           <CallProvider>
+          <SafetyProvider>
           <CallOverlay />
           <NotificationProvider>
           <AppRoutes />
@@ -100,6 +104,7 @@ export default function App() {
             success: { iconTheme: { primary: '#10B981', secondary: '#1C1C20' } },
           }} />
           </NotificationProvider>
+          </SafetyProvider>
           </CallProvider>
         </SocketProvider>
       </AuthProvider>

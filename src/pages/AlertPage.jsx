@@ -89,6 +89,9 @@ export default function AlertPage() {
           Raise an Alert
         </h1>
         <p className="text-sm" style={{ color: '#64748B' }}>Choose what's happening and who should respond</p>
+        <a href="/safety" className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-red-600 hover:underline">
+          Being followed or harassed by a resident? Personal safety →
+        </a>
       </div>
 
       {/* Alert type selection */}
