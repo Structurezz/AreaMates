@@ -15,6 +15,7 @@ import DJLive from '../components/DJLive';
 import MixtapeArchive from '../components/MixtapeArchive';
 import GoLiveCTA from '../components/GoLiveCTA';
 import Portal from '../components/ui/Portal';
+import Feed from '../components/lounge/Feed';
 
 // ── Helpers ────────────────────────────────────────────────────────
 const SERVER_URL = (import.meta.env.VITE_API_URL || 'https://areaconnectapi-production.up.railway.app/api').replace('/api', '');
@@ -52,327 +53,6 @@ const inputStyle = {
   background: '#F8FAFC', border: '1px solid #E2E8F0',
   fontSize: '14px', color: '#0F172A', outline: 'none',
 };
-
-// ── Image grid ────────────────────────────────────────────────────
-function ImageGrid({ images }) {
-  if (!images?.length) return null;
-  const n = images.length;
-  return (
-    <div className={`grid gap-1 rounded-2xl overflow-hidden mt-3 ${n === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}
-      style={{ maxHeight: n === 1 ? 400 : 300 }}>
-      {images.slice(0, 4).map((img, i) => (
-        <div key={i} className={`relative overflow-hidden bg-slate-100 ${n === 3 && i === 0 ? 'row-span-2' : ''}`}
-          style={{ height: n === 1 ? 400 : 150 }}>
-          <img src={imgUrl(img)} alt="" className="w-full h-full object-cover" />
-          {n > 4 && i === 3 && (
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-              <span className="text-white text-xl font-black">+{n - 4}</span>
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ── Create Post ───────────────────────────────────────────────────
-function CreatePost({ user, onCreated }) {
-  const [expanded, setExpanded] = useState(false);
-  const [content, setContent]   = useState('');
-  const [files, setFiles]       = useState([]);
-  const [previews, setPreviews] = useState([]);
-  const [posting, setPosting]   = useState(false);
-  const fileRef = useRef(null);
-
-  const addFiles = (e) => {
-    const picked = Array.from(e.target.files || []).slice(0, 4 - files.length);
-    setFiles(prev => [...prev, ...picked].slice(0, 4));
-    picked.forEach(f => {
-      const reader = new FileReader();
-      reader.onload = (ev) => setPreviews(prev => [...prev, ev.target.result].slice(0, 4));
-      reader.readAsDataURL(f);
-    });
-    e.target.value = '';
-  };
-
-  const removeFile = (i) => {
-    setFiles(prev => prev.filter((_, j) => j !== i));
-    setPreviews(prev => prev.filter((_, j) => j !== i));
-  };
-
-  const handlePost = async () => {
-    if (!content.trim() && files.length === 0) return;
-    setPosting(true);
-    try {
-      const fd = new FormData();
-      fd.append('content', content.trim());
-      files.forEach(f => fd.append('images', f));
-      const { data } = await postAPI.create(fd);
-      onCreated(data.data);
-      setContent(''); setFiles([]); setPreviews([]); setExpanded(false);
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to post');
-    } finally { setPosting(false); }
-  };
-
-  return (
-    <div className="rounded-2xl border p-4" style={{ background: '#fff', borderColor: '#F1F5F9' }}>
-      <div className="flex items-center gap-3">
-        <Avatar name={user?.name} size={38} src={user?.profilePhoto} />
-        {!expanded ? (
-          <button onClick={() => setExpanded(true)}
-            className="flex-1 text-left px-4 py-2.5 rounded-2xl text-sm transition-all"
-            style={{ background: '#F8FAFC', color: '#94A3B8', border: '1px solid #E2E8F0' }}>
-            Share something with the estate…
-          </button>
-        ) : (
-          <span className="text-sm font-semibold" style={{ color: '#0F172A' }}>{user?.name}</span>
-        )}
-      </div>
-
-      {expanded && (
-        <div className="mt-3 space-y-3">
-          <textarea autoFocus rows={3} value={content} onChange={e => setContent(e.target.value)}
-            placeholder="What's happening in the estate?"
-            style={{ ...inputStyle, resize: 'none', fontSize: 15, lineHeight: 1.6 }} />
-
-          {previews.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {previews.map((src, i) => (
-                <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden border" style={{ borderColor: '#E2E8F0' }}>
-                  <img src={src} alt="" className="w-full h-full object-cover" />
-                  <button onClick={() => removeFile(i)}
-                    className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 flex items-center justify-center">
-                    <X size={10} className="text-white" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="flex items-center justify-between pt-1">
-            <div className="flex items-center gap-2">
-              <button onClick={() => fileRef.current?.click()} disabled={files.length >= 4}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all"
-                style={{ color: files.length < 4 ? '#6366F1' : '#CBD5E1', borderColor: files.length < 4 ? '#C7D2FE' : '#E2E8F0', background: files.length < 4 ? '#EEF2FF' : '#F8FAFC' }}>
-                <ImageIcon size={13} /> Photo {files.length > 0 && `(${files.length}/4)`}
-              </button>
-              <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={addFiles} />
-            </div>
-            <div className="flex gap-2">
-              <button onClick={() => { setExpanded(false); setContent(''); setFiles([]); setPreviews([]); }}
-                className="px-3 py-1.5 rounded-xl text-xs font-semibold" style={{ color: '#64748B', background: '#F1F5F9' }}>
-                Cancel
-              </button>
-              <button onClick={handlePost} disabled={posting || (!content.trim() && files.length === 0)}
-                className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-bold text-white disabled:opacity-50 transition-all"
-                style={{ background: '#6366F1' }}>
-                {posting ? <RefreshCw size={12} className="animate-spin" /> : <Send size={12} />}
-                Post
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Post Card ─────────────────────────────────────────────────────
-function PostCard({ post, currentUserId, onDelete }) {
-  const [showComments, setShowComments] = useState(false);
-  const [commentText, setCommentText]   = useState('');
-  const [comments, setComments]         = useState(post.comments || []);
-  const [likes, setLikes]               = useState(post.likes?.length || 0);
-  const [liked, setLiked]               = useState((post.likes || []).some(l => l === currentUserId || l?._id === currentUserId));
-  const [submitting, setSubmitting]     = useState(false);
-  const [deleting, setDeleting]         = useState(null);
-
-  const isOwn     = post.author?._id === currentUserId || post.author === currentUserId;
-  const isManager = post.author?.role === 'estate_manager';
-
-  const handleLike = async () => {
-    try {
-      const { data } = await postAPI.like(post._id);
-      setLikes(data.likes); setLiked(data.liked);
-    } catch { toast.error('Failed'); }
-  };
-
-  const handleComment = async (e) => {
-    e.preventDefault();
-    if (!commentText.trim()) return;
-    setSubmitting(true);
-    try {
-      const { data } = await postAPI.addComment(post._id, commentText.trim());
-      setComments(prev => [...prev, data.data]);
-      setCommentText('');
-    } catch { toast.error('Failed to comment'); }
-    finally { setSubmitting(false); }
-  };
-
-  const handleDeleteComment = async (commentId) => {
-    setDeleting(commentId);
-    try {
-      await postAPI.deleteComment(post._id, commentId);
-      setComments(prev => prev.filter(c => c._id !== commentId));
-    } catch { toast.error('Failed'); }
-    finally { setDeleting(null); }
-  };
-
-  return (
-    <div className="rounded-2xl border" style={{ background: '#fff', borderColor: '#F1F5F9' }}>
-      {/* Author row */}
-      <div className="flex items-start justify-between p-4 pb-0">
-        <div className="flex items-center gap-3">
-          <Avatar name={post.author?.name} size={40} src={post.author?.profilePhoto} />
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-bold" style={{ color: '#0F172A' }}>{post.author?.name || 'Resident'}</span>
-              {isManager && (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: '#F0FDF4', color: '#10B981' }}>Manager</span>
-              )}
-            </div>
-            <span className="text-xs" style={{ color: '#94A3B8' }}>{timeAgo(post.createdAt)}</span>
-          </div>
-        </div>
-        {isOwn && (
-          <button onClick={() => onDelete(post._id)} className="p-1.5 rounded-lg transition-all"
-            style={{ color: '#CBD5E1' }}
-            onMouseEnter={e => e.currentTarget.style.color = '#EF4444'}
-            onMouseLeave={e => e.currentTarget.style.color = '#CBD5E1'}>
-            <Trash2 size={14} />
-          </button>
-        )}
-      </div>
-
-      {post.content && (
-        <p className="px-4 pt-3 text-sm leading-relaxed" style={{ color: '#0F172A', whiteSpace: 'pre-wrap' }}>
-          {post.content}
-        </p>
-      )}
-
-      {post.images?.length > 0 && (
-        <div className="px-4"><ImageGrid images={post.images} /></div>
-      )}
-
-      {/* Actions */}
-      <div className="flex items-center gap-4 px-4 pt-3 pb-3 border-t mt-3" style={{ borderColor: '#F8FAFC' }}>
-        <button onClick={handleLike} className="flex items-center gap-1.5 text-sm font-semibold transition-all"
-          style={{ color: liked ? '#EF4444' : '#94A3B8' }}>
-          <Heart size={17} fill={liked ? '#EF4444' : 'none'} strokeWidth={liked ? 0 : 2} />
-          {likes > 0 && <span>{likes}</span>}
-        </button>
-        <button onClick={() => setShowComments(s => !s)} className="flex items-center gap-1.5 text-sm font-semibold transition-all"
-          style={{ color: showComments ? '#6366F1' : '#94A3B8' }}>
-          <MessageCircle size={17} />
-          {comments.length > 0 && <span>{comments.length}</span>}
-        </button>
-      </div>
-
-      {/* Comments */}
-      {showComments && (
-        <div className="px-4 pb-4 border-t" style={{ borderColor: '#F8FAFC' }}>
-          {comments.length > 0 && (
-            <div className="space-y-3 py-3">
-              {comments.map(c => (
-                <div key={c._id} className="flex items-start gap-2.5 group">
-                  <Avatar name={c.author?.name} size={28} src={c.author?.profilePhoto} />
-                  <div className="flex-1 min-w-0">
-                    <div className="rounded-2xl px-3 py-2" style={{ background: '#F8FAFC' }}>
-                      <span className="text-xs font-bold" style={{ color: '#0F172A' }}>{c.author?.name || 'Resident'} </span>
-                      <span className="text-xs" style={{ color: '#374151' }}>{c.text}</span>
-                    </div>
-                    <span className="text-[11px] pl-3" style={{ color: '#94A3B8' }}>{timeAgo(c.createdAt)}</span>
-                  </div>
-                  {(c.author?._id === currentUserId || c.author === currentUserId) && (
-                    <button onClick={() => handleDeleteComment(c._id)} disabled={deleting === c._id}
-                      className="opacity-0 group-hover:opacity-100 p-1 rounded-lg transition-all flex-shrink-0"
-                      style={{ color: '#CBD5E1' }}
-                      onMouseEnter={e => e.currentTarget.style.color = '#EF4444'}
-                      onMouseLeave={e => e.currentTarget.style.color = '#CBD5E1'}>
-                      <X size={11} />
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-          <form onSubmit={handleComment} className="flex items-center gap-2 mt-2">
-            <input value={commentText} onChange={e => setCommentText(e.target.value)}
-              placeholder="Write a comment…"
-              style={{ ...inputStyle, fontSize: 13, padding: '6px 12px' }} />
-            <button type="submit" disabled={submitting || !commentText.trim()}
-              className="p-2 rounded-xl flex-shrink-0 disabled:opacity-40"
-              style={{ background: '#EEF2FF', color: '#6366F1' }}>
-              {submitting ? <RefreshCw size={13} className="animate-spin" /> : <Send size={13} />}
-            </button>
-          </form>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Social Feed Tab ───────────────────────────────────────────────
-function SocialFeedTab({ user }) {
-  const [posts, setPosts]       = useState([]);
-  const [loading, setLoading]   = useState(true);
-  const [page, setPage]         = useState(1);
-  const [hasMore, setHasMore]   = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-
-  const load = useCallback(async (p = 1, append = false) => {
-    p === 1 ? setLoading(true) : setLoadingMore(true);
-    try {
-      const { data } = await postAPI.getAll(p);
-      setPosts(prev => append ? [...prev, ...(data.data || [])] : (data.data || []));
-      setHasMore(p < data.pages);
-      setPage(p);
-    } catch { toast.error('Failed to load feed'); }
-    finally { setLoading(false); setLoadingMore(false); }
-  }, []);
-
-  useEffect(() => { load(1); }, [load]);
-
-  const handleCreated = (post) => setPosts(prev => [post, ...prev]);
-  const handleDelete  = async (id) => {
-    try {
-      await postAPI.delete(id);
-      setPosts(prev => prev.filter(p => p._id !== id));
-      toast.success('Post removed');
-    } catch { toast.error('Failed to delete'); }
-  };
-
-  return (
-    <div className="space-y-3 max-w-xl mx-auto">
-      <CreatePost user={user} onCreated={handleCreated} />
-
-      {loading ? (
-        <div className="flex justify-center py-12"><RefreshCw size={20} className="animate-spin" style={{ color: '#6366F1' }} /></div>
-      ) : posts.length === 0 ? (
-        <div className="rounded-2xl p-12 text-center border" style={{ borderColor: '#F1F5F9' }}>
-          <PartyPopper size={32} className="mx-auto mb-3" style={{ color: '#CBD5E1' }} />
-          <p className="font-semibold" style={{ color: '#94A3B8' }}>The feed is empty</p>
-          <p className="text-sm mt-1" style={{ color: '#CBD5E1' }}>Be the first to share something!</p>
-        </div>
-      ) : (
-        <>
-          {posts.map(post => (
-            <PostCard key={post._id} post={post} currentUserId={user?._id} onDelete={handleDelete} />
-          ))}
-          {hasMore && (
-            <button onClick={() => load(page + 1, true)} disabled={loadingMore}
-              className="w-full py-3 rounded-2xl text-sm font-semibold border transition-all flex items-center justify-center gap-2"
-              style={{ color: '#64748B', borderColor: '#E2E8F0', background: '#fff' }}>
-              {loadingMore ? <RefreshCw size={14} className="animate-spin" /> : <ChevronDown size={14} />}
-              Load more
-            </button>
-          )}
-        </>
-      )}
-    </div>
-  );
-}
 
 // ── Events Tab ─────────────────────────────────────────────────────
 const EVENT_CATEGORIES = [
@@ -1224,6 +904,9 @@ function useCountdown(target) {
 }
 
 // ── Main Lounge ───────────────────────────────────────────────────
+// Social hub: Instagram-style live feed (components/lounge) + events,
+// activities, polls and music. Mobile-first: compact sticky header, sticky
+// tab strip, edge-to-edge feed.
 export default function Lounge() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('feed');
@@ -1235,73 +918,48 @@ export default function Lounge() {
   const pad           = n => String(n).padStart(2, '0');
 
   return (
-    <div className="space-y-5 animate-fade-in pb-12">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2" style={{ color: '#0F172A', letterSpacing: '-0.03em' }}>
-            <span style={{ color: '#6366F1' }}>✦</span> Resident Lounge
+    <div className="animate-fade-in pb-12 -mt-4 md:-mt-6 lg:-mt-8">
+      {/* Sticky header + tabs */}
+      {/* Sticky offsets cancel <main>'s padding: sticky elements stop at the
+          scroll container's padding edge, which left a see-through strip on top. */}
+      <div className="sticky -top-4 md:-top-6 lg:-top-8 z-30 -mx-4 md:-mx-6 lg:-mx-8 px-4 md:px-6 lg:px-8 pt-3 pb-2 bg-white/90 backdrop-blur-xl border-b border-slate-100">
+        <div className="flex items-center justify-between gap-3 max-w-[960px] mx-auto">
+          <h1 className="text-[26px] font-black tracking-tight leading-none"
+            style={{ background: 'linear-gradient(90deg,#F58529,#DD2A7B 45%,#8134AF)', WebkitBackgroundClip: 'text', color: 'transparent' }}>
+            Lounge
           </h1>
-          <p className="text-sm mt-0.5" style={{ color: '#94A3B8' }}>Your community hub · connect, share & vibe</p>
+          {isFridayNight ? (
+            <span className="px-3 py-1.5 rounded-full text-[11px] font-bold text-white animate-pulse"
+              style={{ background: 'linear-gradient(90deg,#F59E0B,#EF4444)' }}>
+              🎉 Friday Night is LIVE
+            </span>
+          ) : (
+            <span className="px-3 py-1.5 rounded-full text-[11px] font-semibold text-slate-600 bg-slate-100 tabular-nums" title="Friday Night FunTimes">
+              🎉 Fri night in {countdown.d > 0 ? `${countdown.d}d ` : ''}{pad(countdown.h)}:{pad(countdown.m)}:{pad(countdown.s)}
+            </span>
+          )}
         </div>
-        {isFridayNight && (
-          <div className="px-3 py-1.5 rounded-full text-xs font-bold animate-pulse"
-            style={{ background: 'rgba(245,158,11,0.12)', color: '#D97706', border: '1px solid rgba(245,158,11,0.30)' }}>
-            🎉 Friday Night is LIVE!
-          </div>
-        )}
+        <div className="flex gap-1.5 overflow-x-auto no-scrollbar mt-3 max-w-[960px] mx-auto">
+          {TABS.map(({ key, Icon, label }) => {
+            const active = activeTab === key;
+            return (
+              <button key={key} onClick={() => setActiveTab(key)}
+                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[13px] font-semibold whitespace-nowrap transition-all shrink-0 ${active ? 'text-white shadow-sm' : 'text-slate-600 bg-slate-100 hover:bg-slate-200'}`}
+                style={active ? { background: 'linear-gradient(90deg,#DD2A7B,#8134AF)' } : undefined}>
+                <Icon size={15} /> {label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Friday countdown */}
-      {isFridayNight ? (
-        <div className="glass-card p-4 flex items-center gap-4"
-          style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.25)' }}>
-          <span className="text-3xl">🎉</span>
-          <div>
-            <p className="font-bold text-base" style={{ color: '#D97706' }}>Friday Night FunTimes!</p>
-            <p className="text-sm mt-0.5" style={{ color: '#F59E0B', opacity: 0.7 }}>Vibe with the estate community tonight</p>
-          </div>
-        </div>
-      ) : (
-        <div className="glass-card p-4 text-center">
-          <p className="text-xs uppercase tracking-wider font-semibold mb-3" style={{ color: '#94A3B8' }}>
-            {isFriday ? 'Friday FunTimes starts at 6 PM — get ready!' : 'Next Friday Night FunTimes in'}
-          </p>
-          <div className="flex justify-center gap-3">
-            {[['d', countdown.d], ['h', countdown.h], ['m', countdown.m], ['s', countdown.s]].map(([l, v]) => (
-              <div key={l} className="glass-card px-4 py-2 min-w-[52px]">
-                <div className="text-xl font-bold tabular-nums" style={{ color: '#0F172A' }}>{pad(v)}</div>
-                <div className="text-xs" style={{ color: '#94A3B8' }}>{l}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Tab Bar */}
-      <div className="flex gap-1 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
-        {TABS.map(({ key, Icon, label, color }) => {
-          const active = activeTab === key;
-          return (
-            <button key={key} onClick={() => setActiveTab(key)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-semibold whitespace-nowrap transition-all flex-shrink-0"
-              style={active
-                ? { background: color + '15', color, border: `1.5px solid ${color}30` }
-                : { color: '#94A3B8', border: '1.5px solid transparent', background: '#fff' }}>
-              <Icon size={15} style={{ color: active ? color : '#CBD5E1' }} />
-              {label}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Tab Content */}
-      <div>
-        {activeTab === 'feed'       && <SocialFeedTab user={user} />}
-        {activeTab === 'events'     && <EventsTab userId={user?._id} />}
-        {activeTab === 'activities' && <ActivitiesTab />}
-        {activeTab === 'polls'      && <PollsTab userId={user?._id} />}
-        {activeTab === 'music'      && <MusicTab userId={user?._id} />}
+      {/* Tab content */}
+      <div className="pt-4">
+        {activeTab === 'feed'       && <Feed me={user} />}
+        {activeTab === 'events'     && <div className="max-w-[960px] mx-auto"><EventsTab userId={user?._id} /></div>}
+        {activeTab === 'activities' && <div className="max-w-[960px] mx-auto"><ActivitiesTab /></div>}
+        {activeTab === 'polls'      && <div className="max-w-[960px] mx-auto"><PollsTab userId={user?._id} /></div>}
+        {activeTab === 'music'      && <div className="max-w-[960px] mx-auto"><MusicTab userId={user?._id} /></div>}
       </div>
     </div>
   );

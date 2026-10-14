@@ -96,6 +96,9 @@ export function NotificationProvider({ children }) {
       return;
     }
 
+    // On the Lounge the live feed already shows new posts (with a pill) — no toast.
+    if (entry.type === 'new_post' && window.location.pathname.startsWith('/lounge')) return;
+
     // Neighbour buzz: show who it's from — photo, name, unit — with a quick
     // way to buzz back.
     if (entry.type === 'neighbour_buzz') {
