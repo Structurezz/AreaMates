@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { NavLink, useNavigate, Link } from 'react-router-dom';
 import {
-  Menu,
+  Menu, PhoneCall,
   LayoutDashboard, UserCheck, CreditCard, MessageSquare, Bell, Lock,
 } from 'lucide-react';
 import Sidebar from './Sidebar';
@@ -60,6 +60,12 @@ export default function AppLayout({ children }) {
               Area<span style={{ color: '#6366F1' }}>Mates</span>
             </span>
           </Link>
+          {/* Calls & neighbours — always one tap away */}
+          <NavLink to="/neighbours" aria-label="Call or buzz a neighbour"
+            className="p-2 rounded-xl transition-all"
+            style={({ isActive }) => ({ color: isActive ? '#4F46E5' : '#64748B', background: isActive ? '#EEF2FF' : 'transparent' })}>
+            <PhoneCall size={20} />
+          </NavLink>
           <NotificationBell />
           <button
             onClick={() => setSidebarOpen(true)}

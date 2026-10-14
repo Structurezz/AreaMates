@@ -63,6 +63,11 @@ export default function Sidebar({ mobile = false, onClose }) {
             <div className="text-xs font-medium mt-0.5 truncate" style={{ color: '#94A3B8' }}>{estateName}</div>
           </div>
         </Link>
+        <NavLink to="/neighbours" aria-label="Call or buzz a neighbour" onClick={onClose}
+          className="p-2 rounded-xl transition-all hover:bg-slate-100"
+          style={({ isActive }) => ({ color: isActive ? '#4F46E5' : '#64748B' })}>
+          <PhoneCall size={19} />
+        </NavLink>
         <NotificationBell />
       </div>
 
