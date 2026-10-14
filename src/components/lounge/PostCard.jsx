@@ -5,12 +5,13 @@ import { postAPI } from '../../api';
 import { Avatar, VerifiedTick, imgUrl, timeAgo, isManagerRole } from './shared';
 
 // Short text-only posts render as a bold gradient tile (Instagram-style).
+// Text tiles stay within the indigo family (AreaMates theme).
 const TILE_GRADIENTS = [
-  'linear-gradient(135deg,#F58529,#DD2A7B)',
-  'linear-gradient(135deg,#4F46E5,#EC4899)',
-  'linear-gradient(135deg,#0EA5E9,#6366F1)',
-  'linear-gradient(135deg,#10B981,#0EA5E9)',
-  'linear-gradient(135deg,#F59E0B,#EF4444)',
+  'linear-gradient(135deg,#4F46E5,#7C3AED)',
+  'linear-gradient(135deg,#312E81,#6366F1)',
+  'linear-gradient(135deg,#6366F1,#0EA5E9)',
+  'linear-gradient(135deg,#4338CA,#A855F7)',
+  'linear-gradient(135deg,#1E1B4B,#4F46E5)',
 ];
 
 function Carousel({ images, onDoubleTap }) {

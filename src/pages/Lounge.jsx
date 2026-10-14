@@ -925,7 +925,7 @@ export default function Lounge() {
       <div className="sticky -top-4 md:-top-6 lg:-top-8 z-30 -mx-4 md:-mx-6 lg:-mx-8 px-4 md:px-6 lg:px-8 pt-3 pb-2 bg-white/90 backdrop-blur-xl border-b border-slate-100">
         <div className="flex items-center justify-between gap-3 max-w-[960px] mx-auto">
           <h1 className="text-[26px] font-black tracking-tight leading-none"
-            style={{ background: 'linear-gradient(90deg,#F58529,#DD2A7B 45%,#8134AF)', WebkitBackgroundClip: 'text', color: 'transparent' }}>
+            style={{ background: 'linear-gradient(90deg,#6366F1,#4F46E5)', WebkitBackgroundClip: 'text', color: 'transparent' }}>
             Lounge
           </h1>
           {isFridayNight ? (
@@ -945,7 +945,7 @@ export default function Lounge() {
             return (
               <button key={key} onClick={() => setActiveTab(key)}
                 className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[13px] font-semibold whitespace-nowrap transition-all shrink-0 ${active ? 'text-white shadow-sm' : 'text-slate-600 bg-slate-100 hover:bg-slate-200'}`}
-                style={active ? { background: 'linear-gradient(90deg,#DD2A7B,#8134AF)' } : undefined}>
+                style={active ? { background: 'linear-gradient(90deg,#6366F1,#4F46E5)' } : undefined}>
                 <Icon size={15} /> {label}
               </button>
             );

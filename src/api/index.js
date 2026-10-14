@@ -153,6 +153,7 @@ export const paymentAPI = {
 // Social posts (Lounge feed)
 export const postAPI = {
   getAll:        (page = 1) => api.get(`/posts?page=${page}&limit=20`),
+  stories:       () => api.get('/posts/stories'),
   create:        (formData) => api.post('/posts', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   delete:        (id) => api.delete(`/posts/${id}`),
   like:          (id) => api.post(`/posts/${id}/like`),

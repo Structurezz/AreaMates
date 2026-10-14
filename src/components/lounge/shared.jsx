@@ -17,8 +17,9 @@ export function timeAgo(iso, long = false) {
   return new Date(iso).toLocaleDateString('en-NG', { day: 'numeric', month: 'short' });
 }
 
-// Instagram story ring
-export const RING = 'linear-gradient(45deg,#F58529 0%,#FEDA77 25%,#DD2A7B 55%,#8134AF 80%,#515BD4 100%)';
+// Story ring — AreaMates indigo theme
+export const RING = 'linear-gradient(45deg,#818CF8 0%,#6366F1 45%,#4F46E5 75%,#7C3AED 100%)';
+export const BRAND_GRADIENT = 'linear-gradient(90deg,#6366F1,#4F46E5)';
 const AVATAR_COLORS = ['#6366F1', '#10B981', '#EC4899', '#F59E0B', '#0EA5E9', '#8B5CF6'];
 
 /** ring: 'story' (gradient) | 'seen' (grey) | null */

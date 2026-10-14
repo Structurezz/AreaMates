@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { X, Heart, MessageCircle } from 'lucide-react';
+import { X, Heart, MessageCircle, Trash2 } from 'lucide-react';
 import Portal from '../ui/Portal';
 import { Avatar, imgUrl, timeAgo, VerifiedTick, isManagerRole } from './shared';
 
@@ -7,7 +7,7 @@ const DURATION = 5000;
 
 // Full-screen stories: each neighbour's posts from the last 24h, Instagram
 // style — segmented progress, tap right/left to move, hold to pause.
-export default function StoryViewer({ groups, startIndex, onClose, onSeen, onOpenComments }) {
+export default function StoryViewer({ groups, startIndex, onClose, onSeen, onOpenComments, me, onDelete }) {
   const [g, setG] = useState(startIndex);
   const [i, setI] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -48,10 +48,14 @@ export default function StoryViewer({ groups, startIndex, onClose, onSeen, onOpe
         <div className="relative w-full h-full sm:max-w-[420px] sm:h-[92vh] sm:rounded-2xl overflow-hidden bg-neutral-900">
           {/* Media */}
           {img ? (
-            <img src={imgUrl(img)} alt="" className="absolute inset-0 w-full h-full object-contain bg-black" />
+            <>
+              {/* Blurred fill behind photos that don't match the portrait frame */}
+              <img src={imgUrl(img)} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-60" />
+              <img src={imgUrl(img)} alt="" className="absolute inset-0 w-full h-full object-contain" />
+            </>
           ) : (
             <div className="absolute inset-0 flex items-center justify-center px-8 text-center text-white text-2xl font-bold"
-              style={{ background: 'linear-gradient(135deg,#4F46E5,#DD2A7B)', whiteSpace: 'pre-wrap' }}>
+              style={{ background: 'linear-gradient(135deg,#312E81,#4F46E5 55%,#818CF8)', whiteSpace: 'pre-wrap' }}>
               {post.content}
             </div>
           )}
@@ -73,7 +77,12 @@ export default function StoryViewer({ groups, startIndex, onClose, onSeen, onOpe
             <Avatar person={author} size={32} />
             <span className="text-sm font-semibold inline-flex items-center gap-1">{author.name}{isManagerRole(author.role) && <VerifiedTick size={13} />}</span>
             <span className="text-sm text-white/70">{timeAgo(post.createdAt)}</span>
-            <button onClick={onClose} aria-label="Close" className="ml-auto w-9 h-9 flex items-center justify-center"><X size={26} /></button>
+            {String(author._id) === String(me?._id) && onDelete && (
+              <button onClick={() => { setPaused(true); onDelete(post._id); }} aria-label="Delete story" className="ml-auto w-9 h-9 flex items-center justify-center text-white/90">
+                <Trash2 size={20} />
+              </button>
+            )}
+            <button onClick={onClose} aria-label="Close" className={`${String(author._id) === String(me?._id) && onDelete ? '' : 'ml-auto '}w-9 h-9 flex items-center justify-center`}><X size={26} /></button>
           </div>
 
           {/* Tap zones */}
