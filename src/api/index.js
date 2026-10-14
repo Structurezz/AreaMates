@@ -203,4 +203,5 @@ export const callAPI = {
   verifyTopup: (reference) => api.get(`/calls/credits/verify/${encodeURIComponent(reference)}`),
   buzz:        (toUserId, kind, message) => api.post('/calls/buzz', { toUserId, kind, message }),
   buzzes:      () => api.get('/calls/buzz'),
+  receipt:     (txId) => api.get(`/calls/credits/receipt/${txId}`, { responseType: 'blob' }),
 };

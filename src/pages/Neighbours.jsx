@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import { format, isToday, isYesterday } from 'date-fns';
 import {
   Phone, PhoneIncoming, PhoneOutgoing, PhoneMissed, Search, Hand, ShieldCheck, Briefcase,
-  Coins, Plus, RefreshCw, Lock, Sparkles,
+  Coins, Plus, RefreshCw, Lock, Sparkles, Gift, Download, Minus,
 } from 'lucide-react';
 import { callAPI } from '../api';
 import { useCall } from '../context/CallContext';
@@ -124,6 +124,20 @@ export default function Neighbours() {
     } catch (e) {
       toast.error(e.response?.data?.message || 'Could not send buzz');
     } finally { setSending(false); }
+  };
+
+  const [downloading, setDownloading] = useState(null);
+  const downloadReceipt = async (tx) => {
+    setDownloading(tx._id);
+    try {
+      const { data, headers } = await callAPI.receipt(tx._id);
+      const name = /filename="([^"]+)"/.exec(headers['content-disposition'] || '')?.[1] || 'receipt.pdf';
+      const url = URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url; a.download = name; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    } catch { toast.error('Could not download receipt'); }
+    finally { setDownloading(null); }
   };
 
   const buy = async (pack) => {
@@ -268,6 +282,41 @@ export default function Neighbours() {
                           {n && (
                             <button onClick={() => openBuzz(n)} className="text-xs font-bold px-3 py-2 rounded-full bg-amber-50 text-amber-700 hover:bg-amber-100 shrink-0">
                               Buzz back
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              {credits?.ledger?.length > 0 && (
+                <div className="space-y-2">
+                  <h3 className="px-1 text-xs font-bold uppercase tracking-widest text-slate-400">Credit history</h3>
+                  <div className="glass-card divide-y divide-slate-100 overflow-hidden">
+                    {credits.ledger.map((t) => {
+                      const meta = {
+                        topup: { Icon: Coins, tint: 'bg-indigo-50 text-indigo-600', label: t.description || 'Credits bought' },
+                        grant: { Icon: Gift, tint: 'bg-amber-50 text-amber-600', label: t.description?.replace(/^Bonus from AreaConnect( — )?/, '') ? `Gift: ${t.description.replace(/^Bonus from AreaConnect — /, '')}` : 'Gift from AreaConnect' },
+                        call:  { Icon: Minus, tint: 'bg-slate-100 text-slate-500', label: t.description || 'Call' },
+                        refund:{ Icon: Coins, tint: 'bg-emerald-50 text-emerald-600', label: t.description || 'Refund' },
+                      }[t.type] || { Icon: Coins, tint: 'bg-slate-100 text-slate-500', label: t.description };
+                      return (
+                        <div key={t._id} className="flex items-center gap-3 p-4">
+                          <span className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${meta.tint}`}><meta.Icon size={16} /></span>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-semibold text-slate-900 truncate">{meta.label}</div>
+                            <div className="text-xs text-slate-400 truncate">
+                              {dayLabel(new Date(t.createdAt))} {format(new Date(t.createdAt), 'h:mm a')}
+                              {t.type === 'topup' && t.amountPaid ? ` · ₦${t.amountPaid.toLocaleString('en-NG')}` : ''}
+                              {` · balance ${t.balanceAfter}`}
+                            </div>
+                          </div>
+                          <span className={`text-sm font-bold shrink-0 ${t.amount > 0 ? 'text-emerald-600' : 'text-slate-500'}`}>{t.amount > 0 ? '+' : ''}{t.amount}</span>
+                          {['topup', 'grant'].includes(t.type) && (
+                            <button onClick={() => downloadReceipt(t)} disabled={downloading === t._id} aria-label="Download receipt"
+                              className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 shrink-0 disabled:opacity-50">
+                              {downloading === t._id ? <RefreshCw size={12} className="animate-spin" /> : <Download size={12} />} Receipt
                             </button>
                           )}
                         </div>
