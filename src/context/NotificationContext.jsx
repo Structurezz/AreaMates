@@ -7,6 +7,7 @@ import {
 import { useSocket } from './SocketContext';
 import { useAuth }   from './AuthContext';
 import toast from 'react-hot-toast';
+import { Hand, Coins } from 'lucide-react';
 import { playSiren, stopSiren } from '../utils/siren';
 import { isStatusUpdate, isOwnAlert, isIncomingAlert, unitLabelOf } from '../utils/alertEvents';
 
@@ -34,6 +35,8 @@ export const TYPE_CONFIG = {
   court_update:        { Icon: Scale,         label: 'Courtroom',       color: '#D97706', isAlert: false },
   jury_summoned:       { Icon: Users,         label: 'Jury Duty',       color: '#7C3AED', isAlert: false },
   new_resident:        { Icon: UserPlus,      label: 'Neighbour',       color: '#6366F1', isAlert: false },
+  neighbour_buzz:      { Icon: Hand,          label: 'Buzz',            color: '#F59E0B', isAlert: false },
+  credits_added:       { Icon: Coins,         label: 'Call credits',    color: '#6366F1', isAlert: false },
 
   // ── Live audio ──────────────────────────────────────────
   live_dj:             { Icon: Mic,           label: 'Lounge Live',     color: '#6366F1', isAlert: false },
@@ -90,6 +93,30 @@ export function NotificationProvider({ children }) {
       const hostId = entry.meta?.hostUserId ? String(entry.meta.hostUserId) : null;
       if (hostId && currentUserId && hostId === currentUserId) return;
       setActiveLive(entry);
+      return;
+    }
+
+    // Neighbour buzz: show who it's from — photo, name, unit — with a quick
+    // way to buzz back.
+    if (entry.type === 'neighbour_buzz') {
+      const from = entry.meta?.from || {};
+      toast((t) => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, maxWidth: 320 }}>
+          {from.profilePhoto
+            ? <img src={from.profilePhoto} alt="" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+            : <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#EEF2FF', color: '#4338CA', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                {(from.name || '?').split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()}
+              </div>}
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontWeight: 700, fontSize: 13, color: '#0F172A' }}>{entry.title}</div>
+            <div style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>
+              {entry.meta?.message ? `“${entry.meta.message}”` : from.unit || ''}
+            </div>
+            <a href={`/neighbours?buzzback=${from._id}`} onClick={() => toast.dismiss(t.id)}
+              style={{ display: 'inline-block', marginTop: 6, fontSize: 12, fontWeight: 700, color: '#4F46E5' }}>Buzz back →</a>
+          </div>
+        </div>
+      ), { duration: 9000 });
       return;
     }
 

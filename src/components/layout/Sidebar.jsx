@@ -1,6 +1,6 @@
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { LayoutDashboard, UserCheck, ShoppingBag, MessageSquare, Bell, LogOut, CreditCard, Music, Calendar, BarChart2, Lock, Scale, Settings as SettingsIcon, Radio, Megaphone } from 'lucide-react';
+import { PhoneCall, LayoutDashboard, UserCheck, ShoppingBag, MessageSquare, Bell, LogOut, CreditCard, Music, Calendar, BarChart2, Lock, Scale, Settings as SettingsIcon, Radio, Megaphone } from 'lucide-react';
 import { usePlan } from '../../hooks/usePlan';
 import NotificationBell from '../ui/NotificationBell';
 
@@ -22,6 +22,7 @@ const NAV = [
       { to: '/events',      icon: Calendar,     label: 'Event Board',     feature: 'eventBoard' },
       { to: '/polls',       icon: BarChart2,    label: 'Polls & Voting',  feature: 'pollsAndVoting' },
       { to: '/marketplace', icon: ShoppingBag,  label: 'Marketplace',     feature: 'marketplace' },
+      { to: '/neighbours',  icon: PhoneCall,    label: 'Neighbours' },
       { to: '/chat',        icon: MessageSquare,label: 'Community Chat',  feature: 'communityChat' },
     ],
   },

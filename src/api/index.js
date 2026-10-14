@@ -187,3 +187,20 @@ export const campaignAPI = {
   dismiss:   (id) => api.post(`/campaigns/${id}/dismiss`),
   click:     (id) => api.post(`/campaigns/${id}/click`),
 };
+
+// Calls, call credits and neighbour buzz
+export const callAPI = {
+  config:      () => api.get('/calls/config'),
+  directory:   () => api.get('/calls/directory'),
+  history:     () => api.get('/calls/history'),
+  start:       (calleeId) => api.post('/calls', { calleeId }),
+  answer:      (id) => api.post(`/calls/${id}/answer`),
+  decline:     (id) => api.post(`/calls/${id}/decline`),
+  cancel:      (id) => api.post(`/calls/${id}/cancel`),
+  end:         (id) => api.post(`/calls/${id}/end`),
+  credits:     () => api.get('/calls/credits'),
+  topup:       (packId) => api.post('/calls/credits/topup', { packId }),
+  verifyTopup: (reference) => api.get(`/calls/credits/verify/${encodeURIComponent(reference)}`),
+  buzz:        (toUserId, kind, message) => api.post('/calls/buzz', { toUserId, kind, message }),
+  buzzes:      () => api.get('/calls/buzz'),
+};

@@ -19,6 +19,9 @@ import NewVisitorPage from './pages/NewVisitorPage';
 import Marketplace from './pages/Marketplace';
 import Chat from './pages/Chat';
 import AlertPage from './pages/AlertPage';
+import Neighbours from './pages/Neighbours';
+import { CallProvider } from './context/CallContext';
+import CallOverlay from './components/calls/CallOverlay';
 import Payments from './pages/Payments';
 import Lounge from './pages/Lounge';
 import EventBoard from './pages/EventBoard';
@@ -62,6 +65,7 @@ function AppRoutes() {
       <Route path="/visitors/new" element={<RequireResident><PlanGate feature="visitorManagement" featureName="Visitor Management"><NewVisitorPage /></PlanGate></RequireResident>} />
       <Route path="/visitors/:id" element={<RequireResident><PlanGate feature="visitorManagement" featureName="Visitor Management"><VisitorDetail /></PlanGate></RequireResident>} />
       <Route path="/marketplace" element={<RequireResident><PlanGate feature="marketplace" featureName="Marketplace"><Marketplace /></PlanGate></RequireResident>} />
+      <Route path="/neighbours" element={<RequireResident><Neighbours /></RequireResident>} />
       <Route path="/chat" element={<RequireResident><PlanGate feature="communityChat" featureName="Community Chat"><Chat /></PlanGate></RequireResident>} />
       <Route path="/payments" element={<RequireResident><PlanGate feature="paymentSystem" featureName="Payments"><Payments /></PlanGate></RequireResident>} />
       <Route path="/alerts" element={<RequireResident><PlanGate feature="securityPortal" featureName="Security & Alerts"><AlertPage /></PlanGate></RequireResident>} />
@@ -85,6 +89,8 @@ export default function App() {
       <SeoTracker />
       <AuthProvider>
         <SocketProvider>
+          <CallProvider>
+          <CallOverlay />
           <NotificationProvider>
           <AppRoutes />
           <AlertModal />
@@ -94,6 +100,7 @@ export default function App() {
             success: { iconTheme: { primary: '#10B981', secondary: '#1C1C20' } },
           }} />
           </NotificationProvider>
+          </CallProvider>
         </SocketProvider>
       </AuthProvider>
     </BrowserRouter>
