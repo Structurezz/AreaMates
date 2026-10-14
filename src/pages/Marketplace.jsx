@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Search, Plus, X, ShoppingBag, ShieldCheck, SlidersHorizontal, Ban, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { marketplaceAPI } from '../api';
@@ -8,6 +9,10 @@ import ListingCard from '../components/market/ListingCard';
 import ListingDetail from '../components/market/ListingDetail';
 import ChatPanel from '../components/market/ChatPanel';
 import { SellSheet, ReportSheet, RateSheet } from '../components/market/Sheets';
+import { BuySheet, OrderCard, DisputeSheet, CancelSheet } from '../components/market/Orders';
+import { WalletCard, WalletSheet, WithdrawSheet } from '../components/market/Wallet';
+import BankSheet from '../components/market/BankSheet';
+import { useCall } from '../context/CallContext';
 import { CAT, CATEGORIES, STATUS, naira } from '../components/market/shared';
 import { imgUrl } from '../components/lounge/shared';
 
@@ -17,7 +22,7 @@ const SORTS = [
   { id: 'price_desc', label: 'Price: high to low' },
   { id: 'popular', label: 'Most viewed' },
 ];
-const TABS = [{ id: 'browse', label: 'Browse' }, { id: 'mine', label: 'My listings' }, { id: 'saved', label: 'Saved' }];
+const TABS = [{ id: 'browse', label: 'Browse' }, { id: 'orders', label: 'Orders' }, { id: 'mine', label: 'Selling' }, { id: 'saved', label: 'Saved' }];
 
 function ChatOverlay({ chat, me, onClose }) {
   useScrollLock(true);
@@ -77,6 +82,17 @@ export default function Marketplace() {
   const [sell, setSell] = useState(null); // null | 'new' | listing (editing)
   const [reportFor, setReportFor] = useState(null);
   const [rateFor, setRateFor] = useState(null);
+  // Buying & selling money flow
+  const [buyFor, setBuyFor] = useState(null);
+  const [orders, setOrders] = useState(null);      // my purchases
+  const [sales, setSales] = useState(null);        // orders for my listings
+  const [wallet, setWallet] = useState(null);
+  const [walletLoading, setWalletLoading] = useState(false);
+  const [sheet, setSheet] = useState(null);        // 'wallet' | 'withdraw' | 'bank'
+  const [disputeFor, setDisputeFor] = useState(null);
+  const [cancelFor, setCancelFor] = useState(null);
+  const [params, setParams] = useSearchParams();
+  const { startCall } = useCall() || {};
 
   useEffect(() => { const t = setTimeout(() => setDebounced(q), 300); return () => clearTimeout(t); }, [q]);
 
@@ -90,7 +106,40 @@ export default function Marketplace() {
   const loadMine = useCallback(() => marketplaceAPI.mine().then(({ data }) => setMine(data.data || [])).catch(() => {}), []);
   const loadSaved = useCallback(() => marketplaceAPI.saved().then(({ data }) => setSaved(data.data || [])).catch(() => {}), []);
 
+  const loadOrders = useCallback(() => marketplaceAPI.orders('buyer').then(({ data }) => setOrders(data.data || [])).catch(() => setOrders((o) => o || [])), []);
+  const loadSales = useCallback(() => marketplaceAPI.orders('seller').then(({ data }) => setSales(data.data || [])).catch(() => setSales((o) => o || [])), []);
+  const loadWallet = useCallback(() => {
+    setWalletLoading(true);
+    return marketplaceAPI.wallet().then(({ data }) => setWallet(data.data)).catch(() => {}).finally(() => setWalletLoading(false));
+  }, []);
+
   useEffect(() => { loadBrowse(); }, [loadBrowse]);
+  useEffect(() => { loadOrders(); loadSales(); }, [loadOrders, loadSales]);
+  useEffect(() => { if (tab === 'orders') loadOrders(); if (tab === 'mine') { loadSales(); loadWallet(); } }, [tab, loadOrders, loadSales, loadWallet]);
+
+  // Back from Paystack: /marketplace?order=MKT-…
+  useEffect(() => {
+    const ref = params.get('order');
+    if (!ref) return;
+    setParams({}, { replace: true });
+    setTab('orders');
+    const t = toast.loading('Confirming your payment…');
+    marketplaceAPI.verifyOrder(ref)
+      .then(({ data }) => {
+        const o = data.data;
+        if (o.status === 'refunded') toast.error(`Sorry — ${o.refund?.reason || 'the item sold out'}. You've been refunded.`, { id: t, duration: 6000 });
+        else toast.success('Payment successful! The seller has been notified.', { id: t, duration: 5000 });
+        loadOrders(); loadBrowse();
+      })
+      .catch((e) => toast.error(e.response?.data?.message || 'We couldn\'t confirm the payment yet', { id: t }));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const updateOrder = (o) => {
+    const put = (arr) => arr && arr.map((x) => (x._id === o._id ? { ...x, ...o } : x));
+    setOrders(put); setSales(put);
+    if (['completed', 'refunded'].includes(o.status)) loadWallet();
+  };
+  const chatAbout = (person, o) => setChat({ seller: person, listing: { title: o.title } });
   useEffect(() => { marketplaceAPI.rules().then(({ data }) => setRules(data.data)).catch(() => {}); loadMine(); }, [loadMine]);
   useEffect(() => { if (tab === 'saved') loadSaved(); if (tab === 'mine') loadMine(); }, [tab, loadSaved, loadMine]);
 
@@ -126,7 +175,9 @@ export default function Marketplace() {
     setSell('new');
   };
 
-  const pending = mine.filter((l) => ['pending_approval', 'rejected'].includes(l.status)).length;
+  const toFulfil = (sales || []).filter((o) => ['paid', 'disputed'].includes(o.status));
+  const pending = mine.filter((l) => ['pending_approval', 'rejected'].includes(l.status)).length + toFulfil.length;
+  const toConfirm = (orders || []).filter((o) => o.status === 'delivered').length;
   const shown = tab === 'browse' ? listings : tab === 'saved' ? saved : mine;
   const sortLabel = useMemo(() => SORTS.find((s) => s.id === sort)?.label, [sort]);
 
@@ -154,6 +205,7 @@ export default function Marketplace() {
             <button key={t.id} onClick={() => setTab(t.id)}
               className={`flex-1 py-1.5 rounded-lg text-[13px] font-semibold transition-colors relative ${tab === t.id ? 'bg-white text-indigo-700 shadow-sm' : 'text-white/90'}`}>
               {t.label}
+              {t.id === 'orders' && toConfirm > 0 && <span className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-amber-400 text-amber-950 text-[10px] font-bold px-1">{toConfirm}</span>}
               {t.id === 'mine' && pending > 0 && <span className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-amber-400 text-amber-950 text-[10px] font-bold px-1">{pending}</span>}
             </button>
           ))}
@@ -197,12 +249,36 @@ export default function Marketplace() {
       )}
 
       <div className="px-4 md:px-0 mt-3">
-        {tab === 'mine' ? (
-          mine.length === 0 ? (
-            <Empty title="You're not selling anything yet" body="Home-cooked food, a service you offer, things you no longer need. List it for your neighbours." cta="Sell something" onCta={startSell} />
+        {tab === 'orders' ? (
+          orders === null ? <ListSkeleton /> : orders.length === 0 ? (
+            <Empty title="No orders yet" body="When you buy from a neighbour, your order and its status show here. Your money is held safely until you confirm delivery." cta="Browse the market" onCta={() => setTab('browse')} />
           ) : (
-            <div className="space-y-2.5">{mine.map((l) => <MyRow key={l._id} l={l} onOpen={setOpen} />)}</div>
+            <div className="space-y-2.5">
+              {orders.map((o) => <OrderCard key={o._id} order={o} as="buyer" onChanged={updateOrder} onChat={chatAbout} onCall={(p) => startCall?.(p)} onDispute={setDisputeFor} />)}
+            </div>
           )
+        ) : tab === 'mine' ? (
+          <div className="space-y-5">
+            <WalletCard wallet={wallet} loading={walletLoading} onOpen={() => setSheet('wallet')} onWithdraw={() => setSheet('withdraw')} />
+            {toFulfil.length > 0 && (
+              <section>
+                <h2 className="text-sm font-bold text-slate-900 mb-2">Orders to handle <span className="text-amber-600">({toFulfil.length})</span></h2>
+                <div className="space-y-2.5">{toFulfil.map((o) => <OrderCard key={o._id} order={o} as="seller" onChanged={updateOrder} onChat={chatAbout} onCall={(p) => startCall?.(p)} onCancel={setCancelFor} />)}</div>
+              </section>
+            )}
+            {(sales || []).some((o) => o.status === 'delivered') && (
+              <section>
+                <h2 className="text-sm font-bold text-slate-900 mb-2">Waiting for buyers to confirm</h2>
+                <div className="space-y-2.5">{sales.filter((o) => o.status === 'delivered').map((o) => <OrderCard key={o._id} order={o} as="seller" onChanged={updateOrder} onChat={chatAbout} onCall={(p) => startCall?.(p)} onCancel={setCancelFor} />)}</div>
+              </section>
+            )}
+            <section>
+              <h2 className="text-sm font-bold text-slate-900 mb-2">Your listings</h2>
+              {mine.length === 0
+                ? <Empty title="You're not selling anything yet" body="Home-cooked food, a service you offer, things you no longer need. List it and get paid straight into your wallet." cta="Sell something" onCta={startSell} />
+                : <div className="space-y-2.5">{mine.map((l) => <MyRow key={l._id} l={l} onOpen={setOpen} />)}</div>}
+            </section>
+          </div>
         ) : loading && tab === 'browse' ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-3 gap-y-5">
             {Array.from({ length: 6 }, (_, i) => (
@@ -222,7 +298,7 @@ export default function Marketplace() {
 
       {/* Floating Sell button (mobile) */}
       <button onClick={startSell} aria-label="Sell something"
-        className="sm:hidden fixed right-4 z-30 inline-flex items-center gap-2 rounded-full text-white font-bold px-5 py-3.5 shadow-lg shadow-indigo-600/30 active:scale-95 transition-transform"
+        className={`${tab === 'orders' ? 'hidden' : 'sm:hidden'} fixed right-4 z-30 inline-flex items-center gap-2 rounded-full text-white font-bold px-5 py-3.5 shadow-lg shadow-indigo-600/30 active:scale-95 transition-transform`}
         style={{ bottom: 'calc(5.5rem + env(safe-area-inset-bottom))', background: 'linear-gradient(135deg,#6366F1,#4F46E5)' }}>
         <Plus size={19} strokeWidth={2.6} /> Sell
       </button>
@@ -236,12 +312,32 @@ export default function Marketplace() {
           onEdit={(l) => setSell(l)}
           onReport={(l, done) => setReportFor({ ...l, done })}
           onRate={(l, done) => setRateFor({ ...l, done })}
+          onBuy={(l) => setBuyFor(l)}
         />
       )}
       {chat && <ChatOverlay chat={chat} me={user} onClose={() => setChat(null)} />}
       <SellSheet open={!!sell} editing={sell && sell !== 'new' ? sell : null} rules={rules} onClose={() => setSell(null)} onSaved={onSaved} />
       <ReportSheet listing={reportFor} onClose={() => setReportFor(null)} onDone={() => reportFor?.done?.()} />
+      <BuySheet listing={buyFor} onClose={() => setBuyFor(null)} />
+      <DisputeSheet order={disputeFor} onClose={() => setDisputeFor(null)} onDone={updateOrder} />
+      <CancelSheet order={cancelFor} onClose={() => setCancelFor(null)} onDone={updateOrder} />
+      <WalletSheet open={sheet === 'wallet'} wallet={wallet} onClose={() => setSheet(null)} onWithdraw={() => setSheet('withdraw')} onBank={() => setSheet('bank')} />
+      <WithdrawSheet open={sheet === 'withdraw'} wallet={wallet} onClose={() => setSheet(null)} onDone={loadWallet} onBank={() => setSheet('bank')} />
+      <BankSheet open={sheet === 'bank'} currentBank={wallet?.bank} onClose={() => setSheet(null)} onSaved={() => { loadWallet(); setSheet('withdraw'); }} />
       <RateSheet listing={rateFor} onClose={() => setRateFor(null)} onDone={(r, rev) => rateFor?.done?.(r, rev)} />
+    </div>
+  );
+}
+
+function ListSkeleton() {
+  return (
+    <div className="space-y-2.5">
+      {[0, 1, 2].map((i) => (
+        <div key={i} className="rounded-2xl bg-white border border-slate-200 p-3.5 flex gap-3 animate-pulse">
+          <div className="w-14 h-14 rounded-xl bg-slate-200" />
+          <div className="flex-1 space-y-2 py-1"><div className="h-3 w-24 bg-slate-200 rounded" /><div className="h-4 w-3/4 bg-slate-200 rounded" /><div className="h-3 w-1/2 bg-slate-100 rounded" /></div>
+        </div>
+      ))}
     </div>
   );
 }

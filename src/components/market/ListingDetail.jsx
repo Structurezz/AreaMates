@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   ChevronLeft, Heart, Share2, Phone, MessageCircle, ShieldCheck, Flag, Star,
-  Eye, Tag, RefreshCw, Pencil, Trash2, CheckCircle2, RotateCcw, AlertTriangle,
+  Eye, Tag, RefreshCw, Pencil, Trash2, CheckCircle2, RotateCcw, AlertTriangle, Lock,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Portal, { Z, useScrollLock } from '../ui/Portal';
@@ -37,7 +37,7 @@ const TIPS = [
   'Something off? Report it. Estate management reviews every report.',
 ];
 
-export default function ListingDetail({ listing: initial, me, onClose, onChat, onChanged, onEdit, onReport, onRate }) {
+export default function ListingDetail({ listing: initial, me, onClose, onChat, onChanged, onEdit, onReport, onRate, onBuy }) {
   useScrollLock(true);
   const [l, setL] = useState(initial);
   const [loading, setLoading] = useState(true);
@@ -234,9 +234,20 @@ export default function ListingDetail({ listing: initial, me, onClose, onChat, o
 
           {/* Sticky contact bar */}
           {!mine && l.status === 'active' && (
-            <div className="border-t border-slate-100 bg-white px-4 pt-3 flex gap-2.5" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
-              <button onClick={call} className="mk-btn flex-1 border border-indigo-200 text-indigo-700 bg-indigo-50"><Phone size={17} /> Call</button>
-              <button onClick={() => onChat(l)} className="mk-btn flex-[2] text-white" style={{ background: 'linear-gradient(135deg,#6366F1,#4F46E5)' }}><MessageCircle size={17} /> Chat with {seller.name?.split(' ')[0] || 'seller'}</button>
+            <div className="border-t border-slate-100 bg-white px-4 pt-3" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
+              {l.price > 0 ? (
+                <div className="flex gap-2.5">
+                  <button onClick={() => onChat(l)} aria-label="Chat with seller" className="mk-btn !px-3.5 border border-indigo-200 text-indigo-700 bg-indigo-50"><MessageCircle size={18} /></button>
+                  <button onClick={call} aria-label="Call seller" className="mk-btn !px-3.5 border border-indigo-200 text-indigo-700 bg-indigo-50"><Phone size={18} /></button>
+                  <button onClick={() => onBuy(l)} className="mk-btn flex-1 text-white" style={{ background: 'linear-gradient(135deg,#6366F1,#4F46E5)' }}><Lock size={15} /> Buy · {naira(l.price)}</button>
+                </div>
+              ) : (
+                <div className="flex gap-2.5">
+                  <button onClick={call} className="mk-btn flex-1 border border-indigo-200 text-indigo-700 bg-indigo-50"><Phone size={17} /> Call</button>
+                  <button onClick={() => onChat(l)} className="mk-btn flex-[2] text-white" style={{ background: 'linear-gradient(135deg,#6366F1,#4F46E5)' }}><MessageCircle size={17} /> Chat with {seller.name?.split(' ')[0] || 'seller'}</button>
+                </div>
+              )}
+              {l.price > 0 && <p className="text-[11px] text-slate-500 text-center mt-2 flex items-center justify-center gap-1"><ShieldCheck size={12} className="text-indigo-500" /> Paid safely · seller is paid only when you confirm</p>}
             </div>
           )}
         </div>

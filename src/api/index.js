@@ -81,6 +81,16 @@ export const marketplaceAPI = {
   toggleSave: (id) => api.post(`/marketplace/${id}/save`),
   report: (id, reason, note) => api.post(`/marketplace/${id}/report`, { reason, note }),
   review: (id, rating, comment) => api.post(`/marketplace/${id}/review`, { rating, comment }),
+  // Buying (Paystack → escrow) and the seller wallet
+  buy: (id, quantity, note) => api.post(`/marketplace/${id}/buy`, { quantity, note }),
+  verifyOrder: (reference) => api.get(`/marketplace/orders/verify/${reference}`),
+  orders: (as) => api.get('/marketplace/orders', { params: { as } }),
+  deliver: (id) => api.post(`/marketplace/orders/${id}/deliver`),
+  confirm: (id) => api.post(`/marketplace/orders/${id}/confirm`),
+  cancelOrder: (id, reason) => api.post(`/marketplace/orders/${id}/cancel`, { reason }),
+  dispute: (id, reason, note) => api.post(`/marketplace/orders/${id}/dispute`, { reason, note }),
+  wallet: () => api.get('/marketplace/wallet'),
+  withdraw: (amount) => api.post('/marketplace/wallet/withdraw', { amount }),
 };
 
 // Messages
