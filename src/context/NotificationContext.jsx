@@ -112,8 +112,11 @@ export function NotificationProvider({ children }) {
             <div style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>
               {entry.meta?.message ? `“${entry.meta.message}”` : from.unit || ''}
             </div>
-            <a href={`/neighbours?buzzback=${from._id}`} onClick={() => toast.dismiss(t.id)}
-              style={{ display: 'inline-block', marginTop: 6, fontSize: 12, fontWeight: 700, color: '#4F46E5' }}>Buzz back →</a>
+            {/* Neighbours can be buzzed back; staff (e.g. the estate manager) are called back, free. */}
+            <a href={from.role === 'resident' ? `/neighbours?buzzback=${from._id}` : '/neighbours'} onClick={() => toast.dismiss(t.id)}
+              style={{ display: 'inline-block', marginTop: 6, fontSize: 12, fontWeight: 700, color: '#4F46E5' }}>
+              {from.role === 'resident' ? 'Buzz back →' : 'Call back (free) →'}
+            </a>
           </div>
         </div>
       ), { duration: 9000 });

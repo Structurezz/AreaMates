@@ -272,16 +272,25 @@ export default function Neighbours() {
                       const meta = BUZZES.find((x) => x.kind === b.kind) || BUZZES[0];
                       const from = b.fromId || {};
                       const n = dir.neighbours.find((x) => String(x._id) === String(from._id));
+                      const staff = !n && dir.staff.find((x) => String(x._id) === String(from._id));
                       return (
                         <div key={b._id} className="flex items-center gap-3 p-4">
                           <Avatar person={{ ...from, online: n?.online }} size={40} />
                           <div className="flex-1 min-w-0">
-                            <div className="text-sm text-slate-900 truncate"><strong>{from.name}</strong> {meta.emoji} {meta.label.toLowerCase()}</div>
+                            <div className="text-sm text-slate-900 truncate">
+                              <strong>{from.name}</strong>{staff ? <span className="text-xs text-slate-400"> · Estate Manager</span> : null} {meta.emoji} {meta.label.toLowerCase()}
+                            </div>
                             <div className="text-xs text-slate-400 truncate">{b.message ? `“${b.message}” · ` : ''}{dayLabel(new Date(b.createdAt))} {format(new Date(b.createdAt), 'h:mm a')}</div>
                           </div>
                           {n && (
                             <button onClick={() => openBuzz(n)} className="text-xs font-bold px-3 py-2 rounded-full bg-amber-50 text-amber-700 hover:bg-amber-100 shrink-0">
                               Buzz back
+                            </button>
+                          )}
+                          {staff && (
+                            <button onClick={() => callPerson(staff)} disabled={!!call}
+                              className="inline-flex items-center gap-1 text-xs font-bold px-3 py-2 rounded-full bg-indigo-50 text-indigo-700 hover:bg-indigo-100 shrink-0 disabled:opacity-40">
+                              <Phone size={12} /> Call back
                             </button>
                           )}
                         </div>
