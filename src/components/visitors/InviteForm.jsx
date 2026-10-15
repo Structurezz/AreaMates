@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { format, addDays } from 'date-fns';
-import { Zap, CalendarClock, Users, UserCheck, Package, Wrench, Heart, MoreHorizontal, Mail, FileText, RefreshCw, QrCode, ShieldCheck } from 'lucide-react';
+import { Zap, CalendarClock, CalendarDays, Users, UserCheck, Package, Wrench, Heart, MoreHorizontal, Mail, FileText, RefreshCw, QrCode, ShieldCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { visitorAPI } from '../../api';
 
@@ -33,6 +33,19 @@ export default function InviteForm({ onCreated, onCancel, sticky = false }) {
   const [saving, setSaving] = useState(false);
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
   const instant = mode === 'instant';
+  const dateRef = useRef(null);
+  const customDay = ![ymd(new Date()), ymd(addDays(new Date(), 1))].includes(form.day);
+  // Open the native calendar. showPicker() works on modern Chrome/Safari/Firefox;
+  // older browsers fall back to focusing/clicking the input.
+  const openPicker = () => {
+    const el = dateRef.current;
+    if (!el) return;
+    try { if (typeof el.showPicker === 'function') { el.showPicker(); return; } } catch { /* not allowed → fallback */ }
+    el.style.pointerEvents = 'auto';
+    el.focus();
+    el.click();
+    setTimeout(() => { el.style.pointerEvents = 'none'; }, 500);
+  };
 
   const pickPurpose = (label) => {
     if (label === 'Other') { setOther(true); set('purpose', ''); } else { setOther(false); set('purpose', label); }
@@ -136,11 +149,16 @@ export default function InviteForm({ onCreated, onCancel, sticky = false }) {
                 {[['Today', ymd(new Date())], ['Tomorrow', ymd(addDays(new Date(), 1))]].map(([label, d]) => (
                   <button key={label} type="button" onClick={() => set('day', d)} className={`${chip(form.day === d)} py-2.5`} style={form.day === d ? { background: ACCENT } : undefined}>{label}</button>
                 ))}
-                <label className={`${chip(![ymd(new Date()), ymd(addDays(new Date(), 1))].includes(form.day))} py-2.5 relative flex items-center justify-center cursor-pointer`}
-                  style={![ymd(new Date()), ymd(addDays(new Date(), 1))].includes(form.day) ? { background: ACCENT } : undefined}>
-                  {![ymd(new Date()), ymd(addDays(new Date(), 1))].includes(form.day) ? format(new Date(`${form.day}T00:00`), 'd MMM') : 'Pick date'}
-                  <input type="date" min={ymd(new Date())} value={form.day} onChange={(e) => e.target.value && set('day', e.target.value)} className="absolute inset-0 opacity-0" aria-label="Pick a date" />
-                </label>
+                <button type="button" onClick={openPicker}
+                  className={`${chip(customDay)} py-2.5 relative flex items-center justify-center gap-1.5`}
+                  style={customDay ? { background: ACCENT } : undefined}>
+                  <CalendarDays size={14} style={{ color: customDay ? '#fff' : ACCENT }} />
+                  {customDay ? format(new Date(`${form.day}T00:00`), 'd MMM') : 'Pick date'}
+                  {/* Real date input, kept in the layout (not display:none) so the picker can open from it */}
+                  <input ref={dateRef} type="date" min={ymd(new Date())} value={form.day} tabIndex={-1} aria-hidden="true"
+                    onChange={(e) => e.target.value && set('day', e.target.value)}
+                    className="absolute inset-0 w-full h-full opacity-0 pointer-events-none" />
+                </button>
               </div>
               <input type="time" value={form.time} onChange={(e) => set('time', e.target.value)}
                 className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[16px] font-semibold text-slate-900 outline-none focus:bg-white focus:border-indigo-300" aria-label="Arrival time" />
