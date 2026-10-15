@@ -17,6 +17,8 @@ const MIME = {
   '.woff2':'font/woff2',
   '.ttf':  'font/ttf',
   '.webp': 'image/webp',
+  '.webmanifest': 'application/manifest+json',
+  '.mp3':  'audio/mpeg',
 };
 
 const dist = path.join(__dirname, 'dist');
@@ -34,7 +36,10 @@ http.createServer((req, res) => {
   const mimeType = MIME[ext] || 'application/octet-stream';
 
   res.setHeader('Content-Type', mimeType);
-  res.setHeader('Cache-Control', ext === '.html' ? 'no-cache' : 'public, max-age=31536000, immutable');
+  // Only Vite's fingerprinted /assets/* are safe to cache forever. Everything
+  // else (index.html, sw.js, manifest, icons, sounds) must revalidate so
+  // updates — especially the service worker — reach phones.
+  res.setHeader('Cache-Control', urlPath.startsWith('/assets/') ? 'public, max-age=31536000, immutable' : 'no-cache');
 
   fs.createReadStream(filePath)
     .on('error', () => {
