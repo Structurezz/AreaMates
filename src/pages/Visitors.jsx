@@ -6,11 +6,13 @@ import { useAuth } from '../context/AuthContext';
 import Badge, { visitorStatusBadge } from '../components/ui/Badge';
 import Spinner from '../components/ui/Spinner';
 import Pagination from '../components/ui/Pagination';
+import InviteForm from '../components/visitors/InviteForm';
+import { VisitorsHero, VisitorsFilters, VisitorCards, CardAction } from '../components/visitors/MobileVisitors';
 import {
   UserCheck, Plus, QrCode, Calendar, Clock, X,
   Users, Package, Wrench, Heart, MoreHorizontal,
   Phone, Mail, FileText, ChevronDown, ChevronUp,
-  Share2, CheckCircle,
+  Share2, CheckCircle, Copy, XCircle,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
@@ -241,7 +243,7 @@ function PassTimer({ visitor }) {
     return `${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s`;
   };
 
-  if (['checked-out', 'blacklisted', 'expired'].includes(visitor.status)) return null;
+  if (['checked-out', 'blacklisted', 'expired', 'cancelled'].includes(visitor.status)) return null;
 
   if (visitor.status === 'checked-in') {
     const entryTime = visitor.entryTime ? new Date(visitor.entryTime) : null;
@@ -335,176 +337,6 @@ const DURATIONS = [
 ];
 
 /* ─────────────────────────────────────────────────────── */
-/*  Create Guest Pass Form                                 */
-/* ─────────────────────────────────────────────────────── */
-function NewVisitorForm({ onClose, onSuccess }) {
-  const tomorrow = () => {
-    const d = new Date(); d.setDate(d.getDate() + 1);
-    return d.toISOString().split('T')[0];
-  };
-  const [form, setForm] = useState({
-    visitorName: '', visitorPhone: '', visitorEmail: '',
-    purpose: '', expectedDate: tomorrow(), expectedTime: '10:00',
-    expectedDuration: 60, notes: '',
-  });
-  const [customPurpose, setCustomPurpose] = useState(false);
-  const [showNotes, setShowNotes] = useState(false);
-  const [saving, setSaving] = useState(false);
-
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
-
-  const selectPurpose = (label) => {
-    if (label === 'Other') { setCustomPurpose(true); set('purpose', ''); }
-    else { setCustomPurpose(false); set('purpose', label); }
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-    try {
-      const expectedDate = form.expectedDate && form.expectedTime
-        ? new Date(`${form.expectedDate}T${form.expectedTime}`).toISOString()
-        : form.expectedDate;
-      const { data } = await visitorAPI.preRegister({ ...form, expectedDate });
-      toast.success('Visitor pass created!');
-      onSuccess(data.data);
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to create pass');
-    } finally { setSaving(false); }
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-5">
-
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#94A3B8' }}>Visitor Details</p>
-        <div className="space-y-3">
-          <div>
-            <label className="text-sm font-medium mb-1.5 block" style={{ color: '#475569' }}>
-              Full Name <span style={{ color: ACCENT }}>*</span>
-            </label>
-            <input className="input-field" placeholder="e.g. John Adeyemi"
-              value={form.visitorName} onChange={(e) => set('visitorName', e.target.value)} required />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-sm font-medium mb-1.5 flex items-center gap-1.5" style={{ color: '#475569' }}>
-                <Phone size={12} /> Phone
-              </label>
-              <input className="input-field" placeholder="+234..."
-                value={form.visitorPhone} onChange={(e) => set('visitorPhone', e.target.value)} />
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-1.5 flex items-center gap-1.5" style={{ color: '#475569' }}>
-                <Mail size={12} /> Email
-              </label>
-              <input type="email" className="input-field" placeholder="optional"
-                value={form.visitorEmail} onChange={(e) => set('visitorEmail', e.target.value)} />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#94A3B8' }}>
-          Purpose of Visit <span style={{ color: ACCENT }}>*</span>
-        </p>
-        <div className="grid grid-cols-3 gap-2">
-          {PURPOSES.map(({ label, Icon }) => {
-            const isSelected = customPurpose ? label === 'Other' : form.purpose === label;
-            return (
-              <button key={label} type="button" onClick={() => selectPurpose(label)}
-                className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border text-xs font-semibold transition-all"
-                style={isSelected ? { background: 'rgba(99,102,241,0.08)', borderColor: ACCENT, color: ACCENT_DARK }
-                  : { background: '#F8FAFC', borderColor: '#E2E8F0', color: '#64748B' }}
-                onMouseEnter={e => { if (!isSelected) { e.currentTarget.style.borderColor = 'rgba(99,102,241,0.30)'; e.currentTarget.style.background = 'rgba(99,102,241,0.04)'; }}}
-                onMouseLeave={e => { if (!isSelected) { e.currentTarget.style.borderColor = '#E2E8F0'; e.currentTarget.style.background = '#F8FAFC'; }}}>
-                <Icon size={16} />{label}
-              </button>
-            );
-          })}
-        </div>
-        {customPurpose && (
-          <input className="input-field mt-2" placeholder="Describe the visit purpose..."
-            value={form.purpose} onChange={(e) => set('purpose', e.target.value)} required autoFocus />
-        )}
-      </div>
-
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#94A3B8' }}>
-          Visit Schedule <span style={{ color: ACCENT }}>*</span>
-        </p>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="text-sm font-medium mb-1.5 flex items-center gap-1.5" style={{ color: '#475569' }}>
-              <Calendar size={12} /> Date
-            </label>
-            <input type="date" className="input-field" min={new Date().toISOString().split('T')[0]}
-              value={form.expectedDate} onChange={(e) => set('expectedDate', e.target.value)} required />
-          </div>
-          <div>
-            <label className="text-sm font-medium mb-1.5 flex items-center gap-1.5" style={{ color: '#475569' }}>
-              <Clock size={12} /> Time
-            </label>
-            <input type="time" className="input-field"
-              value={form.expectedTime} onChange={(e) => set('expectedTime', e.target.value)} />
-          </div>
-        </div>
-        <div className="mt-3">
-          <label className="text-sm font-medium mb-2 block" style={{ color: '#475569' }}>Duration</label>
-          <div className="flex flex-wrap gap-2">
-            {DURATIONS.map(({ label, value }) => {
-              const isSelected = form.expectedDuration === value;
-              return (
-                <button key={value} type="button" onClick={() => set('expectedDuration', value)}
-                  className="text-xs font-semibold px-3 py-1.5 rounded-full border transition-all"
-                  style={isSelected ? { background: ACCENT, borderColor: ACCENT, color: 'white' }
-                    : { background: '#F8FAFC', borderColor: '#E2E8F0', color: '#475569' }}>
-                  {label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      <div>
-        <button type="button" onClick={() => setShowNotes(v => !v)}
-          className="flex items-center gap-2 text-sm font-medium transition-colors"
-          style={{ color: showNotes ? ACCENT : '#94A3B8' }}>
-          <FileText size={14} />
-          {showNotes ? 'Hide notes' : 'Add notes (optional)'}
-          {showNotes ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-        </button>
-        {showNotes && (
-          <textarea className="input-field resize-none mt-2" rows={2}
-            placeholder="Any special instructions for security..."
-            value={form.notes} onChange={(e) => set('notes', e.target.value)} />
-        )}
-      </div>
-
-      <div className="flex items-start gap-2.5 rounded-xl p-3"
-        style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.14)' }}>
-        <QrCode size={14} style={{ color: ACCENT, flexShrink: 0, marginTop: 1 }} />
-        <p className="text-xs" style={{ color: '#64748B' }}>
-          A unique access code and QR code will be generated and sent to your visitor automatically.
-        </p>
-      </div>
-
-      <div className="flex gap-3 pt-1">
-        <button type="button" onClick={onClose} className="btn-outline flex-1">Cancel</button>
-        <button type="submit"
-          disabled={saving || !form.visitorName || (!form.purpose && !customPurpose)}
-          className="btn-primary flex-1 gap-2">
-          <QrCode size={15} />
-          {saving ? 'Generating pass...' : 'Create Pass'}
-        </button>
-      </div>
-    </form>
-  );
-}
-
-/* ─────────────────────────────────────────────────────── */
 /*  Sidebar helper (desktop only — mobile uses /visitors/new) */
 /* ─────────────────────────────────────────────────────── */
 function Drawer({ open, onClose, title, children }) {
@@ -536,7 +368,7 @@ function Drawer({ open, onClose, title, children }) {
 /* ─────────────────────────────────────────────────────── */
 /*  Visitor Pass Sidebar                                   */
 /* ─────────────────────────────────────────────────────── */
-function VisitorPassDrawer({ visitor, onClose }) {
+function VisitorPassDrawer({ visitor, onClose, onCancelPass }) {
   const { user } = useAuth();
   useEffect(() => {
     if (visitor) document.body.style.overflow = 'hidden';
@@ -664,6 +496,11 @@ function VisitorPassDrawer({ visitor, onClose }) {
             style={{ background: '#25D366', color: 'white', border: 'none', cursor: 'pointer' }}>
             <WhatsAppIcon /> Share Pass
           </button>
+          {visitor.status === 'active' && onCancelPass && (
+            <button onClick={() => onCancelPass(visitor)} className="col-span-2 py-2 rounded-[9px] text-sm font-semibold text-red-600 hover:bg-red-50">
+              Cancel this pass
+            </button>
+          )}
           <button onClick={onClose} className="btn-primary col-span-2 gap-2">
             <CheckCircle size={14} /> Done
           </button>
@@ -680,6 +517,11 @@ const PAGE_SIZE = 15;
 
 export default function ResidentVisitors() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [search,          setSearch]          = useState('');
+  const [statusFilter,    setStatusFilter]    = useState('');
+  const [counts,          setCounts]          = useState(null);
+  const searchTimer = useRef(null);
   const [visitors,        setVisitors]        = useState([]);
   const [loading,         setLoading]         = useState(true);
   const [page,            setPage]            = useState(1);
@@ -692,23 +534,72 @@ export default function ResidentVisitors() {
     else setSelectedVisitor(v);
   };
 
-  const load = async (p = 1) => {
+  const load = async (p = 1, q = search, status = statusFilter) => {
     setLoading(true);
     try {
-      const { data } = await visitorAPI.getAll({ page: p, limit: PAGE_SIZE });
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const { data } = await visitorAPI.getAll({
+        page: p, limit: PAGE_SIZE,
+        search: q || undefined,
+        ...(status === 'today' ? { date: today.toISOString() } : { status: status || undefined }),
+      });
       setVisitors(data.data);
       setPagination(data.pagination || { total: data.data.length, pages: 1 });
+      if (data.counts) setCounts(data.counts);
     } catch { toast.error('Failed to load'); }
     finally { setLoading(false); }
   };
 
   const handlePage = (p) => { setPage(p); load(p); };
+  const handleSearch = (q) => {
+    setSearch(q); setPage(1);
+    clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => load(1, q, statusFilter), 300);
+  };
+  const handleStatus = (st) => { const next = st === statusFilter ? '' : st; setStatusFilter(next); setPage(1); load(1, search, next); };
+  const invite = () => (window.innerWidth < 640 ? navigate('/visitors/new') : setShowNew(true));
+  const cancelPass = async (v) => {
+    if (!window.confirm(`Cancel ${v.visitorName}'s pass? The code will stop working at the gate.`)) return;
+    try {
+      await visitorAPI.cancel(v._id);
+      toast.success('Pass cancelled');
+      setSelectedVisitor((s) => (s?._id === v._id ? null : s));
+      load(page);
+    } catch (e) { toast.error(e.response?.data?.message || 'Couldn\'t cancel the pass'); }
+  };
+  const copyCode = (v) => { navigator.clipboard?.writeText(v.visitorCode); toast.success(`Code ${v.visitorCode} copied`); };
 
   useEffect(() => { load(1); }, []);
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="animate-fade-in">
+      {/* ── Phone ── */}
+      <div className="md:hidden pb-6">
+        <VisitorsHero
+          title="My visitors" subtitle="Invite guests and share their gate pass"
+          gradient="linear-gradient(135deg,#4F46E5 0%,#6366F1 55%,#7C3AED 100%)"
+          counts={counts} statusFilter={statusFilter} onPick={handleStatus}
+          cta="Invite a visitor" onCta={invite}
+        />
+        <VisitorsFilters search={search} onSearch={handleSearch} statusFilter={statusFilter} onStatus={handleStatus} counts={counts} accent={ACCENT} />
+        <VisitorCards
+          visitors={visitors} loading={loading} accent={ACCENT}
+          onOpen={(v) => navigate(`/visitors/${v._id}`)}
+          emptyText={search ? `No visitors match "${search}"` : statusFilter ? 'No visitors here' : 'No visitors yet'}
+          emptyCta={!search && !statusFilter ? 'Invite a visitor' : null} onEmptyCta={invite}
+          renderActions={(v) => v.status === 'active' && (
+            <>
+              <CardAction tone="green" onClick={() => shareVisitorPass(v, user?.estateId)}><WhatsAppIcon /> Share pass</CardAction>
+              <CardAction onClick={() => copyCode(v)}><Copy size={14} style={{ color: ACCENT }} /> Copy</CardAction>
+              <CardAction tone="danger" onClick={() => cancelPass(v)} aria-label={`Cancel ${v.visitorName}'s pass`}><XCircle size={14} /> Cancel</CardAction>
+            </>
+          )}
+        />
+        {pagination.pages > 1 && <div className="mt-4"><Pagination page={page} pages={pagination.pages} total={pagination.total} limit={PAGE_SIZE} onPage={handlePage} /></div>}
+      </div>
 
+      {/* ── Tablet / desktop ── */}
+      <div className="hidden md:block space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold mb-1" style={{ color: '#0F172A', letterSpacing: '-0.02em' }}>My Visitor Passes</h1>
@@ -782,17 +673,18 @@ export default function ResidentVisitors() {
       </div>
 
       <Pagination page={page} pages={pagination.pages} total={pagination.total} limit={PAGE_SIZE} onPage={handlePage} />
+      </div>
 
       {/* Create sidebar */}
       <Drawer open={showNew} onClose={() => setShowNew(false)} title="Invite a Visitor">
-        <NewVisitorForm
-          onClose={() => setShowNew(false)}
-          onSuccess={(v) => { setShowNew(false); setSelectedVisitor(v); setPage(1); load(1); }}
+        <InviteForm
+          onCancel={() => setShowNew(false)}
+          onCreated={(v) => { setShowNew(false); setSelectedVisitor(v); setPage(1); load(1); }}
         />
       </Drawer>
 
       {/* Pass detail sidebar */}
-      <VisitorPassDrawer visitor={selectedVisitor} onClose={() => setSelectedVisitor(null)} />
+      <VisitorPassDrawer visitor={selectedVisitor} onClose={() => setSelectedVisitor(null)} onCancelPass={cancelPass} />
     </div>
   );
 }

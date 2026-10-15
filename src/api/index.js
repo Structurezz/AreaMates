@@ -35,6 +35,7 @@ export const visitorAPI = {
   checkOut: (id) => api.patch(`/visitors/${id}/checkout`),
   blacklist: (id) => api.patch(`/visitors/${id}/blacklist`),
   approveEarly: (id) => api.post(`/visitors/${id}/approve-early`),
+  cancel: (id) => api.patch(`/visitors/${id}/cancel`),
 };
 
 // Residents

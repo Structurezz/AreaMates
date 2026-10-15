@@ -5,7 +5,10 @@ import { visitorAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
 import Badge, { visitorStatusBadge } from '../components/ui/Badge';
 import Spinner from '../components/ui/Spinner';
-import { ArrowLeft, UserCheck, Share2, CheckCircle, MessageCircle, LogIn } from 'lucide-react';
+import {
+  ArrowLeft, UserCheck, Share2, CheckCircle, MessageCircle, LogIn, Copy, XCircle, Calendar, Clock, Timer,
+  Phone, Mail, StickyNote, ChevronRight, Zap, Users, Package, Wrench, Heart, MoreHorizontal,
+} from 'lucide-react';
 import { useSocket } from '../context/SocketContext';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
@@ -281,7 +284,7 @@ function PassTimer({ visitor }) {
     return `${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s`;
   };
 
-  if (['checked-out', 'blacklisted', 'expired'].includes(visitor.status)) return null;
+  if (['checked-out', 'blacklisted', 'expired', 'cancelled'].includes(visitor.status)) return null;
 
   // Arrived & checked in — replace the countdown with a success card
   if (visitor.status === 'checked-in') {
@@ -388,209 +391,167 @@ export default function VisitorDetailPage() {
     'checked-out': { bg: '#F8FAFC', text: '#475569', border: '#E2E8F0' },
     expired:       { bg: '#FFFBEB', text: '#D97706', border: '#FDE68A' },
     blacklisted:   { bg: '#FEF2F2', text: '#DC2626', border: '#FECACA' },
+    cancelled:     { bg: '#F1F5F9', text: '#64748B', border: '#E2E8F0' },
   }[visitor.status] || { bg: '#F8FAFC', text: '#475569', border: '#E2E8F0' };
 
   const isDone     = visitor.status === 'checked-out';
   const isIn       = visitor.status === 'checked-in';
-  const isBlocked  = visitor.status === 'blacklisted' || visitor.status === 'expired';
+  const isBlocked  = ['blacklisted', 'expired', 'cancelled'].includes(visitor.status);
+  const canCancel  = visitor.status === 'active';
+  const cancelPass = async () => {
+    if (!window.confirm(`Cancel ${visitor.visitorName}'s pass? The code will stop working at the gate.`)) return;
+    try { const { data } = await visitorAPI.cancel(visitor._id); setVisitor((v) => ({ ...v, ...data.data })); toast.success('Pass cancelled'); }
+    catch (e) { toast.error(e.response?.data?.message || 'Couldn\'t cancel the pass'); }
+  };
   const canShare   = !isDone && !isBlocked;
   const expectedAt = new Date(visitor.expectedDate);
 
-  return (
-    <div className="animate-fade-in max-w-xl mx-auto">
+  const PURPOSE = {
+    family: ['#EC4899', Users], friend: ['#6366F1', UserCheck], delivery: ['#F59E0B', Package],
+    contractor: ['#F97316', Wrench], medical: ['#EF4444', Heart],
+  }[String(visitor.purpose || '').toLowerCase()] || ['#64748B', MoreHorizontal];
+  const [pColor, PIcon] = PURPOSE;
+  const STATUS_LABEL = { active: 'Expected', 'checked-in': 'Inside now', 'checked-out': 'Left', expired: 'Expired', blacklisted: 'Blocked', cancelled: 'Cancelled' };
+  const initials = (visitor.visitorName || '?').split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase();
+  const validUntil = new Date(expectedAt.getTime() + (visitor.expectedDuration || 60) * 60000);
+  const steps = [
+    { label: 'Pass created', at: visitor.createdAt, done: true, color: '#6366F1' },
+    visitor.status === 'cancelled'
+      ? { label: 'Cancelled', at: visitor.cancelledAt, done: true, color: '#64748B' }
+      : { label: 'Arrived at the gate', at: visitor.entryTime, done: !!visitor.entryTime, color: '#10B981' },
+    ...(visitor.status === 'cancelled' ? [] : [{ label: 'Left the estate', at: visitor.exitTime, done: !!visitor.exitTime, color: '#3B82F6' }]),
+  ];
+  const rows = [
+    { Icon: Calendar, color: '#6366F1', label: 'Date', value: format(expectedAt, 'EEEE, d MMMM yyyy') },
+    { Icon: Clock, color: '#F59E0B', label: visitor.instant ? 'Valid from' : 'Expected at', value: format(expectedAt, 'h:mm a') },
+    { Icon: Timer, color: '#10B981', label: 'Valid until', value: format(validUntil, 'h:mm a') + (format(validUntil, 'yyyy-MM-dd') !== format(expectedAt, 'yyyy-MM-dd') ? ` · ${format(validUntil, 'd MMM')}` : '') },
+    ...(visitor.visitorPhone ? [{ Icon: Phone, color: '#0EA5E9', label: 'Phone', value: visitor.visitorPhone, href: `tel:${visitor.visitorPhone}` }] : []),
+    ...(visitor.visitorEmail ? [{ Icon: Mail, color: '#8B5CF6', label: 'Email', value: visitor.visitorEmail, href: `mailto:${visitor.visitorEmail}` }] : []),
+    ...(visitor.notes ? [{ Icon: StickyNote, color: '#A855F7', label: 'Note for security', value: visitor.notes }] : []),
+  ];
 
-      {/* Top bar */}
-      <div className="flex items-center gap-3 mb-4">
-        <button onClick={() => navigate('/visitors')}
-          className="p-2 rounded-xl transition-all"
-          style={{ background: '#F1F5F9', color: '#475569' }}
-          onMouseEnter={e => e.currentTarget.style.background = '#E2E8F0'}
-          onMouseLeave={e => e.currentTarget.style.background = '#F1F5F9'}>
-          <ArrowLeft size={18} />
-        </button>
-        <div className="min-w-0 flex-1">
-          <div className="text-[10px] font-black uppercase tracking-widest" style={{ color: '#94A3B8' }}>Visitor Pass</div>
-          <h1 className="text-base font-bold truncate" style={{ color: '#0F172A', letterSpacing: '-0.02em' }}>{visitor.visitorName}</h1>
+  return (
+    <div className="animate-fade-in -mx-4 -mt-4 md:mx-auto md:mt-0 max-w-xl pb-44">
+      {/* Header */}
+      <div className="relative px-4 pt-3 pb-20 text-white overflow-hidden md:rounded-b-3xl" style={{ background: 'linear-gradient(135deg,#4F46E5 0%,#6366F1 55%,#7C3AED 100%)' }}>
+        <div className="absolute -top-16 -right-12 w-48 h-48 rounded-full bg-white/10 pointer-events-none" />
+        <div className="relative flex items-center justify-between">
+          <button onClick={() => navigate('/visitors')} aria-label="Back" className="w-10 h-10 -ml-1 rounded-full flex items-center justify-center hover:bg-white/10"><ArrowLeft size={20} /></button>
+          <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-white/15">
+            <span className={`w-1.5 h-1.5 rounded-full ${isIn ? 'bg-emerald-300 animate-pulse' : isBlocked ? 'bg-red-300' : isDone ? 'bg-slate-300' : 'bg-amber-300'}`} />
+            {STATUS_LABEL[visitor.status] || visitor.status}
+          </span>
+        </div>
+        <div className="relative flex items-center gap-3.5 mt-3">
+          <div className="relative shrink-0">
+            <div className="w-16 h-16 rounded-2xl bg-white/20 border border-white/30 flex items-center justify-center text-xl font-extrabold">{initials}</div>
+            <span className="absolute -bottom-1.5 -right-1.5 w-7 h-7 rounded-full flex items-center justify-center ring-[3px] ring-indigo-500" style={{ background: pColor }}>
+              <PIcon size={14} className="text-white" />
+            </span>
+          </div>
+          <div className="min-w-0">
+            <h1 className="text-[22px] font-extrabold tracking-tight truncate">{visitor.visitorName}</h1>
+            <p className="text-[13px] text-white/80 truncate">{visitor.purpose} · {format(expectedAt, 'EEE d MMM, h:mm a')}</p>
+            {visitor.instant && <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-300 text-amber-950"><Zap size={10} /> Instant pass</span>}
+          </div>
         </div>
       </div>
 
-      <div className="space-y-4">
-
-        {/* ── Hero ── */}
-        <div className="relative overflow-hidden rounded-3xl p-5 sm:p-6"
-          style={{
-            background:
-              'radial-gradient(120% 90% at 100% 0%, #818CF8 0%, transparent 55%),' +
-              'radial-gradient(90% 80% at 0% 100%, #4338CA 0%, transparent 60%),' +
-              'linear-gradient(135deg, #4F46E5 0%, #4338CA 100%)',
-            boxShadow: '0 20px 40px -18px rgba(67,56,202,0.45), inset 0 1px 0 rgba(255,255,255,0.14)',
-          }}>
-          <div className="absolute inset-0 opacity-[0.15] pointer-events-none"
-            style={{
-              backgroundImage: 'radial-gradient(rgba(255,255,255,0.9) 1px, transparent 1px)',
-              backgroundSize: '18px 18px',
-              maskImage: 'linear-gradient(180deg, rgba(0,0,0,0.9) 0%, transparent 75%)',
-              WebkitMaskImage: 'linear-gradient(180deg, rgba(0,0,0,0.9) 0%, transparent 75%)',
-            }} />
-          <div className="absolute -top-14 -right-10 w-48 h-48 rounded-full pointer-events-none blur-2xl"
-            style={{ background: 'rgba(196,181,253,0.35)' }} />
-
-          <div className="relative flex items-start gap-4">
-            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center text-xl sm:text-2xl font-black flex-shrink-0 text-white"
-              style={{
-                background: 'linear-gradient(135deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.10) 100%)',
-                border: '1.5px solid rgba(255,255,255,0.55)',
-                boxShadow: '0 6px 16px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.35)',
-              }}>
-              {visitor.visitorName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-            </div>
-            <div className="min-w-0 flex-1">
-              <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
-                style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', border: '1px solid rgba(255,255,255,0.25)' }}>
-                <span className="w-1.5 h-1.5 rounded-full inline-block"
-                  style={{ background: isIn ? '#86EFAC' : isBlocked ? '#FCA5A5' : isDone ? '#CBD5E1' : '#FDE68A' }} />
-                {visitor.status}
-              </span>
-              <div className="font-black text-xl sm:text-2xl mt-1.5 text-white truncate" style={{ letterSpacing: '-0.02em' }}>
-                {visitor.visitorName}
+      <div className="px-4 -mt-14 relative space-y-4">
+        {/* Gate pass */}
+        <div className={`rounded-3xl bg-white shadow-xl shadow-indigo-900/10 border border-slate-100 overflow-hidden ${isBlocked || isDone ? 'grayscale' : ''}`}>
+          <div className="px-5 pt-4 pb-3 text-center">
+            <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">{canShare ? 'Show this at the gate' : 'Gate pass'}</p>
+            <button onClick={copyCode} className="mt-1.5 inline-flex items-center gap-2 group" title="Tap to copy">
+              <span className={`visitor-code text-[38px] font-extrabold tracking-[0.18em] ${visitor.status === 'cancelled' ? 'line-through' : ''}`} style={{ color: ACCENT }}>{visitor.visitorCode}</span>
+              <Copy size={16} className="text-indigo-300 group-hover:text-indigo-500" />
+            </button>
+          </div>
+          <div className="relative border-t-2 border-dashed border-slate-200 mx-4">
+            <span className="absolute -left-7 -top-3 w-6 h-6 rounded-full bg-[#F8FAFC]" />
+            <span className="absolute -right-7 -top-3 w-6 h-6 rounded-full bg-[#F8FAFC]" />
+          </div>
+          <div className="p-5 pt-4 flex flex-col items-center">
+            {canShare ? <QRCanvas value={visitor.visitorCode} size={176} /> : (
+              <div className="w-44 h-44 rounded-xl bg-slate-50 border border-slate-200 flex flex-col items-center justify-center text-center px-4">
+                <XCircle size={30} className={visitor.status === 'cancelled' ? 'text-slate-400' : 'text-red-400'} />
+                <p className="text-xs text-slate-500 mt-2">{visitor.status === 'cancelled' ? 'This pass was cancelled' : isDone ? 'Pass already used' : `Pass ${visitor.status}`}</p>
               </div>
-              <div className="text-xs sm:text-sm mt-1 truncate" style={{ color: 'rgba(255,255,255,0.85)' }}>{visitor.purpose}</div>
-              <div className="text-[11px] sm:text-xs mt-2" style={{ color: 'rgba(255,255,255,0.70)' }}>
-                {format(expectedAt, 'EEE, MMM d · h:mm a')}
-              </div>
-            </div>
+            )}
+            <p className="text-[11px] text-slate-400 mt-2">{canShare ? 'Guards scan the QR or type the code' : 'The gate will refuse this code'}</p>
           </div>
         </div>
 
-        {/* ── Live arrival / arrived state ── */}
         <PassTimer visitor={visitor} />
 
-        {/* ── Pass ticket ── */}
-        <div className="rounded-3xl overflow-hidden"
-          style={{
-            border: '1px solid rgba(99,102,241,0.18)',
-            boxShadow: '0 20px 40px -18px rgba(79,70,229,0.20)',
-          }}>
-          {/* Ticket header */}
-          <div className="px-5 py-4 flex items-center justify-between"
-            style={{ background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)' }}>
-            <div className="min-w-0">
-              <div className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.75)' }}>Guest Pass</div>
-              <div className="text-sm font-bold text-white truncate mt-0.5">{user?.estateId?.name || 'Your Estate'}</div>
-            </div>
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{ background: 'rgba(255,255,255,0.20)', border: '1px solid rgba(255,255,255,0.30)' }}>
-              <UserCheck size={18} className="text-white" />
-            </div>
-          </div>
-
-          {/* Perforation */}
-          <div className="relative" style={{ borderTop: '2px dashed rgba(99,102,241,0.22)' }}>
-            <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full" style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }} />
-            <div className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full" style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }} />
-          </div>
-
-          {/* Code + QR */}
-          <div className="p-5 sm:p-6 text-center" style={{ background: '#FFFFFF' }}>
-            <div className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: '#94A3B8' }}>Access Code</div>
-            <button onClick={copyCode} className="group inline-block mb-4" title="Tap to copy">
-              <div className="visitor-code text-4xl sm:text-5xl font-black tracking-[0.18em]"
-                style={{ color: ACCENT, letterSpacing: '0.18em' }}>
-                {visitor.visitorCode}
-              </div>
-              <div className="text-[10px] font-semibold mt-1 flex items-center justify-center gap-1 opacity-70 group-hover:opacity-100 transition-opacity"
-                style={{ color: '#64748B' }}>
-                <Share2 size={10} /> Tap to copy
-              </div>
-            </button>
-
-            <div className="inline-block p-3 rounded-2xl"
-              style={{ background: '#F8FAFC', border: '1px solid rgba(15,23,42,0.05)' }}>
-              <QRCanvas value={visitor.visitorCode} size={180} />
-            </div>
-            <p className="text-[11px] mt-3 font-medium" style={{ color: '#94A3B8' }}>Scan at the security gate</p>
-          </div>
-        </div>
-
-        {/* ── Visit details ── */}
-        <div className="glass-card overflow-hidden">
-          <div className="px-5 pt-4 pb-3 flex items-center gap-2"
-            style={{ borderBottom: '1px solid rgba(15,23,42,0.05)' }}>
-            <div className="w-6 h-6 rounded-lg flex items-center justify-center"
-              style={{ background: 'rgba(99,102,241,0.10)' }}>
-              <UserCheck size={12} style={{ color: '#4F46E5' }} />
-            </div>
-            <h2 className="text-xs font-bold uppercase tracking-widest" style={{ color: '#64748B' }}>Visit details</h2>
-          </div>
-          <div className="divide-y" style={{ borderColor: 'rgba(15,23,42,0.05)' }}>
-            {[
-              { label: 'Date',     value: format(expectedAt, 'EEE, MMM d, yyyy') },
-              { label: 'Time',     value: format(expectedAt, 'h:mm a') },
-              { label: 'Duration', value: `${visitor.expectedDuration || 720} min` },
-              ...(visitor.visitorPhone ? [{ label: 'Phone', value: visitor.visitorPhone, href: `tel:${visitor.visitorPhone}` }] : []),
-              ...(visitor.entryTime  ? [{ label: 'Entry',  value: format(new Date(visitor.entryTime), 'h:mm a'), tone: '#059669' }] : []),
-              ...(visitor.exitTime   ? [{ label: 'Exit',   value: format(new Date(visitor.exitTime),  'h:mm a'), tone: '#1D4ED8' }] : []),
-            ].map(({ label, value, href, tone }) => (
-              <div key={label} className="px-5 py-3 flex items-center justify-between gap-3">
-                <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#94A3B8' }}>{label}</span>
-                {href ? (
-                  <a href={href} className="text-sm font-bold" style={{ color: tone || '#4F46E5', textDecoration: 'none' }}>{value}</a>
-                ) : (
-                  <span className="text-sm font-bold" style={{ color: tone || '#0F172A' }}>{value}</span>
-                )}
-              </div>
+        {/* Timeline */}
+        <div className="rounded-2xl bg-white border border-slate-200 p-4">
+          <h2 className="text-sm font-bold text-slate-900 mb-3">Activity</h2>
+          <ol className="space-y-0">
+            {steps.map((st, k) => (
+              <li key={st.label} className="flex gap-3">
+                <div className="flex flex-col items-center">
+                  <span className="w-3.5 h-3.5 rounded-full border-2 mt-0.5" style={st.done ? { background: st.color, borderColor: st.color } : { borderColor: '#CBD5E1', background: '#fff' }} />
+                  {k < steps.length - 1 && <span className="w-0.5 flex-1 my-1 rounded" style={{ background: steps[k + 1].done ? steps[k + 1].color : '#E2E8F0', minHeight: 18 }} />}
+                </div>
+                <div className="pb-3">
+                  <p className={`text-sm font-semibold ${st.done ? 'text-slate-900' : 'text-slate-400'}`}>{st.label}</p>
+                  <p className="text-xs text-slate-400">{st.at ? format(new Date(st.at), 'EEE d MMM · h:mm a') : 'Not yet'}</p>
+                </div>
+              </li>
             ))}
-          </div>
+          </ol>
         </div>
 
-        {/* Spacer so the fixed bar doesn't cover the end of the page */}
-        <div className="h-28 lg:hidden" aria-hidden />
+        {/* Details */}
+        <div className="rounded-2xl bg-white border border-slate-200 divide-y divide-slate-100">
+          {rows.map(({ Icon, color, label, value, href }) => {
+            const inner = (
+              <>
+                <span className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${color}1A` }}><Icon size={17} style={{ color }} /></span>
+                <span className="flex-1 min-w-0">
+                  <span className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400">{label}</span>
+                  <span className="block text-[15px] font-semibold text-slate-900 break-words">{value}</span>
+                </span>
+              </>
+            );
+            return href
+              ? <a key={label} href={href} className="flex items-center gap-3 p-3.5 active:bg-slate-50">{inner}<ChevronRight size={16} className="text-slate-300" /></a>
+              : <div key={label} className="flex items-center gap-3 p-3.5">{inner}</div>;
+          })}
+        </div>
+      </div>
 
-        {/* ── Actions (fixed above the mobile bottom nav; static on desktop) ── */}
-        <div
-          className="fixed inset-x-0 z-30 lg:static lg:inset-x-auto lg:z-auto"
-          style={{ bottom: 'calc(env(safe-area-inset-bottom) + 68px)' }}>
-          <div
-            className="max-w-xl mx-auto px-4 pt-3 pb-1 lg:px-0 lg:pt-1 lg:pb-8 space-y-2"
-            style={{
-              background: 'linear-gradient(to top, rgba(248,250,252,0.98) 70%, rgba(248,250,252,0))',
-              backdropFilter: 'blur(8px)',
-              WebkitBackdropFilter: 'blur(8px)',
-            }}>
+      {/* Actions */}
+      <div className="fixed inset-x-0 z-30 px-4 pt-3 md:static md:mt-4 md:px-4"
+        style={{ bottom: 'calc(4.25rem + env(safe-area-inset-bottom))', background: 'linear-gradient(to top, rgba(248,250,252,1) 75%, rgba(248,250,252,0))' }}>
+        <div className="max-w-xl mx-auto space-y-2">
           {canShare && (
-            <button
-              onClick={() => shareVisitorPass(visitor, user?.estateId)}
-              className="w-full flex items-center justify-center gap-2 rounded-2xl font-bold text-white transition-all active:scale-98"
-              style={{
-                background: 'linear-gradient(135deg, #25D366, #128C7E)',
-                padding: '14px', fontSize: 15,
-                boxShadow: '0 10px 24px -8px rgba(18,140,126,0.45)',
-              }}>
+            <button onClick={() => shareVisitorPass(visitor, user?.estateId)}
+              className="w-full flex items-center justify-center gap-2 rounded-2xl font-bold text-white py-3.5 active:scale-[0.99] transition-transform"
+              style={{ background: 'linear-gradient(135deg,#25D366,#128C7E)', boxShadow: '0 10px 24px -8px rgba(18,140,126,0.45)' }}>
               <WhatsAppIcon /> Share pass on WhatsApp
             </button>
           )}
           <div className="grid grid-cols-2 gap-2">
-            <button onClick={copyCode}
-              className="flex items-center justify-center gap-2 rounded-xl py-3 font-semibold text-sm transition-all"
-              style={{ background: '#F1F5F9', color: '#475569', border: '1px solid #E2E8F0' }}>
-              <Share2 size={14} /> Copy code
-            </button>
-            <button onClick={() => navigate('/visitors')}
-              className="flex items-center justify-center gap-2 rounded-xl py-3 font-semibold text-sm text-white transition-all"
-              style={{ background: 'linear-gradient(135deg, #6366F1, #4F46E5)' }}>
-              <CheckCircle size={14} /> Done
-            </button>
-          </div>
-          {isDone && (
-            <div className="text-center text-[11px] mt-2" style={{ color: '#94A3B8' }}>
-              This visitor has already checked out.
-            </div>
-          )}
-          {isBlocked && (
-            <div className="text-center text-[11px] mt-2" style={{ color: '#DC2626' }}>
-              Pass is {visitor.status} — the guard cannot admit this visitor.
-            </div>
-          )}
+            {canCancel ? (
+              <button onClick={cancelPass} className="flex items-center justify-center gap-2 rounded-xl py-3 font-semibold text-sm bg-red-50 text-red-600">
+                <XCircle size={15} /> Cancel pass
+              </button>
+            ) : (
+              <button onClick={copyCode} className="flex items-center justify-center gap-2 rounded-xl py-3 font-semibold text-sm bg-white border border-slate-200 text-slate-700">
+                <Copy size={15} style={{ color: ACCENT }} /> Copy code
+              </button>
+            )}
+            {visitor.visitorPhone ? (
+              <a href={`tel:${visitor.visitorPhone}`} className="flex items-center justify-center gap-2 rounded-xl py-3 font-semibold text-sm bg-white border border-slate-200 text-slate-700">
+                <Phone size={15} style={{ color: '#0EA5E9' }} /> Call visitor
+              </a>
+            ) : (
+              <button onClick={() => navigate('/visitors')} className="flex items-center justify-center gap-2 rounded-xl py-3 font-semibold text-sm text-white" style={{ background: ACCENT }}>
+                <CheckCircle size={15} /> Done
+              </button>
+            )}
           </div>
         </div>
       </div>
