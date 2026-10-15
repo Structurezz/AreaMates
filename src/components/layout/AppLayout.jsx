@@ -12,6 +12,7 @@ import NotificationBell from '../ui/NotificationBell';
 import SafetyShareBanner from '../SafetyShareBanner';
 import PodcastLivePill from '../PodcastLivePill';
 import LiveNotificationModal from '../LiveNotificationModal';
+import CallAlertsPrompt from '../calls/CallAlertsPrompt';
 
 
 const BOTTOM_NAV = [
@@ -83,6 +84,7 @@ export default function AppLayout({ children }) {
         {/* Live-location reminder (only while sharing with security) */}
         <SafetyShareBanner />
         <main className="flex-1 overflow-y-auto p-4 pb-24 md:p-6 lg:p-8 lg:pb-8">
+          <CallAlertsPrompt appName="AreaMates" />
           {children}
         </main>
       </div>

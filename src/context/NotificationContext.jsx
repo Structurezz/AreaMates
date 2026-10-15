@@ -4,6 +4,7 @@ import {
   Clock, AlertCircle, UserPlus, Bell, BellRing, MessageSquare,
   Calendar, BarChart2, ShoppingBag, Scale, Users, Info, Mic, Radio,
 } from 'lucide-react';
+import { PhoneMissed } from 'lucide-react';
 import { useSocket } from './SocketContext';
 import { useAuth }   from './AuthContext';
 import toast from 'react-hot-toast';
@@ -17,6 +18,7 @@ const STORAGE_KEY = 'am_resident_notifications';
 const MAX_STORED = 60;
 
 export const TYPE_CONFIG = {
+  missed_call:         { Icon: PhoneMissed,   label: 'Missed call',     color: '#EF4444', isAlert: false },
   // ── Security Alerts ──────────────────────────────────────
   new_alert:           { Icon: Siren,         label: 'Security Alert',  color: '#EF4444', isAlert: true  },
   alert_broadcast:     { Icon: Siren,         label: 'Broadcast Alert', color: '#EF4444', isAlert: true  },
@@ -72,6 +74,18 @@ export function NotificationProvider({ children }) {
 
   const addNotification = useCallback((notif) => {
     const entry = { ...notif, id: notif.id || String(Date.now()), createdAt: notif.createdAt || new Date().toISOString() };
+    // Already in the list (e.g. a missed call announced live, then again on catch-up).
+    if (notif.id && loadStored().some((n) => n.id === notif.id)) return;
+    // Silent entries (the call system shows its own toast) just go in the bell.
+    if (notif.silent) {
+      setNotifications(prev => {
+        const updated = [entry, ...prev].slice(0, MAX_STORED);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+        return updated;
+      });
+      setUnreadCount(n => n + 1);
+      return;
+    }
     const cfg = TYPE_CONFIG[entry.type] || DEFAULT_CFG;
 
     setNotifications(prev => {
@@ -244,6 +258,13 @@ export function NotificationProvider({ children }) {
 
   const alertCount = notifications.filter(n => !n.readAt && (TYPE_CONFIG[n.type]?.isAlert)).length;
 
+
+  // Entries raised by other parts of the app (e.g. missed calls from CallContext).
+  useEffect(() => {
+    const on = (e) => e.detail && addNotification(e.detail);
+    window.addEventListener('app:notification', on);
+    return () => window.removeEventListener('app:notification', on);
+  }, [addNotification]);
   return (
     <NotificationContext.Provider value={{ notifications, unreadCount, alertCount, activeAlert, dismissAlert, activeLive, dismissLive, markAllRead, clearAll, stopSiren, TYPE_CONFIG }}>
       {children}

@@ -207,6 +207,7 @@ export const campaignAPI = {
 
 // Calls, call credits and neighbour buzz
 export const callAPI = {
+  ringing:     () => api.get('/calls/ringing'),
   config:      () => api.get('/calls/config'),
   directory:   () => api.get('/calls/directory'),
   history:     () => api.get('/calls/history'),
