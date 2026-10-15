@@ -7,7 +7,7 @@ import Badge, { visitorStatusBadge } from '../components/ui/Badge';
 import Spinner from '../components/ui/Spinner';
 import Pagination from '../components/ui/Pagination';
 import InviteForm from '../components/visitors/InviteForm';
-import { VisitorsHero, VisitorsFilters, VisitorCards, CardAction } from '../components/visitors/MobileVisitors';
+import { VisitorsHero, VisitorsFilters, VisitorCards, CardAction, VisitorsPager } from '../components/visitors/MobileVisitors';
 import {
   UserCheck, Plus, QrCode, Calendar, Clock, X,
   Users, Package, Wrench, Heart, MoreHorizontal,
@@ -595,7 +595,7 @@ export default function ResidentVisitors() {
             </>
           )}
         />
-        {pagination.pages > 1 && <div className="mt-4"><Pagination page={page} pages={pagination.pages} total={pagination.total} limit={PAGE_SIZE} onPage={handlePage} /></div>}
+        <VisitorsPager page={page} pages={pagination.pages} total={pagination.total} limit={PAGE_SIZE} onPage={handlePage} accent={ACCENT} />
       </div>
 
       {/* ── Tablet / desktop ── */}

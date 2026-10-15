@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { format, isToday, isTomorrow, isYesterday } from 'date-fns';
-import { Search, X, Plus, ChevronRight, Users, Package, Wrench, Heart, UserCheck, MoreHorizontal, Clock } from 'lucide-react';
+import { Search, X, Plus, ChevronRight, ChevronLeft, Users, Package, Wrench, Heart, UserCheck, MoreHorizontal, Clock } from 'lucide-react';
 
 // Phone layout for the Visitors pages (residents + estate manager share it;
 // each app passes its own colours and card actions). Desktop keeps the table.
@@ -201,5 +201,33 @@ export function CardAction({ children, tone = 'plain', accent, ...p }) {
       style={style}>
       {children}
     </button>
+  );
+}
+
+
+/** Thumb-friendly pagination for the phone list. */
+export function VisitorsPager({ page, pages, total, limit, onPage, accent }) {
+  if (!total) return null;
+  const from = (page - 1) * limit + 1;
+  const to = Math.min(page * limit, total);
+  const goto = (p) => { onPage(p); document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' }); };
+  return (
+    <div className="mt-5 rounded-2xl bg-white border border-slate-200 p-3">
+      <p className="text-center text-[12px] text-slate-500 mb-2.5">
+        Showing <b className="text-slate-800">{from}–{to}</b> of <b className="text-slate-800">{total}</b> visitor{total === 1 ? '' : 's'}
+      </p>
+      <div className="flex items-center gap-2">
+        <button onClick={() => goto(page - 1)} disabled={page <= 1}
+          className="flex-1 inline-flex items-center justify-center gap-1 rounded-xl py-2.5 text-sm font-semibold border border-slate-200 text-slate-700 disabled:opacity-40">
+          <ChevronLeft size={16} /> Prev
+        </button>
+        <span className="px-2 text-[13px] font-semibold text-slate-600 whitespace-nowrap">Page {page} of {Math.max(1, pages)}</span>
+        <button onClick={() => goto(page + 1)} disabled={page >= pages}
+          className="flex-1 inline-flex items-center justify-center gap-1 rounded-xl py-2.5 text-sm font-semibold text-white disabled:opacity-40"
+          style={{ background: accent }}>
+          Next <ChevronRight size={16} />
+        </button>
+      </div>
+    </div>
   );
 }
