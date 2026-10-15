@@ -231,3 +231,38 @@ export function VisitorsPager({ page, pages, total, limit, onPage, accent }) {
     </div>
   );
 }
+
+
+/** Compact visitor row for home screens — same look as the Visitors page. */
+export function VisitorRow({ v, accent, showHost, to, LinkComp }) {
+  const st = VISITOR_STATUS[v.status] || VISITOR_STATUS['checked-out'];
+  const [Icon, pColor] = purposeIcon(v.purpose);
+  const when = new Date(v.expectedDate);
+  const day = isToday(when) ? 'Today' : isTomorrow(when) ? 'Tomorrow' : isYesterday(when) ? 'Yesterday' : format(when, 'EEE d MMM');
+  const host = showHost && (v.hostResidentId?.name || 'Estate manager');
+  return (
+    <LinkComp to={to} className="flex items-center gap-3 px-4 py-3 active:bg-slate-50 hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0" style={{ textDecoration: 'none' }}>
+      <div className="relative shrink-0">
+        <div className="w-10 h-10 rounded-full flex items-center justify-center text-[13px] font-bold" style={{ background: st.bg, color: st.text }}>
+          {(v.visitorName || '?').split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase()}
+        </div>
+        <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center ring-2 ring-white" style={{ background: pColor }}>
+          <Icon size={11} className="text-white" />
+        </span>
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="font-semibold text-[14px] text-slate-900 truncate">{v.visitorName}</p>
+        <p className="text-[12px] text-slate-500 truncate">
+          <span className="font-semibold" style={{ color: pColor }}>{v.purpose}</span> · {day}, {format(when, 'h:mm a')}
+        </p>
+        {host && <p className="text-[11px] text-slate-400 truncate">For {host}</p>}
+      </div>
+      <div className="flex flex-col items-end gap-1 shrink-0">
+        <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full" style={{ background: st.bg, color: st.text }}>
+          <span className="w-1.5 h-1.5 rounded-full" style={{ background: st.dot }} />{st.label}
+        </span>
+        <span className="font-mono text-[11px] font-bold tracking-widest" style={{ color: accent }}>{v.visitorCode}</span>
+      </div>
+    </LinkComp>
+  );
+}

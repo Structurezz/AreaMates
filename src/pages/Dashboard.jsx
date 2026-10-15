@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { visitorAPI, announcementAPI, alertAPI, estateAPI } from '../api';
+import { VisitorRow } from '../components/visitors/MobileVisitors';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 import {
@@ -252,29 +253,7 @@ export default function ResidentDashboard() {
               </div>
             ) : (
               <div>
-                {myVisitors.map((v) => (
-                  <Link
-                    key={v._id}
-                    to={`/visitors/${v._id}`}
-                    className="flex items-center gap-3 px-4 sm:px-5 py-3 transition-colors active:bg-slate-50"
-                    style={{ borderBottom: '1px solid rgba(15,23,42,0.05)', textDecoration: 'none' }}>
-                    <div className="w-9 h-9 rounded-full flex items-center justify-center font-semibold text-sm flex-shrink-0"
-                      style={{ background: 'rgba(99,102,241,0.10)', border: '1px solid rgba(99,102,241,0.22)', color: '#4F46E5' }}>
-                      {v.visitorName[0]}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm truncate" style={{ color: '#0F172A' }}>{v.visitorName}</div>
-                      <div className="flex items-center gap-1.5 text-xs" style={{ color: '#94A3B8' }}>
-                        <Clock size={10} />
-                        {format(new Date(v.expectedDate), 'MMM d, p')}
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                      <Badge variant={visitorStatusBadge(v.status)}>{v.status}</Badge>
-                      <span className="font-mono text-[11px]" style={{ color: '#6366F1' }}>{v.visitorCode}</span>
-                    </div>
-                  </Link>
-                ))}
+                {myVisitors.map((v) => <VisitorRow key={v._id} v={v} accent="#6366F1" to={`/visitors/${v._id}`} LinkComp={Link} />)}
                 <div className="px-4 sm:px-5 py-3">
                   <Link to="/visitors" className="text-xs hover:underline flex items-center gap-1 font-medium" style={{ color: '#6366F1' }}>
                     View all passes <ChevronRight size={12} />
