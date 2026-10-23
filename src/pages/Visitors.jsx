@@ -4,7 +4,7 @@ import QRCode from 'qrcode';
 import { visitorAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
 import InviteForm from '../components/visitors/InviteForm';
-import { VisitorsHero, VisitorsFilters, VisitorCards, CardAction, VisitorsPager } from '../components/visitors/MobileVisitors';
+import VisitorsMobile from '../components/visitors/VisitorsMobile';
 import VisitorsDesktop from '../components/visitors/desktop/VisitorsDesktop';
 import {
   UserCheck, Plus, QrCode, Calendar, Clock, X,
@@ -575,27 +575,15 @@ export default function ResidentVisitors() {
     <div className="animate-fade-in">
       {/* ── Phone ── */}
       <div className="md:hidden pb-6">
-        <VisitorsHero
-          title="My visitors" subtitle="Invite guests and share their gate pass"
-          gradient="linear-gradient(135deg,#4F46E5 0%,#6366F1 55%,#7C3AED 100%)"
-          counts={counts} statusFilter={statusFilter} onPick={handleStatus}
-          cta="Invite a visitor" onCta={invite}
+        <VisitorsMobile
+          visitors={visitors} loading={loading} counts={counts}
+          search={search} onSearch={handleSearch}
+          statusFilter={statusFilter} onPick={handleStatus} onStatus={(st) => { setStatusFilter(st); setPage(1); load(1, search, st); }}
+          page={page} pagination={pagination} limit={limit} onPage={handlePage}
+          onOpen={(v) => navigate(`/visitors/${v._id}`)} onCreate={invite}
+          onShare={(v) => shareVisitorPass(v, user?.estateId)} onCopy={copyCode} onCancel={cancelPass}
+          ShareIcon={WhatsAppIcon}
         />
-        <VisitorsFilters search={search} onSearch={handleSearch} statusFilter={statusFilter} onStatus={handleStatus} counts={counts} accent={ACCENT} />
-        <VisitorCards
-          visitors={visitors} loading={loading} accent={ACCENT}
-          onOpen={(v) => navigate(`/visitors/${v._id}`)}
-          emptyText={search ? `No visitors match "${search}"` : statusFilter ? 'No visitors here' : 'No visitors yet'}
-          emptyCta={!search && !statusFilter ? 'Invite a visitor' : null} onEmptyCta={invite}
-          renderActions={(v) => v.status === 'active' && (
-            <>
-              <CardAction tone="green" onClick={() => shareVisitorPass(v, user?.estateId)}><WhatsAppIcon /> Share pass</CardAction>
-              <CardAction onClick={() => copyCode(v)}><Copy size={14} style={{ color: ACCENT }} /> Copy</CardAction>
-              <CardAction tone="danger" onClick={() => cancelPass(v)} aria-label={`Cancel ${v.visitorName}'s pass`}><XCircle size={14} /> Cancel</CardAction>
-            </>
-          )}
-        />
-        <VisitorsPager page={page} pages={pagination.pages} total={pagination.total} limit={limit} onPage={handlePage} accent={ACCENT} />
       </div>
 
       {/* ── Tablet / desktop ── */}

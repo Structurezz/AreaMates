@@ -17,6 +17,7 @@ import { CAT, CATEGORIES, STATUS, naira } from '../components/market/shared';
 import { imgUrl } from '../components/lounge/shared';
 import ProductCard from '../components/market/desktop/ProductCard';
 import useIsDesktop from '../hooks/useIsDesktop';
+import useCountUp from '../hooks/useCountUp';
 import { Receipt, Store, Heart, LayoutGrid } from 'lucide-react';
 
 const SORTS = [
@@ -237,7 +238,11 @@ export default function Marketplace() {
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-3 gap-y-5">
-              {shown.map((l) => <ListingCard key={l._id} listing={l} me={user} onOpen={setOpen} onToggleSave={toggleSave} />)}
+              {shown.map((l, i) => (
+                <div key={l._id} className="dash-rise min-w-0" style={{ animationDelay: `${Math.min(i, 12) * 40}ms` }}>
+                  <ListingCard listing={l} me={user} onOpen={setOpen} onToggleSave={toggleSave} />
+                </div>
+              ))}
             </div>
           )
         )}
@@ -370,34 +375,72 @@ export default function Marketplace() {
     );
   }
 
+  const browseCount = listings.length;
   return (
     <div className="animate-fade-in -mx-4 md:mx-0 -mt-4 md:mt-0 pb-10">
-      {/* Hero */}
-      <div className="px-4 md:px-6 pt-5 pb-4 md:rounded-3xl text-white" style={{ background: 'linear-gradient(135deg,#4F46E5 0%,#6366F1 55%,#7C3AED 100%)' }}>
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h1 className="text-[22px] font-extrabold tracking-tight flex items-center gap-2"><ShoppingBag size={21} /> Marketplace</h1>
-            <p className="text-[13px] text-indigo-100 mt-0.5 flex items-center gap-1"><ShieldCheck size={13} /> Neighbours only · protected by estate management</p>
+      <div className="px-4 pt-4 space-y-4">
+        {/* Header */}
+        <header className="dash-rise flex items-end justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-[12px] font-medium text-slate-400">Buy &amp; sell with neighbours</div>
+            <h1 className="text-[22px] font-semibold text-slate-900 leading-tight" style={{ letterSpacing: '-0.03em' }}>Marketplace</h1>
           </div>
-          <button onClick={startSell} className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-white text-indigo-700 font-bold text-sm px-4 py-2 shadow active:scale-95 transition-transform">
-            <Plus size={16} /> Sell
+          <button onClick={startSell}
+            className="flex-shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-[13px] font-semibold text-white active:scale-95 transition-transform"
+            style={{ background: 'linear-gradient(135deg,#6366F1,#4F46E5)', boxShadow: '0 10px 22px -12px rgba(79,70,229,0.95)' }}>
+            <Plus size={15} strokeWidth={2.6} /> Sell
           </button>
-        </div>
-        <div className="relative mt-4">
+        </header>
+
+        {/* Safe trading */}
+        <section className="dash-rise relative overflow-hidden rounded-[26px] p-5 text-white"
+          style={{ animationDelay: '60ms', background: 'linear-gradient(150deg, #1E1B4B 0%, #312E81 50%, #4F46E5 115%)', boxShadow: '0 24px 44px -24px rgba(30,27,75,0.95)' }}>
+          <div className="dash-blob absolute -top-20 -right-16 w-56 h-56 rounded-full blur-3xl pointer-events-none" style={{ background: 'rgba(129,140,248,0.45)' }} />
+          <ShoppingBag size={150} className="absolute -right-6 -bottom-8 text-white/[0.06] pointer-events-none" />
+          <div className="relative">
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-white/10 border border-white/15">
+              <ShieldCheck size={12} className="text-indigo-200" /> Neighbours only · protected payments
+            </span>
+            <div className="mt-4 grid grid-cols-3 gap-2">
+              <MarketStat label="For sale" value={browseCount} delay={120} />
+              <MarketStat label="To confirm" value={toConfirm} delay={170} tone={toConfirm ? '#FDE68A' : '#fff'} onClick={() => setTab('orders')} />
+              <MarketStat label="To handle" value={toFulfil.length} delay={220} tone={toFulfil.length ? '#FDE68A' : '#fff'} onClick={() => setTab('mine')} />
+            </div>
+            <div className="mt-4 flex items-center gap-1.5 text-[10px] font-semibold">
+              {['Pay', 'Held safely', 'Delivered', 'Seller paid'].map((step, i) => (
+                <span key={step} className="dash-rise flex items-center gap-1.5 min-w-0" style={{ animationDelay: `${260 + i * 120}ms` }}>
+                  <span className={`px-2 py-1 rounded-full whitespace-nowrap ${i === 3 ? 'bg-emerald-400 text-emerald-950' : 'bg-white/12 text-white/85'}`}>{step}</span>
+                  {i < 3 && <span className="w-2.5 h-px bg-white/30 flex-shrink-0" />}
+                </span>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Search */}
+        <div className="dash-rise relative" style={{ animationDelay: '120ms' }}>
           <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input value={q} onChange={(e) => { setQ(e.target.value); setTab('browse'); }} placeholder="Search food, services, items…"
-            className="w-full rounded-2xl bg-white text-slate-900 placeholder:text-slate-400 pl-10 pr-10 py-3 text-[15px] outline-none shadow-sm" />
+            className="w-full rounded-2xl bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 pl-10 pr-10 py-3 text-[14px] outline-none transition-all focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100" />
           {q && <button onClick={() => setQ('')} aria-label="Clear" className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"><X size={16} /></button>}
         </div>
-        <div className="flex gap-1 mt-3 bg-white/15 rounded-xl p-1">
-          {TABS.map((t) => (
-            <button key={t.id} onClick={() => setTab(t.id)}
-              className={`flex-1 py-1.5 rounded-lg text-[13px] font-semibold transition-colors relative ${tab === t.id ? 'bg-white text-indigo-700 shadow-sm' : 'text-white/90'}`}>
-              {t.label}
-              {t.id === 'orders' && toConfirm > 0 && <span className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-amber-400 text-amber-950 text-[10px] font-bold px-1">{toConfirm}</span>}
-              {t.id === 'mine' && pending > 0 && <span className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-amber-400 text-amber-950 text-[10px] font-bold px-1">{pending}</span>}
-            </button>
-          ))}
+      </div>
+
+      {/* Tabs */}
+      <div className="sticky -top-4 z-20 px-4 py-2 mt-1 bg-[#F8FAFC]/95 backdrop-blur">
+        <div className="flex gap-1 p-1 rounded-2xl bg-white border border-slate-200">
+          {TABS.map((t) => {
+            const badge = t.id === 'orders' ? toConfirm : t.id === 'mine' ? pending : 0;
+            const on = tab === t.id;
+            return (
+              <button key={t.id} onClick={() => setTab(t.id)}
+                className="flex-1 py-2 rounded-xl text-[13px] font-semibold transition-all inline-flex items-center justify-center gap-1"
+                style={on ? { background: 'linear-gradient(135deg,#6366F1,#4F46E5)', color: '#fff', boxShadow: '0 6px 14px -8px rgba(79,70,229,0.9)' } : { color: '#475569' }}>
+                {t.label}
+                {badge > 0 && <span className="min-w-[17px] h-[17px] rounded-full bg-amber-400 text-amber-950 text-[10px] font-bold px-1 leading-[17px]">{badge}</span>}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -409,11 +452,11 @@ export default function Marketplace() {
       )}
 
       {tab === 'browse' && (
-        <div className="sticky -top-4 md:-top-6 lg:-top-8 z-10 bg-[#F8FAFC]/95 backdrop-blur pt-3 pb-2">
+        <div className="pt-2 pb-2">
           <div className="flex gap-2 overflow-x-auto no-scrollbar px-4 md:px-0">
             {[['', 'All', '✨'], ...CATEGORIES.map((c) => [c, CAT[c].label, CAT[c].emoji])].map(([id, label, emoji]) => (
               <button key={id || 'all'} onClick={() => setCat(id)}
-                className={`shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[13px] font-semibold border transition-colors ${cat === id ? 'bg-slate-900 border-slate-900 text-white' : 'bg-white border-slate-200 text-slate-700'}`}>
+                className={`shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[13px] font-semibold border transition-all active:scale-95 ${cat === id ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm shadow-indigo-600/30' : 'bg-white border-slate-200 text-slate-700'}`}>
                 <span>{emoji}</span>{label}
               </button>
             ))}
@@ -448,6 +491,18 @@ export default function Marketplace() {
 
       {overlays}
     </div>
+  );
+}
+
+function MarketStat({ label, value, delay, tone = '#fff', onClick }) {
+  const n = useCountUp(value || 0);
+  const Tag = onClick ? 'button' : 'div';
+  return (
+    <Tag type={onClick ? 'button' : undefined} onClick={onClick}
+      className="dash-rise text-left rounded-2xl bg-white/[0.07] border border-white/10 px-3 py-2.5 active:scale-[0.97] transition-transform" style={{ animationDelay: `${delay}ms` }}>
+      <div className="text-[20px] font-semibold tabular-nums leading-none" style={{ color: tone }}>{n}</div>
+      <div className="text-[11px] text-white/55 mt-1">{label}</div>
+    </Tag>
   );
 }
 

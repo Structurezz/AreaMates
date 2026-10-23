@@ -25,7 +25,7 @@ const PURPOSE_ICON = {
   contractor: [Wrench, '#F97316', '#FFF7ED'],
   medical:    [Heart, '#EF4444', '#FEF2F2'],
 };
-const purposeIcon = (p = '') => PURPOSE_ICON[String(p).toLowerCase()] || [MoreHorizontal, '#64748B', '#F1F5F9'];
+export const purposeIcon = (p = '') => PURPOSE_ICON[String(p).toLowerCase()] || [MoreHorizontal, '#64748B', '#F1F5F9'];
 
 const dayLabel = (d) => (isToday(d) ? 'Today' : isTomorrow(d) ? 'Tomorrow' : isYesterday(d) ? 'Yesterday' : format(d, 'EEE, d MMM'));
 

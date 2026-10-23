@@ -450,7 +450,7 @@ export default function VisitorDetailPage() {
             </span>
           </div>
           <div className="min-w-0">
-            <h1 className="text-[22px] font-extrabold tracking-tight truncate">{visitor.visitorName}</h1>
+            <h1 className="text-[22px] font-extrabold tracking-tight truncate" style={{ color: '#fff' }}>{visitor.visitorName}</h1>
             <p className="text-[13px] text-white/80 truncate">{visitor.purpose} · {format(expectedAt, 'EEE d MMM, h:mm a')}</p>
             {visitor.instant && <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-300 text-amber-950"><Zap size={10} /> Instant pass</span>}
           </div>
