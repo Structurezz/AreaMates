@@ -15,6 +15,9 @@ import BankSheet from '../components/market/BankSheet';
 import { useCall } from '../context/CallContext';
 import { CAT, CATEGORIES, STATUS, naira } from '../components/market/shared';
 import { imgUrl } from '../components/lounge/shared';
+import ProductCard from '../components/market/desktop/ProductCard';
+import useIsDesktop from '../hooks/useIsDesktop';
+import { Receipt, Store, Heart, LayoutGrid } from 'lucide-react';
 
 const SORTS = [
   { id: 'newest', label: 'Newest' },
@@ -93,6 +96,7 @@ export default function Marketplace() {
   const [cancelFor, setCancelFor] = useState(null);
   const [params, setParams] = useSearchParams();
   const { startCall } = useCall() || {};
+  const isDesktop = useIsDesktop();
 
   useEffect(() => { const t = setTimeout(() => setDebounced(q), 300); return () => clearTimeout(t); }, [q]);
 
@@ -181,6 +185,191 @@ export default function Marketplace() {
   const shown = tab === 'browse' ? listings : tab === 'saved' ? saved : mine;
   const sortLabel = useMemo(() => SORTS.find((s) => s.id === sort)?.label, [sort]);
 
+  const content = (
+      <div className="px-4 md:px-0 mt-3">
+        {tab === 'orders' ? (
+          orders === null ? <ListSkeleton /> : orders.length === 0 ? (
+            <Empty title="No orders yet" body="When you buy from a neighbour, your order and its status show here. Your money is held safely until you confirm delivery." cta="Browse the market" onCta={() => setTab('browse')} />
+          ) : (
+            <div className="space-y-2.5">
+              {orders.map((o) => <OrderCard key={o._id} order={o} as="buyer" onChanged={updateOrder} onChat={chatAbout} onCall={(p) => startCall?.(p)} onDispute={setDisputeFor} />)}
+            </div>
+          )
+        ) : tab === 'mine' ? (
+          <div className="space-y-5">
+            <WalletCard wallet={wallet} loading={walletLoading} onOpen={() => setSheet('wallet')} onWithdraw={() => setSheet('withdraw')} />
+            {toFulfil.length > 0 && (
+              <section>
+                <h2 className="text-sm font-bold text-slate-900 mb-2">Orders to handle <span className="text-amber-600">({toFulfil.length})</span></h2>
+                <div className="space-y-2.5">{toFulfil.map((o) => <OrderCard key={o._id} order={o} as="seller" onChanged={updateOrder} onChat={chatAbout} onCall={(p) => startCall?.(p)} onCancel={setCancelFor} />)}</div>
+              </section>
+            )}
+            {(sales || []).some((o) => o.status === 'delivered') && (
+              <section>
+                <h2 className="text-sm font-bold text-slate-900 mb-2">Waiting for buyers to confirm</h2>
+                <div className="space-y-2.5">{sales.filter((o) => o.status === 'delivered').map((o) => <OrderCard key={o._id} order={o} as="seller" onChanged={updateOrder} onChat={chatAbout} onCall={(p) => startCall?.(p)} onCancel={setCancelFor} />)}</div>
+              </section>
+            )}
+            <section>
+              <h2 className="text-sm font-bold text-slate-900 mb-2">Your listings</h2>
+              {mine.length === 0
+                ? <Empty title="You're not selling anything yet" body="Home-cooked food, a service you offer, things you no longer need. List it and get paid straight into your wallet." cta="Sell something" onCta={startSell} />
+                : <div className="space-y-2.5">{mine.map((l) => <MyRow key={l._id} l={l} onOpen={setOpen} />)}</div>}
+            </section>
+          </div>
+        ) : loading && tab === 'browse' ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-3 gap-y-5">
+            {Array.from({ length: 6 }, (_, i) => (
+              <div key={i}><div className="aspect-square rounded-2xl bg-slate-200/70 animate-pulse" /><div className="h-4 w-16 bg-slate-200/70 rounded mt-2 animate-pulse" /><div className="h-3 w-28 bg-slate-200/60 rounded mt-1.5 animate-pulse" /></div>
+            ))}
+          </div>
+        ) : shown.length === 0 ? (
+          tab === 'saved'
+            ? <Empty title="Nothing saved yet" body="Tap the ♥ on a listing to keep it here." />
+            : <Empty title={q ? `No results for "${q}"` : 'No listings yet'} body={q || cat ? 'Try another search or category.' : 'Be the first to sell something in your estate.'} cta={!q && !cat ? 'Sell something' : null} onCta={startSell} />
+        ) : (
+          isDesktop ? (
+            <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
+              {shown.map((l, i) => (
+                <ProductCard key={l._id} i={i} listing={l} me={user} onOpen={setOpen} onToggleSave={toggleSave}
+                  onChat={(x) => setChat({ seller: x.sellerId, listing: x })} onBuy={setBuyFor} />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-3 gap-y-5">
+              {shown.map((l) => <ListingCard key={l._id} listing={l} me={user} onOpen={setOpen} onToggleSave={toggleSave} />)}
+            </div>
+          )
+        )}
+      </div>
+  );
+  const overlays = (
+    <>
+      {open && (
+        <ListingDetail
+          listing={open} me={user}
+          onClose={() => setOpen(null)}
+          onChat={(l) => setChat({ seller: l.sellerId, listing: l })}
+          onChanged={applyChange}
+          onEdit={(l) => setSell(l)}
+          onReport={(l, done) => setReportFor({ ...l, done })}
+          onRate={(l, done) => setRateFor({ ...l, done })}
+          onBuy={(l) => setBuyFor(l)}
+        />
+      )}
+      {chat && <ChatOverlay chat={chat} me={user} onClose={() => setChat(null)} />}
+      <SellSheet open={!!sell} editing={sell && sell !== 'new' ? sell : null} rules={rules} onClose={() => setSell(null)} onSaved={onSaved} />
+      <ReportSheet listing={reportFor} onClose={() => setReportFor(null)} onDone={() => reportFor?.done?.()} />
+      <BuySheet listing={buyFor} onClose={() => setBuyFor(null)} />
+      <DisputeSheet order={disputeFor} onClose={() => setDisputeFor(null)} onDone={updateOrder} />
+      <CancelSheet order={cancelFor} onClose={() => setCancelFor(null)} onDone={updateOrder} />
+      <WalletSheet open={sheet === 'wallet'} wallet={wallet} onClose={() => setSheet(null)} onWithdraw={() => setSheet('withdraw')} onBank={() => setSheet('bank')} />
+      <WithdrawSheet open={sheet === 'withdraw'} wallet={wallet} onClose={() => setSheet(null)} onDone={loadWallet} onBank={() => setSheet('bank')} />
+      <BankSheet open={sheet === 'bank'} currentBank={wallet?.bank} onClose={() => setSheet(null)} onSaved={() => { loadWallet(); setSheet('withdraw'); }} />
+      <RateSheet listing={rateFor} onClose={() => setRateFor(null)} onDone={(r, rev) => rateFor?.done?.(r, rev)} />
+    </>
+  );
+
+  if (isDesktop) {
+    const SECTIONS = [
+      { id: 'browse', label: 'Browse',  icon: LayoutGrid, hint: 'Everything your neighbours are selling' },
+      { id: 'orders', label: 'Orders',  icon: Receipt,    hint: 'What you bought and its status', badge: toConfirm },
+      { id: 'mine',   label: 'Selling', icon: Store,      hint: 'Your listings, sales and wallet', badge: pending },
+      { id: 'saved',  label: 'Saved',   icon: Heart,      hint: 'Listings you liked' },
+    ];
+    return (
+      <div className="max-w-[1400px] mx-auto space-y-5 pb-10">
+        {/* ── Banner ── */}
+        <div className="dash-rise relative overflow-hidden rounded-2xl px-6 py-5"
+          style={{ background: 'linear-gradient(120deg, #1E1B4B 0%, #312E81 55%, #4338CA 100%)', boxShadow: '0 16px 32px -18px rgba(49,46,129,0.8)' }}>
+          <div className="dash-blob absolute -top-20 right-72 w-56 h-56 rounded-full blur-3xl pointer-events-none" style={{ background: 'rgba(129,140,248,0.35)' }} />
+          <div className="relative flex items-center gap-6">
+            <div className="flex items-center gap-4 min-w-0">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-white/10 border border-white/15 flex-shrink-0"><ShoppingBag size={22} className="text-indigo-200" /></div>
+              <div className="min-w-0">
+                <h1 className="text-[22px] font-semibold text-white" style={{ letterSpacing: '-0.025em' }}>Marketplace</h1>
+                <p className="text-[13px] text-indigo-100/75 flex items-center gap-1.5"><ShieldCheck size={13} /> Neighbours only · protected by estate management</p>
+              </div>
+            </div>
+            <div className="relative flex-1 max-w-xl ml-auto">
+              <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input value={q} onChange={(e) => { setQ(e.target.value); setTab('browse'); }} placeholder="Search food, services, items…"
+                className="w-full rounded-xl bg-white text-slate-900 placeholder:text-slate-400 pl-10 pr-10 py-2.5 text-[14px] outline-none shadow-sm focus:ring-4 focus:ring-indigo-300/40" />
+              {q && <button onClick={() => setQ('')} aria-label="Clear" className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"><X size={16} /></button>}
+            </div>
+            <button onClick={startSell}
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-[13px] font-semibold text-indigo-700 bg-white hover:-translate-y-0.5 transition-all flex-shrink-0"
+              style={{ boxShadow: '0 8px 18px -8px rgba(0,0,0,0.35)' }}>
+              <Plus size={15} /> Sell something
+            </button>
+          </div>
+        </div>
+
+        {rules?.suspended && (
+          <div className="rounded-2xl bg-red-50 border border-red-200 p-3 flex gap-2.5 text-[13px] text-red-800">
+            <Ban size={16} className="shrink-0 mt-0.5" />
+            <div><p className="font-semibold">You can't list items right now</p><p>{rules.suspended.reason}{rules.suspended.until ? ` · until ${new Date(rules.suspended.until).toLocaleDateString('en-NG', { day: 'numeric', month: 'short' })}` : ''}</p></div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-[230px_minmax(0,1fr)] gap-5 items-start">
+          {/* ── Rail ── */}
+          <aside className="sticky top-0 space-y-4">
+            <nav className="dash-rise rounded-2xl bg-white border border-slate-200/70 p-2" style={{ animationDelay: '60ms' }}>
+              {SECTIONS.map(({ id, label, icon: Icon, hint, badge }) => {
+                const on = tab === id;
+                return (
+                  <button key={id} onClick={() => setTab(id)}
+                    className={`group relative w-full flex items-start gap-3 px-3 py-2.5 rounded-xl text-left transition-all ${on ? 'bg-indigo-50' : 'hover:bg-slate-50'}`}>
+                    {on && <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-full bg-indigo-500" />}
+                    <span className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${on ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'}`}><Icon size={14} /></span>
+                    <span className="flex-1 min-w-0">
+                      <span className={`flex items-center justify-between text-[13px] ${on ? 'font-semibold text-slate-900' : 'font-medium text-slate-700'}`}>
+                        {label}
+                        {badge > 0 && <span className="min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold flex items-center justify-center bg-amber-400 text-amber-950">{badge}</span>}
+                      </span>
+                      <span className="block text-[11px] text-slate-400 leading-snug mt-0.5">{hint}</span>
+                    </span>
+                  </button>
+                );
+              })}
+            </nav>
+            {tab === 'browse' && (
+              <div className="dash-rise rounded-2xl bg-white border border-slate-200/70 p-2" style={{ animationDelay: '120ms' }}>
+                <div className="px-2 pt-1 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Categories</div>
+                {[['', 'All', '✨'], ...CATEGORIES.map((c) => [c, CAT[c].label, CAT[c].emoji])].map(([id, label, emoji]) => (
+                  <button key={id || 'all'} onClick={() => setCat(id)}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] transition-colors ${cat === id ? 'bg-slate-900 text-white font-semibold' : 'text-slate-600 hover:bg-slate-50'}`}>
+                    <span className="text-[15px]">{emoji}</span>{label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </aside>
+
+          {/* ── Main ── */}
+          <div className="min-w-0">
+            {tab === 'browse' && (
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-[13px] text-slate-500">{loading ? 'Loading…' : `${listings.length} listing${listings.length === 1 ? '' : 's'}${cat ? ` in ${CAT[cat]?.label}` : ''}`}</p>
+                <div className="flex p-1 rounded-xl bg-white border border-slate-200">
+                  {SORTS.map((o) => (
+                    <button key={o.id} onClick={() => setSort(o.id)}
+                      className={`px-2.5 py-1 rounded-lg text-[12px] font-medium transition-colors ${sort === o.id ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-800'}`}>
+                      {o.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {content}
+          </div>
+        </div>
+        {overlays}
+      </div>
+    );
+  }
+
   return (
     <div className="animate-fade-in -mx-4 md:mx-0 -mt-4 md:mt-0 pb-10">
       {/* Hero */}
@@ -248,53 +437,7 @@ export default function Marketplace() {
         </div>
       )}
 
-      <div className="px-4 md:px-0 mt-3">
-        {tab === 'orders' ? (
-          orders === null ? <ListSkeleton /> : orders.length === 0 ? (
-            <Empty title="No orders yet" body="When you buy from a neighbour, your order and its status show here. Your money is held safely until you confirm delivery." cta="Browse the market" onCta={() => setTab('browse')} />
-          ) : (
-            <div className="space-y-2.5">
-              {orders.map((o) => <OrderCard key={o._id} order={o} as="buyer" onChanged={updateOrder} onChat={chatAbout} onCall={(p) => startCall?.(p)} onDispute={setDisputeFor} />)}
-            </div>
-          )
-        ) : tab === 'mine' ? (
-          <div className="space-y-5">
-            <WalletCard wallet={wallet} loading={walletLoading} onOpen={() => setSheet('wallet')} onWithdraw={() => setSheet('withdraw')} />
-            {toFulfil.length > 0 && (
-              <section>
-                <h2 className="text-sm font-bold text-slate-900 mb-2">Orders to handle <span className="text-amber-600">({toFulfil.length})</span></h2>
-                <div className="space-y-2.5">{toFulfil.map((o) => <OrderCard key={o._id} order={o} as="seller" onChanged={updateOrder} onChat={chatAbout} onCall={(p) => startCall?.(p)} onCancel={setCancelFor} />)}</div>
-              </section>
-            )}
-            {(sales || []).some((o) => o.status === 'delivered') && (
-              <section>
-                <h2 className="text-sm font-bold text-slate-900 mb-2">Waiting for buyers to confirm</h2>
-                <div className="space-y-2.5">{sales.filter((o) => o.status === 'delivered').map((o) => <OrderCard key={o._id} order={o} as="seller" onChanged={updateOrder} onChat={chatAbout} onCall={(p) => startCall?.(p)} onCancel={setCancelFor} />)}</div>
-              </section>
-            )}
-            <section>
-              <h2 className="text-sm font-bold text-slate-900 mb-2">Your listings</h2>
-              {mine.length === 0
-                ? <Empty title="You're not selling anything yet" body="Home-cooked food, a service you offer, things you no longer need. List it and get paid straight into your wallet." cta="Sell something" onCta={startSell} />
-                : <div className="space-y-2.5">{mine.map((l) => <MyRow key={l._id} l={l} onOpen={setOpen} />)}</div>}
-            </section>
-          </div>
-        ) : loading && tab === 'browse' ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-3 gap-y-5">
-            {Array.from({ length: 6 }, (_, i) => (
-              <div key={i}><div className="aspect-square rounded-2xl bg-slate-200/70 animate-pulse" /><div className="h-4 w-16 bg-slate-200/70 rounded mt-2 animate-pulse" /><div className="h-3 w-28 bg-slate-200/60 rounded mt-1.5 animate-pulse" /></div>
-            ))}
-          </div>
-        ) : shown.length === 0 ? (
-          tab === 'saved'
-            ? <Empty title="Nothing saved yet" body="Tap the ♥ on a listing to keep it here." />
-            : <Empty title={q ? `No results for "${q}"` : 'No listings yet'} body={q || cat ? 'Try another search or category.' : 'Be the first to sell something in your estate.'} cta={!q && !cat ? 'Sell something' : null} onCta={startSell} />
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-3 gap-y-5">
-            {shown.map((l) => <ListingCard key={l._id} listing={l} me={user} onOpen={setOpen} onToggleSave={toggleSave} />)}
-          </div>
-        )}
-      </div>
+      {content}
 
       {/* Floating Sell button (mobile) */}
       <button onClick={startSell} aria-label="Sell something"
@@ -303,28 +446,7 @@ export default function Marketplace() {
         <Plus size={19} strokeWidth={2.6} /> Sell
       </button>
 
-      {open && (
-        <ListingDetail
-          listing={open} me={user}
-          onClose={() => setOpen(null)}
-          onChat={(l) => setChat({ seller: l.sellerId, listing: l })}
-          onChanged={applyChange}
-          onEdit={(l) => setSell(l)}
-          onReport={(l, done) => setReportFor({ ...l, done })}
-          onRate={(l, done) => setRateFor({ ...l, done })}
-          onBuy={(l) => setBuyFor(l)}
-        />
-      )}
-      {chat && <ChatOverlay chat={chat} me={user} onClose={() => setChat(null)} />}
-      <SellSheet open={!!sell} editing={sell && sell !== 'new' ? sell : null} rules={rules} onClose={() => setSell(null)} onSaved={onSaved} />
-      <ReportSheet listing={reportFor} onClose={() => setReportFor(null)} onDone={() => reportFor?.done?.()} />
-      <BuySheet listing={buyFor} onClose={() => setBuyFor(null)} />
-      <DisputeSheet order={disputeFor} onClose={() => setDisputeFor(null)} onDone={updateOrder} />
-      <CancelSheet order={cancelFor} onClose={() => setCancelFor(null)} onDone={updateOrder} />
-      <WalletSheet open={sheet === 'wallet'} wallet={wallet} onClose={() => setSheet(null)} onWithdraw={() => setSheet('withdraw')} onBank={() => setSheet('bank')} />
-      <WithdrawSheet open={sheet === 'withdraw'} wallet={wallet} onClose={() => setSheet(null)} onDone={loadWallet} onBank={() => setSheet('bank')} />
-      <BankSheet open={sheet === 'bank'} currentBank={wallet?.bank} onClose={() => setSheet(null)} onSaved={() => { loadWallet(); setSheet('withdraw'); }} />
-      <RateSheet listing={rateFor} onClose={() => setRateFor(null)} onDone={(r, rev) => rateFor?.done?.(r, rev)} />
+      {overlays}
     </div>
   );
 }

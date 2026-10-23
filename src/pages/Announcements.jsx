@@ -5,6 +5,8 @@ import { announcementAPI } from '../api';
 import { useSocket } from '../context/SocketContext';
 import toast from 'react-hot-toast';
 import DJLive from '../components/DJLive';
+import AnnouncementsDesktop from '../components/announcements/AnnouncementsDesktop';
+import useIsDesktop from '../hooks/useIsDesktop';
 
 const CAT_META = {
   general:     { Icon: Megaphone,     color: '#2563EB', bg: '#EFF6FF', border: '#BFDBFE', label: 'General' },
@@ -17,6 +19,7 @@ export default function Announcements() {
   const { subscribe } = useSocket() || {};
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const isDesktop = useIsDesktop();
 
   const load = async () => {
     try {
@@ -51,6 +54,8 @@ export default function Announcements() {
       <RefreshCw size={20} className="animate-spin" style={{ color: '#6366F1' }} />
     </div>
   );
+
+  if (isDesktop) return <AnnouncementsDesktop items={items} />;
 
   return (
     <div style={{ maxWidth: 720, margin: '0 auto', padding: '0 4px 40px' }}>

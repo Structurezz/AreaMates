@@ -3,11 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import QRCode from 'qrcode';
 import { visitorAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
-import Badge, { visitorStatusBadge } from '../components/ui/Badge';
-import Spinner from '../components/ui/Spinner';
-import Pagination from '../components/ui/Pagination';
 import InviteForm from '../components/visitors/InviteForm';
 import { VisitorsHero, VisitorsFilters, VisitorCards, CardAction, VisitorsPager } from '../components/visitors/MobileVisitors';
+import VisitorsDesktop from '../components/visitors/desktop/VisitorsDesktop';
 import {
   UserCheck, Plus, QrCode, Calendar, Clock, X,
   Users, Package, Wrench, Heart, MoreHorizontal,
@@ -525,6 +523,7 @@ export default function ResidentVisitors() {
   const [visitors,        setVisitors]        = useState([]);
   const [loading,         setLoading]         = useState(true);
   const [page,            setPage]            = useState(1);
+  const [limit,           setLimit]           = useState(PAGE_SIZE);
   const [pagination,      setPagination]      = useState({ total: 0, pages: 1 });
   const [showNew,         setShowNew]         = useState(false);
   const [selectedVisitor, setSelectedVisitor] = useState(null);
@@ -534,12 +533,12 @@ export default function ResidentVisitors() {
     else setSelectedVisitor(v);
   };
 
-  const load = async (p = 1, q = search, status = statusFilter) => {
+  const load = async (p = 1, q = search, status = statusFilter, lim = limit) => {
     setLoading(true);
     try {
       const today = new Date(); today.setHours(0, 0, 0, 0);
       const { data } = await visitorAPI.getAll({
-        page: p, limit: PAGE_SIZE,
+        page: p, limit: lim,
         search: q || undefined,
         ...(status === 'today' ? { date: today.toISOString() } : { status: status || undefined }),
       });
@@ -550,7 +549,8 @@ export default function ResidentVisitors() {
     finally { setLoading(false); }
   };
 
-  const handlePage = (p) => { setPage(p); load(p); };
+  const handlePage = (p) => { setPage(p); load(p); document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' }); };
+  const handleLimit = (l) => { setLimit(l); setPage(1); load(1, search, statusFilter, l); };
   const handleSearch = (q) => {
     setSearch(q); setPage(1);
     clearTimeout(searchTimer.current);
@@ -595,84 +595,18 @@ export default function ResidentVisitors() {
             </>
           )}
         />
-        <VisitorsPager page={page} pages={pagination.pages} total={pagination.total} limit={PAGE_SIZE} onPage={handlePage} accent={ACCENT} />
+        <VisitorsPager page={page} pages={pagination.pages} total={pagination.total} limit={limit} onPage={handlePage} accent={ACCENT} />
       </div>
 
       {/* ── Tablet / desktop ── */}
-      <div className="hidden md:block space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold mb-1" style={{ color: '#0F172A', letterSpacing: '-0.02em' }}>My Visitor Passes</h1>
-          <p className="text-sm" style={{ color: '#64748B' }}>Pre-register guests and manage their access</p>
-        </div>
-        <button onClick={() => window.innerWidth < 640 ? navigate('/visitors/new') : setShowNew(true)} className="btn-primary gap-2">
-          <Plus size={15} /> Invite Visitor
-        </button>
-      </div>
-
-      {/* List */}
-      <div className="glass-card overflow-hidden">
-        {loading ? (
-          <div className="flex justify-center p-12"><Spinner /></div>
-        ) : visitors.length === 0 ? (
-          <div className="flex flex-col items-center py-16 gap-3">
-            <UserCheck size={40} style={{ color: '#CBD5E1' }} />
-            <p className="font-medium" style={{ color: '#94A3B8' }}>No visitors registered</p>
-            <button onClick={() => window.innerWidth < 640 ? navigate('/visitors/new') : setShowNew(true)} className="btn-primary gap-2 mt-1">
-              <Plus size={14} /> Invite Visitor
-            </button>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr style={{ borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
-                  {['Visitor', 'Purpose', 'Expected', 'Code', 'Status'].map(h => (
-                    <th key={h} className="text-left text-xs font-medium uppercase tracking-wider px-4 py-3"
-                      style={{ color: '#94A3B8' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {visitors.map((v) => (
-                  <tr key={v._id}
-                    onClick={() => openVisitor(v)}
-                    style={{ borderTop: '1px solid rgba(0,0,0,0.04)', transition: 'background 0.15s', cursor: 'pointer' }}
-                    onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
-                          style={{ background: `linear-gradient(135deg, ${ACCENT} 0%, ${ACCENT_DARK} 100%)` }}>
-                          {v.visitorName[0]}
-                        </div>
-                        <div>
-                          <div className="font-medium text-sm" style={{ color: '#0F172A' }}>{v.visitorName}</div>
-                          <div className="text-xs" style={{ color: '#94A3B8' }}>{v.visitorPhone || v.visitorEmail || '—'}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-sm" style={{ color: '#475569' }}>{v.purpose}</td>
-                    <td className="px-4 py-3 text-sm whitespace-nowrap" style={{ color: '#475569' }}>
-                      {format(new Date(v.expectedDate), 'MMM d, HH:mm')}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="font-mono text-sm font-bold tracking-widest" style={{ color: ACCENT }}>
-                        {v.visitorCode}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge variant={visitorStatusBadge(v.status)}>{v.status}</Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      <Pagination page={page} pages={pagination.pages} total={pagination.total} limit={PAGE_SIZE} onPage={handlePage} />
+      <div className="hidden md:block">
+        <VisitorsDesktop
+          visitors={visitors} loading={loading} counts={counts}
+          search={search} onSearch={handleSearch} statusFilter={statusFilter} onStatus={handleStatus}
+          page={page} pagination={pagination} limit={limit} onPage={handlePage} onLimit={handleLimit}
+          onInvite={invite} onOpen={openVisitor}
+          onShare={(v) => shareVisitorPass(v, user?.estateId)} onCopy={copyCode} onCancel={cancelPass}
+        />
       </div>
 
       {/* Create sidebar */}

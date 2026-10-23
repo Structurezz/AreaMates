@@ -36,6 +36,7 @@ export function useLiveAudio({ roomType, roomId, role, enabled = true, meta = {}
   const micCtxRef        = useRef(null);
   const micSourceRef     = useRef(null);
   const micGainNodeRef   = useRef(null);
+  const micDestRef       = useRef(null);  // outbound mix bus (extra sources can join the broadcast)
   const [micGainLevel, setMicGainLevel] = useState(1.0);  // 0–2 range (0% – 200%)
   const peersRef       = useRef(new Map());  // socketId -> RTCPeerConnection
   const roleRef        = useRef(role);
@@ -77,6 +78,7 @@ export function useLiveAudio({ roomType, roomId, role, enabled = true, meta = {}
         micCtxRef.current      = ctx;
         micSourceRef.current   = source;
         micGainNodeRef.current = gain;
+        micDestRef.current     = dest;
         outboundRef.current    = dest.stream;
       } else {
         outboundRef.current = raw;
@@ -94,6 +96,12 @@ export function useLiveAudio({ roomType, roomId, role, enabled = true, meta = {}
     setMicGainLevel(clamped);
     if (micGainNodeRef.current) micGainNodeRef.current.gain.value = clamped;
   }, []);
+
+  // Outbound mix bus: connect extra audio nodes (e.g. a soundboard) to `dest`
+  // and listeners hear them alongside the mic. Null until the mic is live.
+  const getMixBus = useCallback(() => (
+    micCtxRef.current && micDestRef.current ? { ctx: micCtxRef.current, dest: micDestRef.current } : null
+  ), []);
 
   // RAW stream for MediaRecorder (unprocessed, preserves what the host
   // originally said; recorder shouldn't double-apply any boost).
@@ -113,6 +121,7 @@ export function useLiveAudio({ roomType, roomId, role, enabled = true, meta = {}
     try { micCtxRef.current?.close(); } catch {}
     micSourceRef.current = null;
     micGainNodeRef.current = null;
+    micDestRef.current = null;
     micCtxRef.current = null;
   }, []);
 
@@ -336,7 +345,7 @@ export function useLiveAudio({ roomType, roomId, role, enabled = true, meta = {}
     handRaised, calledIn,
     raiseHand, lowerHand,
     handRequests, approveHand, denyHand, removeCaller,
-    getLocalStream, getRawStream,
+    getLocalStream, getRawStream, getMixBus,
     micGain: micGainLevel, setMicGain,
   };
 }

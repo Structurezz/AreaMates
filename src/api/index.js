@@ -23,6 +23,8 @@ export const estateAPI = {
   getStats: () => api.get('/estates/stats'),
   getConstitutionMeta: (id) => api.get(`/estates/${id}/constitution/meta`),
   constitutionFileUrl: (id) => `/estates/${id}/constitution/file`,
+  // The file route needs the auth header, so fetch it as a blob (a plain link can't send it)
+  downloadConstitution: (id) => api.get(`/estates/${id}/constitution/file`, { responseType: 'blob' }),
 };
 
 // Visitors

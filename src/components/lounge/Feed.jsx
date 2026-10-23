@@ -14,7 +14,8 @@ const loadSeen = () => { try { return JSON.parse(localStorage.getItem(SEEN_KEY))
 const DAY = 24 * 3600_000;
 
 const norm = (p) => ({ ...p, likeCount: p.likeCount ?? p.likes?.length ?? 0, comments: p.comments || [] });
-const scroller = () => document.querySelector('main') || document.scrollingElement;
+// Desktop Lounge scrolls its centre column; elsewhere the page's <main> scrolls.
+const scroller = () => document.querySelector('[data-lounge-scroll]') || document.querySelector('main') || document.scrollingElement;
 
 function Skeleton() {
   return (
@@ -69,7 +70,7 @@ export default function Feed({ me }) {
     if (!el || !hasMore) return;
     const io = new IntersectionObserver((entries) => {
       if (entries[0].isIntersecting && !loadingMore) load(page + 1);
-    }, { root: document.querySelector('main'), rootMargin: '600px' });
+    }, { root: scroller(), rootMargin: '600px' });
     io.observe(el);
     return () => io.disconnect();
   }, [hasMore, page, loadingMore, load]);
@@ -177,7 +178,7 @@ export default function Feed({ me }) {
 
   return (
     // Full-bleed on phones (cancel <main> padding), centred 470px column above.
-    <div className="-mx-4 sm:mx-auto sm:max-w-[470px]">
+    <div className="-mx-4 sm:mx-auto sm:max-w-[470px] lg:max-w-[580px]">
       {/* Stories */}
       <div className="flex gap-3.5 overflow-x-auto no-scrollbar px-4 py-3 bg-white sm:rounded-2xl sm:border sm:border-slate-200">
         <button onClick={() => (myGroupIndex >= 0 ? setStory(myGroupIndex) : setComposer({ photo: true, mode: 'story' }))} className="flex flex-col items-center gap-1 w-[72px] shrink-0">
@@ -214,7 +215,7 @@ export default function Feed({ me }) {
 
       {/* New posts pill */}
       {pending.length > 0 && (
-        <div className="sticky top-[104px] md:top-[96px] z-40 flex justify-center pointer-events-none">
+        <div className="sticky top-[104px] md:top-[96px] lg:top-2 z-40 flex justify-center pointer-events-none">
           <button onClick={showPending}
             className="pointer-events-auto mt-3 inline-flex items-center gap-2 pl-2 pr-4 py-1.5 rounded-full text-white text-sm font-semibold shadow-lg"
             style={{ background: 'linear-gradient(90deg,#6366F1,#4F46E5)' }}>

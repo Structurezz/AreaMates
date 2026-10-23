@@ -9,6 +9,8 @@ import { djAPI, podcastAPI } from '../api';
 import { useSocket } from '../context/SocketContext';
 import DJLive from '../components/DJLive';
 import Portal from '../components/ui/Portal';
+import PodcastsDesktop from '../components/podcasts/PodcastsDesktop';
+import useIsDesktop from '../hooks/useIsDesktop';
 
 const VIOLET      = '#8B5CF6';
 const VIOLET_DARK = '#6D28D9';
@@ -134,6 +136,7 @@ export default function Podcasts() {
   const [activeDJ, setActiveDJ] = useState(null);
   const [liveFM, setLiveFM]     = useState(null);
   const [playing, setPlaying]   = useState(null); // { kind: 'ep'|'mix', item }
+  const isDesktop = useIsDesktop();
 
   useEffect(() => {
     Promise.all([
@@ -156,6 +159,18 @@ export default function Podcasts() {
     const u4 = subscribe('dj:ended',        () => setActiveDJ(null));
     return () => { u1 && u1(); u2 && u2(); u3 && u3(); u4 && u4(); };
   }, [subscribe]);
+
+  if (isDesktop) return (
+    <>
+      <PodcastsDesktop
+        upcoming={upcoming} episodes={episodes} mixtapes={mixtapes}
+        activeDJ={activeDJ} liveFM={liveFM}
+        onPlay={(kind, item) => setPlaying({ kind, item })}
+        onStart={() => navigate('/lounge/live')}
+      />
+      {playing && <AudioPlayer item={playing.item} kind={playing.kind} onClose={() => setPlaying(null)} />}
+    </>
+  );
 
   return (
     <div style={{ maxWidth: 760, margin: '0 auto', padding: '0 4px 40px' }}>

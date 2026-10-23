@@ -16,6 +16,9 @@ import MixtapeArchive from '../components/MixtapeArchive';
 import GoLiveCTA from '../components/GoLiveCTA';
 import Portal from '../components/ui/Portal';
 import Feed from '../components/lounge/Feed';
+import { LoungeBanner, LoungeNav, LoungeRightRail } from '../components/lounge/LoungeDesktop';
+import useIsDesktop from '../hooks/useIsDesktop';
+import useFillHeight from '../hooks/useFillHeight';
 
 // ── Helpers ────────────────────────────────────────────────────────
 const SERVER_URL = (import.meta.env.VITE_API_URL || 'https://areaconnectapi-production.up.railway.app/api').replace('/api', '');
@@ -916,6 +919,39 @@ export default function Lounge() {
   const isFridayNight = isFriday && now.getHours() >= 18;
   const countdown     = useCountdown(getNextFriday().getTime());
   const pad           = n => String(n).padStart(2, '0');
+  const isDesktop     = useIsDesktop();
+  const shellRef      = useRef(null);
+  const centreRef     = useRef(null);
+  const shellHeight   = useFillHeight(shellRef, isDesktop);
+  const switchTab     = (key) => { setActiveTab(key); centreRef.current?.scrollTo({ top: 0 }); };
+
+  // Desktop: banner + side rails stay put; only the centre column scrolls.
+  if (isDesktop) return (
+    <div ref={shellRef} className="max-w-[1400px] mx-auto flex flex-col gap-5 overflow-hidden"
+      style={{ height: shellHeight ?? 'calc(100vh - 4rem)' }}>
+      <div className="flex-none">
+        <LoungeBanner isFridayNight={isFridayNight} countdown={countdown} name={user?.name?.split(' ')[0]} />
+      </div>
+      <div className="flex-1 min-h-0 grid grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[220px_minmax(0,1fr)_300px] gap-6">
+        <div className="h-full min-h-0 overflow-y-auto no-scrollbar">
+          <LoungeNav tabs={TABS} tab={activeTab} onTab={switchTab} />
+        </div>
+        <div ref={centreRef} data-lounge-scroll
+          className={`h-full min-h-0 min-w-0 overflow-y-auto overscroll-contain pr-1 pb-8 ${activeTab === 'feed' ? '' : 'xl:col-span-2'}`}>
+          {activeTab === 'feed'       && <Feed me={user} />}
+          {activeTab === 'events'     && <EventsTab userId={user?._id} />}
+          {activeTab === 'activities' && <ActivitiesTab />}
+          {activeTab === 'polls'      && <PollsTab userId={user?._id} />}
+          {activeTab === 'music'      && <MusicTab userId={user?._id} />}
+        </div>
+        {activeTab === 'feed' && (
+          <div className="hidden xl:block h-full min-h-0 overflow-y-auto no-scrollbar pb-2">
+            <LoungeRightRail onTab={switchTab} catMap={catMap} userId={user?._id} />
+          </div>
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <div className="animate-fade-in pb-12 -mt-4 md:-mt-6 lg:-mt-8">

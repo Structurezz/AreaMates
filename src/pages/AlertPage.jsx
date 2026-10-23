@@ -8,6 +8,8 @@ import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import Spinner from '../components/ui/Spinner';
 import Pagination from '../components/ui/Pagination';
+import AlertsDesktop from '../components/alerts/AlertsDesktop';
+import useIsDesktop from '../hooks/useIsDesktop';
 
 const SEVERITY_STYLE = {
   critical: { badge: 'bg-red-50 text-red-600 border border-red-200',    bar: 'bg-red-500' },
@@ -46,6 +48,7 @@ export default function AlertPage() {
   const [loadingAlerts, setLoadingAlerts] = useState(true);
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ total: 0, pages: 1 });
+  const isDesktop = useIsDesktop();
 
   const loadAlerts = async (p = 1) => {
     setLoadingAlerts(true);
@@ -81,6 +84,15 @@ export default function AlertPage() {
       setSending(false);
     }
   };
+
+  if (isDesktop) return (
+    <AlertsDesktop
+      alertTypes={ALERT_TYPES} targets={TARGETS} targetLabel={TARGET_LABEL} targetCfg={targetCfg}
+      selectedType={selectedType} setSelectedType={setSelectedType} target={target} setTarget={setTarget}
+      note={note} setNote={setNote} sending={sending} onRaise={handleAlert}
+      alerts={myAlerts} loading={loadingAlerts} page={page} pagination={pagination} onPage={handlePage}
+    />
+  );
 
   return (
     <div className="max-w-lg mx-auto space-y-6 animate-fade-in">
