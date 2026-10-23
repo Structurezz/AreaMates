@@ -24,6 +24,7 @@ import Safety from './pages/Safety';
 import { SafetyProvider } from './context/SafetyContext';
 import { CallProvider } from './context/CallContext';
 import CallOverlay from './components/calls/CallOverlay';
+import UpdateBanner from './components/ui/UpdateBanner';
 import Payments from './pages/Payments';
 import Lounge from './pages/Lounge';
 import EventBoard from './pages/EventBoard';
@@ -95,6 +96,7 @@ export default function App() {
           <CallProvider>
           <SafetyProvider>
           <CallOverlay />
+          <UpdateBanner />
           <NotificationProvider>
           <AppRoutes />
           <AlertModal />
