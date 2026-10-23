@@ -5,6 +5,7 @@ import {
   Loader2, Headphones, Radio, Megaphone, Hand, MessageSquare, Headphones as HeadphonesIcon,
   Church, Heart,
   Clock3, TrendingUp, Smile, ListMusic, Disc3, Search, CheckCircle2, ThumbsUp, ArrowLeft, Play, Pause, Laptop,
+  Sparkles, StickyNote,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth }   from '../context/AuthContext';
@@ -18,6 +19,8 @@ import useIsDesktop from '../hooks/useIsDesktop';
 import useFillHeight from '../hooks/useFillHeight';
 import { useRoomEngagement, ReactionLayer, ChatPanel, Soundboard, useMicLevel, NotesPanel } from '../components/studio/StudioPanels';
 import AddTracks from '../components/live/AddTracks';
+import MobileHostStudio from '../components/studio/MobileHostStudio';
+import SetupSteps, { OptionCard, MicCheck } from '../components/studio/SetupSteps';
 
 const INDIGO = '#6366F1';
 const INDIGO_DARK = '#4F46E5';
@@ -463,54 +466,70 @@ export default function ResidentLive() {
     );
   }
 
-  // ── Pre-live mode picker ──────────────────────────────────────────────────
+  // ── Phone: step-by-step set-up ─────────────────────────────────────────────
   if (!session) {
-    const picked = MODES.find(m => m.key === mode);
-    return (
-      <div style={{ maxWidth: 620, margin: '0 auto', padding: '24px 16px 40px' }}>
-        <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', color: '#64748B', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginBottom: 12, padding: 0, display: 'inline-flex', alignItems: 'center', gap: 6 }}>← Back</button>
-
-        <div style={{ background: `linear-gradient(135deg, ${picked.color}, ${picked.color}dd)`, borderRadius: 22, padding: '26px 22px', color: '#fff', boxShadow: `0 20px 44px -18px ${picked.color}88` }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.18)', padding: '6px 12px', borderRadius: 999, fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', marginBottom: 14 }}>
-            <picked.Icon size={13}/> {picked.label.toUpperCase()}
-          </div>
-          <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.02em', margin: 0, lineHeight: 1.2 }}>Go live, {user?.name?.split(' ')[0] || 'there'}.</h1>
-          <p style={{ fontSize: 14, lineHeight: 1.55, marginTop: 8, opacity: 0.9 }}>{picked.desc} Residents will get a notification when you start.</p>
-
-          <input value={title} onChange={e => setTitle(e.target.value)}
-            placeholder={`Give your ${picked.label.toLowerCase()} a name…`}
-            style={{ width: '100%', marginTop: 16, padding: '12px 14px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.12)', color: '#fff', fontSize: 14, outline: 'none' }} />
-
-          <button onClick={goLive} disabled={starting}
-            style={{ marginTop: 16, width: '100%', padding: '13px 20px', borderRadius: 14, border: 'none',
-              background: '#fff', color: picked.color, fontWeight: 800, fontSize: 15,
-              cursor: starting ? 'wait' : 'pointer',
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
-            {starting ? <><Loader2 size={16} className="animate-spin"/> Starting…</> : <><Mic size={16}/> Go live now</>}
-          </button>
-          <div style={{ fontSize: 11, opacity: 0.75, marginTop: 10, textAlign: 'center' }}>
-            Mic access required. Only one live room per estate — if someone else is live, you'll be asked to join theirs.
-          </div>
-        </div>
-
-        <div style={{ marginTop: 20 }}>
-          <div style={{ fontSize: 10, fontWeight: 800, color: '#94A3B8', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>Pick a room style</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8 }}>
+    const picked = MODES.find(m => m.key === mode) || MODES[0];
+    const steps = [
+      { key: 'style', title: 'What kind of room?', hint: 'Pick how you want to go live to your neighbours.',
+        content: (
+          <div className="space-y-2.5">
             {MODES.map(({ key, Icon, label, desc, color }) => (
-              <button key={key} onClick={() => setMode(key)}
-                style={{ textAlign: 'left', padding: '12px 14px', borderRadius: 14, cursor: 'pointer',
-                  border: mode === key ? `1.5px solid ${color}` : '1px solid #E2E8F0',
-                  background: mode === key ? `${color}0E` : '#fff' }}>
-                <div style={{ width: 32, height: 32, borderRadius: 10, background: `${color}18`, color, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
-                  <Icon size={16}/>
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 800, color: mode === key ? color : '#0F172A' }}>{label}</div>
-                <div style={{ fontSize: 11, color: '#64748B', marginTop: 2, lineHeight: 1.35 }}>{desc}</div>
-              </button>
+              <OptionCard key={key} on={mode === key} color={color} Icon={Icon} label={label} desc={desc} onClick={() => setMode(key)} />
             ))}
           </div>
-        </div>
-      </div>
+        ) },
+      { key: 'name', title: 'Name your room', hint: 'Neighbours see this in their notification.',
+        content: (
+          <div>
+            <input value={title} onChange={e => setTitle(e.target.value)} maxLength={80} autoFocus
+              placeholder={`Give your ${picked.label.toLowerCase()} a name…`}
+              className="w-full px-3.5 py-3 rounded-xl bg-white border border-slate-200 text-[15px] outline-none focus:border-slate-400" />
+            <p className="text-[11px] text-slate-400 mt-1.5">Optional — leave blank and we'll name it for you.</p>
+          </div>
+        ) },
+      ...(needsMusic ? [{ key: 'music', title: 'Your music', hint: 'The top-voted Lounge songs are ready. Add your own if you like — or skip.',
+        content: (
+          <div className="rounded-2xl bg-white border border-slate-200 overflow-hidden">
+            {sortedLibrary.length === 0 && localTracks.length === 0 && <p className="px-4 py-4 text-[13px] text-slate-400">The Lounge library is empty. Add a song below.</p>}
+            <div className="py-1.5">
+              {sortedLibrary.slice(0, 6).map((t, i) => (
+                <div key={t._id || t.videoId} className="flex items-center gap-2.5 px-4 py-1.5">
+                  <span className="text-[11px] text-slate-400 w-4 tabular-nums">{i + 1}</span>
+                  <img src={`https://i.ytimg.com/vi/${t.videoId}/default.jpg`} alt="" className="w-11 h-8 rounded-md object-cover flex-shrink-0" loading="lazy" />
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-[13px] font-medium text-slate-800 truncate">{t.title}</span>
+                    <span className="block text-[11px] text-slate-400 truncate">{t.artist || 'Resident'} · {t.votes?.length || 0} votes</span>
+                  </span>
+                </div>
+              ))}
+              {localTracks.map((t) => (
+                <div key={t.id} className="flex items-center gap-2.5 px-4 py-1.5">
+                  <span className="w-4" />
+                  <span className="w-11 h-8 rounded-md bg-slate-900 flex items-center justify-center flex-shrink-0"><Music size={13} className="text-indigo-300" /></span>
+                  <span className="flex-1 min-w-0 text-[13px] font-medium text-slate-800 truncate">{t.title}</span>
+                  <button onClick={() => removeLocal(t)} aria-label="Remove" className="p-1 rounded-md text-slate-300 hover:text-red-500"><X size={14} /></button>
+                </div>
+              ))}
+            </div>
+            <AddTracks onAddYouTube={addYouTubeTrack} onAddFiles={addLocalFiles} />
+          </div>
+        ) }] : []),
+      { key: 'mic', title: 'Check your mic', hint: 'Make sure your neighbours can hear you clearly.',
+        content: (
+          <div className="space-y-3">
+            <MicCheck accent={picked.color} />
+            <div className="rounded-2xl bg-slate-50 border border-slate-100 p-4 space-y-2 text-[13px] text-slate-600">
+              <div>🎧 Use headphones so {needsMusic ? 'the music' : 'your speaker'} doesn't echo into your mic.</div>
+              <div>🔔 Neighbours get a notification the moment you go live.</div>
+              <div>👥 Only one live room runs at a time — if someone is already live you'll be asked to join theirs.</div>
+              {needsMusic && <div>💾 When you end, you can save it to the archive.</div>}
+            </div>
+          </div>
+        ) },
+    ];
+    return (
+      <SetupSteps heading={picked.label} accent={picked.color} onExit={() => navigate(-1)}
+        onFinish={goLive} finishing={starting} steps={steps} />
     );
   }
 
@@ -772,175 +791,78 @@ export default function ResidentLive() {
     );
   }
 
-  // Simple view for non-music rooms (prayer, chat)
-  if (!needsMusic) {
-    return (
-      <div style={{ maxWidth: 540, margin: '0 auto', padding: '24px 16px 40px' }}>
-        <div style={{ background: `linear-gradient(135deg, ${modeMeta.color}, ${modeMeta.color}dd)`, borderRadius: 22, padding: 26, color: '#fff', boxShadow: `0 20px 44px -18px ${modeMeta.color}88` }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ position: 'relative', display: 'inline-flex', width: 10, height: 10 }}>
-                <span style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: '#fff', animation: 'ping 1.6s infinite' }} />
-                <span style={{ position: 'relative', borderRadius: '50%', width: 10, height: 10, background: '#fff' }} />
+  // ── Phone: live ────────────────────────────────────────────────────────────
+  const nextUp = sortedLibrary.find((t) => t.videoId !== current?.videoId && !setlist.some(x => x.videoId === t.videoId))
+    || sortedLibrary.find((t) => t.videoId !== current?.videoId);
+  const accent = modeMeta.color;
+  const musicTab = (
+    <div className="rounded-2xl bg-white border border-slate-200 overflow-hidden">
+      {localTracks.length > 0 && (
+        <div className="py-1.5 border-b border-slate-100">
+          <div className="px-4 py-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1"><Laptop size={11} /> Your files · this session</div>
+          {localTracks.map((t) => {
+            const on = current?.local && current.id === t.id;
+            return (
+              <button key={t.id} onClick={() => (on ? toggleLocal() : playLocal(t))}
+                className="w-full flex items-center gap-2.5 px-4 py-2 text-left" style={on ? { background: `${accent}12` } : undefined}>
+                <span className="w-11 h-8 rounded-md bg-slate-900 flex items-center justify-center flex-shrink-0 text-white">
+                  {on && localPos.playing ? <Pause size={13} /> : <Play size={13} fill="currentColor" />}
+                </span>
+                <span className="flex-1 min-w-0 text-[13px] font-medium text-slate-800 truncate">{t.title}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+      <div className="py-1.5">
+        {sortedLibrary.length === 0 && <p className="px-4 py-4 text-[13px] text-slate-400 text-center">No songs yet — add one below.</p>}
+        {sortedLibrary.map((t) => {
+          const on = !current?.local && current?.videoId === t.videoId;
+          return (
+            <button key={t._id || t.videoId} onClick={() => playTrack(t)}
+              className="w-full flex items-center gap-2.5 px-4 py-2 text-left" style={on ? { background: `${accent}12` } : undefined}>
+              <img src={`https://i.ytimg.com/vi/${t.videoId}/default.jpg`} alt="" className="w-11 h-8 rounded-md object-cover flex-shrink-0" loading="lazy" />
+              <span className="flex-1 min-w-0">
+                <span className="block text-[13px] truncate" style={{ fontWeight: on ? 700 : 500, color: on ? accent : '#1E293B' }}>{t.title}</span>
+                <span className="block text-[11px] text-slate-400 truncate">{on ? 'Playing now' : (t.artist || 'Resident')}</span>
               </span>
-              <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.16em' }}>LIVE · {modeMeta.label.toUpperCase()}</span>
-              <span style={{ fontSize: 12, opacity: 0.85, marginLeft: 4 }}>{fmtDur(elapsed)}</span>
-            </div>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,0.18)', padding: '5px 10px', borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
-              <Users size={13}/> {live.listenerCount}
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <button onClick={live.toggleMic}
-              style={{ width: 80, height: 80, borderRadius: '50%', border: 'none', cursor: 'pointer',
-                background: live.micOn ? '#fff' : 'rgba(255,255,255,0.14)',
-                color: live.micOn ? modeMeta.color : '#fff',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: live.micOn ? '0 10px 24px rgba(0,0,0,0.2)' : 'none', flexShrink: 0 }}>
-              {live.micOn ? <Mic size={30}/> : <MicOff size={30}/>}
+              {!on && <SkipForward size={14} className="text-slate-300" />}
             </button>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', opacity: 0.85 }}>
-                {live.micOn ? 'Speaking' : 'Muted'}
-              </div>
-              <div style={{ fontSize: 18, fontWeight: 800, lineHeight: 1.2, marginTop: 3 }}>{session.title}</div>
-              <div style={{ fontSize: 12, marginTop: 4, opacity: 0.85 }}>{user?.name} · Peak {peak}</div>
-            </div>
-          </div>
-
-          {/* Mic fader (no music in prayer/chat) */}
-          <div style={{ marginTop: 16, padding: 12, borderRadius: 12, background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.1)' }}>
-            <Fader label="Mic" value={Math.round((live.micGain || 1) * 100)} max={200} unit="%"
-              onChange={(v) => live.setMicGain((v || 0) / 100)}
-              color="#10B981"
-              icon={<Mic size={13}/>}
-              quickActions={[{ label: 'Low', value: 80 }, { label: 'Hot', value: 150 }]}
-            />
-          </div>
-
-          <button onClick={endSession}
-            style={{ marginTop: 16, width: '100%', padding: '11px 0', borderRadius: 12, border: '1px solid rgba(255,255,255,0.3)', background: 'rgba(0,0,0,0.2)', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-            <X size={14}/> End room
-          </button>
-        </div>
-
-        {/* Audience panel */}
-        <div style={{ marginTop: 14, background: 'linear-gradient(180deg, #0F172A, #1E1B4B)', borderRadius: 18, padding: 14, border: '1px solid #334155' }}>
-          <AudiencePanel roomType="dj" roomId={session._id} accent={modeMeta.color} />
-        </div>
-
-        <style>{`@keyframes ping { 75%,100% { transform: scale(2.4); opacity: 0; } }`}</style>
+          );
+        })}
       </div>
-    );
-  }
-
-  // DJ / podcast view (with music + volume control)
-  return (
-    <div style={{ maxWidth: 1100, margin: '0 auto', padding: '12px 16px 40px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-        padding: '14px 18px', borderRadius: 16, marginBottom: 14,
-        background: 'linear-gradient(135deg, #0F172A, #1E293B)', color: '#fff', border: '1px solid #334155' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ position: 'relative', display: 'inline-flex', width: 10, height: 10 }}>
-            <span style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: '#EF4444', animation: 'ping 1.6s infinite' }} />
-            <span style={{ position: 'relative', borderRadius: '50%', width: 10, height: 10, background: '#EF4444' }} />
-          </span>
-          <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.14em', color: '#FCA5A5' }}>ON AIR · {modeMeta.label.toUpperCase()}</span>
-          <span style={{ fontSize: 12, color: '#94A3B8', marginLeft: 6 }}>{fmtDur(elapsed)}</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            <Users size={14} color="#94A3B8" />
-            <span style={{ fontSize: 13, fontWeight: 700 }}>{live.listenerCount}</span>
-          </div>
-          <button onClick={endSession}
-            style={{ padding: '7px 14px', borderRadius: 10, background: '#EF4444', color: '#fff', fontWeight: 700, fontSize: 12, border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            <X size={13} /> End
-          </button>
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 300px', gap: 14 }} className="live-grid">
-        <div style={{ background: '#fff', borderRadius: 18, border: '1px solid #E2E8F0', overflow: 'hidden' }}>
-          <div style={{ position: 'relative', paddingBottom: '56.25%', background: '#000' }}>
-            {current && !current.local ? (
-              <iframe ref={iframeRef} key={current.videoId}
-                src={`https://www.youtube.com/embed/${current.videoId}?autoplay=1&modestbranding=1&rel=0&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}`}
-                allow="autoplay; encrypted-media" allowFullScreen
-                onLoad={() => setTimeout(() => applyVolume(musicVol), 400)}
-                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 0 }} />
-            ) : (
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94A3B8', fontSize: 13 }}>Pick a track to start</div>
-            )}
-          </div>
-          <div style={{ padding: '14px 18px', borderTop: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', gap: 14 }}>
-            <button onClick={live.toggleMic}
-              style={{ width: 56, height: 56, borderRadius: 999, border: 'none', cursor: 'pointer',
-                background: live.micOn ? `linear-gradient(135deg, ${modeMeta.color}, ${modeMeta.color}dd)` : '#334155',
-                color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {live.micOn ? <Mic size={22}/> : <MicOff size={22}/>}
-            </button>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                {live.micOn ? 'Mic open' : 'Mic muted'}
-              </div>
-              <div style={{ fontSize: 15, fontWeight: 800, color: '#0F172A', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{current?.title || 'No track selected'}</div>
-              <div style={{ fontSize: 12, color: '#64748B' }}>{current?.artist || 'Spin something from the queue →'}</div>
-            </div>
-          </div>
-          <div style={{ padding: '12px 18px', borderTop: '1px solid #F1F5F9', background: '#0F172A', display: 'flex', gap: 10 }}>
-            <Fader label="Music" value={musicVol} max={100} unit="%"
-              disabled={!current}
-              onChange={applyVolume}
-              color={modeMeta.color}
-              icon={musicVol === 0 ? <VolumeX size={13}/> : musicVol < 40 ? <Volume1 size={13}/> : <Volume2 size={13}/>}
-              quickActions={[{ label: 'Duck', value: 20 }, { label: 'Up', value: 60 }]}
-            />
-            <Fader label="Mic" value={Math.round((live.micGain || 1) * 100)} max={200} unit="%"
-              disabled={false}
-              onChange={(v) => live.setMicGain((v || 0) / 100)}
-              color="#10B981"
-              icon={<Mic size={13}/>}
-              quickActions={[{ label: 'Low', value: 80 }, { label: 'Hot', value: 150 }]}
-            />
-          </div>
-        </div>
-
-        <div style={{ background: '#fff', borderRadius: 18, border: '1px solid #E2E8F0', padding: 14, maxHeight: 540, overflow: 'auto' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-            <Music size={14} color={modeMeta.color} />
-            <span style={{ fontSize: 13, fontWeight: 800, color: '#0F172A' }}>Queue</span>
-          </div>
-          {upcoming.length === 0 && <div style={{ fontSize: 12, color: '#94A3B8', padding: '20px 0', textAlign: 'center' }}>Add tracks to the Lounge library first</div>}
-          {upcoming.map((t) => (
-            <button key={t._id} onClick={() => playTrack(t)}
-              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 10px', borderRadius: 10, border: '1px solid transparent', background: 'transparent', cursor: 'pointer', textAlign: 'left', width: '100%' }}
-              onMouseEnter={e => { e.currentTarget.style.background = '#F8FAFC'; e.currentTarget.style.borderColor = '#E2E8F0'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; }}>
-              <div style={{ width: 28, height: 28, borderRadius: 8, background: `${modeMeta.color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: modeMeta.color, flexShrink: 0 }}>
-                <SkipForward size={13}/>
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.title}</div>
-                <div style={{ fontSize: 11, color: '#94A3B8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.artist || 'Resident'}</div>
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Audience panel */}
-      <div style={{ marginTop: 14, background: 'linear-gradient(180deg, #0F172A, #1E1B4B)', borderRadius: 18, padding: 14, border: '1px solid #334155' }}>
-        <AudiencePanel roomType="dj" roomId={session._id} accent={modeMeta.color} />
-      </div>
-
-      {saveModal}
-
-      <style>{`
-        @keyframes ping { 75%,100% { transform: scale(2.4); opacity: 0; } }
-        @media (max-width: 820px) { .live-grid { grid-template-columns: 1fr !important; } }
-      `}</style>
+      <AddTracks onAddYouTube={addYouTubeTrack} onAddFiles={addLocalFiles} />
     </div>
+  );
+
+  return (
+    <>
+      <MobileHostStudio
+        title={session.title} kindLabel={modeMeta.label} KindIcon={modeMeta.Icon}
+        accent={accent} dark={accent} live={live} level={level} elapsed={elapsed} peak={peak}
+        engagement={engagement} onEnd={endSession}
+        music={needsMusic ? {
+          title: current?.title,
+          subtitle: current ? (current.local ? 'From your phone' : (current.artist || 'Playing to everyone')) : 'Pick a song in the Music tab',
+          thumb: current?.videoId ? `https://i.ytimg.com/vi/${current.videoId}/default.jpg` : null,
+          onNext: nextUp ? () => playTrack(nextUp) : null, nextLabel: current ? 'Next' : 'Play',
+          volume: musicVol, onVolume: applyVolume,
+          player: current && !current.local && (
+            <div className="relative mt-3 w-full aspect-video rounded-xl overflow-hidden bg-black/40 border border-white/10">
+              <iframe ref={iframeRef} key={current.videoId} title="Now playing"
+                src={`https://www.youtube.com/embed/${current.videoId}?autoplay=1&playsinline=1&modestbranding=1&rel=0&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}`}
+                allow="autoplay; encrypted-media"
+                onLoad={() => setTimeout(() => applyVolume(musicVol), 400)}
+                className="absolute inset-0 w-full h-full border-0" />
+            </div>
+          ),
+        } : null}
+        tabs={[
+          ...(needsMusic ? [{ key: 'music', label: 'Music', Icon: Music, content: musicTab }] : []),
+          { key: 'sounds', label: 'Sounds', Icon: Sparkles, content: <Soundboard getMixBus={live.getMixBus} accent={accent} enabled /> },
+          { key: 'notes', label: 'Notes', Icon: StickyNote, content: <NotesPanel accent={accent} /> },
+        ]} />
+      {saveModal}
+    </>
   );
 }

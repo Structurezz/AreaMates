@@ -11,6 +11,7 @@ import { useSocket } from '../context/SocketContext';
 import { courtAPI, estateAPI } from '../api';
 import toast from 'react-hot-toast';
 import useIsDesktop from '../hooks/useIsDesktop';
+import useCountUp from '../hooks/useCountUp';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -853,6 +854,46 @@ function CaseProgress({ status }) {
 
 // ── "Your next steps" panel (desktop) ────────────────────────────────────────
 
+// Phone version: same five stages, smaller, with the plain-English "now" line
+function MobileCaseProgress({ status }) {
+  const idx = STAGE_INDEX[status] ?? 0;
+  const done = ['settled', 'closed'].includes(status);
+  return (
+    <div className="dash-rise rounded-[22px] bg-white border border-slate-200/70 px-3.5 py-4 mb-4">
+      <div className="flex items-start">
+        {STAGES.map((s, i) => {
+          const complete = i < idx || done;
+          const current = i === idx && !done;
+          const Icon = s.icon;
+          return (
+            <div key={s.key} className={`flex items-start ${i < STAGES.length - 1 ? 'flex-1' : ''}`}>
+              <div className="flex flex-col items-center gap-1 w-12">
+                <div className="relative w-8 h-8 rounded-full flex items-center justify-center"
+                  style={complete ? { background: '#10B981', color: '#fff' }
+                    : current ? { background: '#F59E0B', color: '#fff', boxShadow: '0 0 0 4px rgba(245,158,11,0.18)' }
+                    : { background: '#F1F5F9', color: '#94A3B8' }}>
+                  {current && <span className="absolute inset-0 rounded-full animate-ping opacity-30" style={{ background: '#F59E0B' }} />}
+                  {complete ? <CheckCircle2 size={14} /> : <Icon size={13} />}
+                </div>
+                <span className={`text-[10px] font-semibold text-center leading-tight ${current ? 'text-amber-600' : complete ? 'text-emerald-600' : 'text-slate-400'}`}>{s.label}</span>
+              </div>
+              {i < STAGES.length - 1 && (
+                <div className="flex-1 h-[3px] mt-[15px] -mx-2 rounded-full overflow-hidden bg-slate-100">
+                  <div className="h-full rounded-full transition-all duration-700" style={{ width: complete ? '100%' : '0%', background: '#10B981' }} />
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <div className="mt-3.5 flex items-start gap-2 px-3 py-2.5 rounded-xl bg-amber-50/80 border border-amber-100">
+        <Clock size={13} className="text-amber-600 mt-0.5 flex-shrink-0" />
+        <p className="text-[12px] text-slate-700 leading-relaxed"><span className="font-semibold text-slate-900">Now: </span>{STAGE_NOW[status] || STAGE_NOW.filed}</p>
+      </div>
+    </div>
+  );
+}
+
 function NextStepsPanel({ roles, items, blocks, openId, setOpenId }) {
   return (
     <div className="space-y-4">
@@ -984,6 +1025,53 @@ function CaseRow({ c, onClick, i }) {
 }
 
 // ── Case detail ───────────────────────────────────────────────────────────────
+
+// ── Case list (phone) ────────────────────────────────────────────────────────
+
+function CourtStat({ label, value, color, delay }) {
+  const n = useCountUp(value || 0);
+  return (
+    <div className="dash-rise rounded-2xl bg-white/[0.07] border border-white/10 px-2 py-2.5 text-center" style={{ animationDelay: `${delay}ms` }}>
+      <div className="text-[18px] font-semibold tabular-nums leading-none" style={{ color }}>{value == null ? '–' : n}</div>
+      <div className="text-[10px] text-white/55 mt-1">{label}</div>
+    </div>
+  );
+}
+
+function CaseCardMobile({ c, onClick, i, userId }) {
+  const sev = SEVERITY_COLORS[c.severity] || SEVERITY_COLORS.minor;
+  const st = STATUS_META[c.status] || STATUS_META.filed;
+  const same = (x) => x && (x === userId || x?._id === userId || x?.toString?.() === userId);
+  const isMine = same(c.plaintiff?.userId) || same(c.defendant?.userId);
+  const isJuror = c.jury?.members?.some(same);
+  return (
+    <button onClick={onClick}
+      className="dash-rise w-full text-left rounded-[22px] bg-white border p-4 active:scale-[0.99] transition-transform"
+      style={{ animationDelay: `${160 + i * 50}ms`, borderColor: isMine || isJuror ? `${PRIMARY}55` : 'rgba(226,232,240,0.7)', boxShadow: '0 1px 2px rgba(15,23,42,0.04)' }}>
+      <div className="flex items-center gap-2">
+        <span className="text-[11px] font-mono text-slate-400">{c.caseNumber}</span>
+        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md" style={{ color: sev.text, background: sev.bg }}>{c.severity?.toUpperCase()}</span>
+        {isMine && <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700">Your case</span>}
+        {!isMine && isJuror && <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-violet-50 text-violet-700">You're on the jury</span>}
+        <span className="ml-auto text-[11px] text-slate-400">{new Date(c.filedAt).toLocaleDateString('en-NG', { day: 'numeric', month: 'short' })}</span>
+      </div>
+      <div className="mt-1.5 text-[15px] font-semibold text-slate-900 leading-snug" style={{ letterSpacing: '-0.01em' }}>{c.title}</div>
+      <div className="mt-1 text-[12px] text-slate-500 truncate">
+        {c.plaintiff?.name || 'Unknown'} <span className="font-bold text-red-500 mx-0.5">vs</span> {c.defendant?.isEstate ? 'Estate management' : (c.defendant?.name || 'Unknown')}
+        <span className="text-slate-300 mx-1">·</span>{TYPE_LABELS[c.type] || c.type}
+      </div>
+      <div className="mt-3 flex items-center gap-2.5">
+        <StageDots status={c.status} />
+        <span className="text-[11px] font-semibold" style={{ color: st.color }}>{st.label}</span>
+        {st.hint && <span className="text-[11px] text-slate-400 truncate">· {st.hint}</span>}
+        <ChevronRight size={15} className="ml-auto text-slate-300 flex-shrink-0" />
+      </div>
+      {c.fine?.status === 'pending' && (
+        <div className="mt-2.5 inline-flex items-center gap-1 text-[11px] font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded-md"><Banknote size={11} /> Fine pending</div>
+      )}
+    </button>
+  );
+}
 
 function CaseDetail({ caseId, onBack, user }) {
   const { subscribe } = useSocket() || {};
@@ -1564,7 +1652,57 @@ function CaseDetail({ caseId, onBack, user }) {
     isJuror     && { label: 'Juror',                 icon: Users,  color: '#7C3AED', hint: 'Follow what both sides say, then cast your private vote.' },
   ].filter(Boolean);
   if (!roles.length) roles.push({ label: 'Watching', icon: Eye, color: '#64748B', hint: "You're following this case. Only the two sides and the jury can take action." });
-  const tabShown = isDesktop && activeTab === 'actions' ? 'proceedings' : activeTab;
+  const caseExtras = (
+    <>
+        {c.charges?.length > 0 && (
+        <div style={{ paddingTop: 12, borderTop: '1px solid #E0E7FF' }}>
+          <div style={{ color: PRIMARY_DARK, fontSize: 9, fontWeight: 700, textTransform: 'uppercase', marginBottom: 6 }}>What they're saying</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {c.charges.map((ch, i) => (
+              <span key={i} style={{ fontSize: 11, fontWeight: 600, padding: '2px 10px', borderRadius: 999, background: '#fff', color: '#334155', border: '1px solid #E2E8F0' }}>{i + 1}. {ch}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Lawyers row */}
+      <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #E0E7FF', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        {[
+          { side: 'prosecution', lawyer: c.lawyers?.prosecution, sideColor: '#DC2626', label: "Filer's lawyer" },
+          { side: 'defense',     lawyer: c.lawyers?.defense,     sideColor: '#2563EB', label: "Other side's lawyer" },
+        ].map(({ side, lawyer, sideColor, label }) => {
+          const persona = lawyer?.aiPersona ? AI_PERSONAS[lawyer.aiPersona] : null;
+          return (
+            <div key={side} style={{ flex: 1, minWidth: 150, background: '#fff', borderRadius: 10, padding: '8px 12px', border: `1px solid ${sideColor}30` }}>
+              <div style={{ color: sideColor, fontSize: 9, fontWeight: 700, textTransform: 'uppercase', marginBottom: 5 }}>{label}</div>
+              {persona
+                ? <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                    <Avatar initials={persona.initials} color={persona.color} size={26} />
+                    <div>
+                      <div style={{ color: '#0F172A', fontSize: 11, fontWeight: 700 }}>{persona.name}</div>
+                      <div style={{ color: '#64748B', fontSize: 10 }}>AI · {persona.role}</div>
+                    </div>
+                  </div>
+                : <div style={{ color: '#94A3B8', fontSize: 11, fontStyle: 'italic' }}>No lawyer yet</div>}
+            </div>
+          );
+        })}
+        <div style={{ flex: 1, minWidth: 150, background: '#fff', borderRadius: 10, padding: '8px 12px', border: '1px solid #B4530930' }}>
+          <div style={{ color: '#B45309', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', marginBottom: 5 }}>Judge</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+            <Avatar initials={JUDGE.initials} color={JUDGE.color} size={26} />
+            <div>
+              <div style={{ color: '#0F172A', fontSize: 11, fontWeight: 700 }}>{JUDGE.name}</div>
+              <div style={{ color: '#64748B', fontSize: 10 }}>AI judge</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+
+  // The Actions tab is folded into the "Your next steps" panel (desktop rail, phone top)
+  const tabShown = activeTab === 'actions' ? 'proceedings' : activeTab;
 
   return (
     <div>
@@ -1574,49 +1712,7 @@ function CaseDetail({ caseId, onBack, user }) {
       </button>
 
       {isDesktop && <CaseProgress status={c.status} />}
-      {/* Phase progress bar */}
-      {!isDesktop && (() => {
-        const phases = [
-          { key: 'filed',              label: 'Filed' },
-          { key: 'open',               label: 'Open' },
-          { key: 'in_hearing',         label: 'Hearing' },
-          { key: 'jury_deliberation',  label: 'Jury' },
-          { key: 'judge_deliberation', label: 'Judge' },
-          { key: 'verdict_delivered',  label: 'Verdict' },
-        ];
-        const idx = Math.max(0, phases.findIndex(p => p.key === c.status));
-        const settled = c.status === 'settled';
-        return (
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            padding: '10px 14px', borderRadius: 12, background: '#F8FAFC',
-            border: '1px solid #E2E8F0', marginBottom: 10,
-            overflowX: 'auto',
-          }}>
-            {phases.map((p, i) => {
-              const isActive = i <= idx && !settled;
-              const isCurrent = i === idx && !settled;
-              return (
-                <div key={p.key} style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                  <div style={{
-                    width: 8, height: 8, borderRadius: '50%',
-                    background: isActive ? PRIMARY : '#CBD5E1',
-                    boxShadow: isCurrent ? `0 0 0 4px ${PRIMARY}22` : 'none',
-                    transition: 'all 0.3s',
-                  }} />
-                  <span style={{ fontSize: 11, fontWeight: isCurrent ? 800 : 600, color: isActive ? '#0F172A' : '#94A3B8' }}>
-                    {p.label}
-                  </span>
-                  {i < phases.length - 1 && (
-                    <div style={{ width: 18, height: 2, background: i < idx && !settled ? PRIMARY : '#E2E8F0', borderRadius: 2 }} />
-                  )}
-                </div>
-              );
-            })}
-            {settled && <span style={{ fontSize: 11, fontWeight: 800, color: '#059669', marginLeft: 'auto' }}>✓ Resolved amicably</span>}
-          </div>
-        );
-      })()}
+      {!isDesktop && <MobileCaseProgress status={c.status} />}
 
       {/* Live play-by-play ticker */}
       {commentary.length > 0 && (
@@ -1699,51 +1795,22 @@ function CaseDetail({ caseId, onBack, user }) {
           <StatusBadge status={c.status} />
         </div>
 
-        {c.charges?.length > 0 && (
-          <div style={{ paddingTop: 12, borderTop: '1px solid #E0E7FF' }}>
-            <div style={{ color: PRIMARY_DARK, fontSize: 9, fontWeight: 700, textTransform: 'uppercase', marginBottom: 6 }}>What they're saying</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {c.charges.map((ch, i) => (
-                <span key={i} style={{ fontSize: 11, fontWeight: 600, padding: '2px 10px', borderRadius: 999, background: '#fff', color: '#334155', border: '1px solid #E2E8F0' }}>{i + 1}. {ch}</span>
-              ))}
-            </div>
-          </div>
+        {isDesktop ? caseExtras : (
+          <details className="group mt-1 pt-3" style={{ borderTop: '1px solid #E0E7FF' }}>
+            <summary className="list-none cursor-pointer flex items-center justify-between text-[12px] font-semibold" style={{ color: PRIMARY_DARK }}>
+              <span>Charges, lawyers &amp; judge</span>
+              <ChevronRight size={14} className="transition-transform group-open:rotate-90" />
+            </summary>
+            <div className="pt-3">{caseExtras}</div>
+          </details>
         )}
-
-        {/* Lawyers row */}
-        <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #E0E7FF', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          {[
-            { side: 'prosecution', lawyer: c.lawyers?.prosecution, sideColor: '#DC2626', label: "Filer's lawyer" },
-            { side: 'defense',     lawyer: c.lawyers?.defense,     sideColor: '#2563EB', label: "Other side's lawyer" },
-          ].map(({ side, lawyer, sideColor, label }) => {
-            const persona = lawyer?.aiPersona ? AI_PERSONAS[lawyer.aiPersona] : null;
-            return (
-              <div key={side} style={{ flex: 1, minWidth: 150, background: '#fff', borderRadius: 10, padding: '8px 12px', border: `1px solid ${sideColor}30` }}>
-                <div style={{ color: sideColor, fontSize: 9, fontWeight: 700, textTransform: 'uppercase', marginBottom: 5 }}>{label}</div>
-                {persona
-                  ? <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                      <Avatar initials={persona.initials} color={persona.color} size={26} />
-                      <div>
-                        <div style={{ color: '#0F172A', fontSize: 11, fontWeight: 700 }}>{persona.name}</div>
-                        <div style={{ color: '#64748B', fontSize: 10 }}>AI · {persona.role}</div>
-                      </div>
-                    </div>
-                  : <div style={{ color: '#94A3B8', fontSize: 11, fontStyle: 'italic' }}>No lawyer yet</div>}
-              </div>
-            );
-          })}
-          <div style={{ flex: 1, minWidth: 150, background: '#fff', borderRadius: 10, padding: '8px 12px', border: '1px solid #B4530930' }}>
-            <div style={{ color: '#B45309', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', marginBottom: 5 }}>Judge</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-              <Avatar initials={JUDGE.initials} color={JUDGE.color} size={26} />
-              <div>
-                <div style={{ color: '#0F172A', fontSize: 11, fontWeight: 700 }}>{JUDGE.name}</div>
-                <div style={{ color: '#64748B', fontSize: 10 }}>AI judge</div>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
+
+      {!isDesktop && (
+        <div className="mb-4">
+          <NextStepsPanel roles={roles} items={nextItems} blocks={actionBlocks} openId={openStep} setOpenId={setOpenAction} />
+        </div>
+      )}
 
       <div className={isDesktop ? 'grid grid-cols-[minmax(0,1fr)_380px] gap-5 items-start' : ''}>
       <div className="min-w-0">
@@ -1753,7 +1820,7 @@ function CaseDetail({ caseId, onBack, user }) {
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 14, background: '#F8FAFC', borderRadius: 12, padding: 4, border: '1px solid #E2E8F0', flexWrap: 'wrap' }}>
-        {DETAIL_TABS.filter(t => !(isDesktop && t.id === 'actions')).map(t => (
+        {DETAIL_TABS.filter(t => t.id !== 'actions').map(t => (
           <button key={t.id} onClick={() => setActiveTab(t.id)}
             style={{ flex: 1, minWidth: 70, padding: '8px 6px', borderRadius: 9, fontSize: 11, fontWeight: 600, border: 'none', cursor: 'pointer', transition: 'all 0.15s',
               background: tabShown === t.id ? '#fff' : 'transparent',
@@ -2093,118 +2160,163 @@ export default function Courtroom() {
     );
   }
 
+  // ── Phone ──────────────────────────────────────────────────────────────
+  const by = stats?.byStatus || {};
+  const counts = {
+    active: (by.open || 0) + (by.in_hearing || 0) + (by.jury_deliberation || 0) + (by.judge_deliberation || 0) + (by.filed || 0),
+    records: (by.verdict_delivered || 0) + (by.settled || 0) + (by.closed || 0),
+  };
+  const PHONE_TABS = [
+    { id: 'active',  label: 'Open cases', icon: Gavel },
+    { id: 'mine',    label: 'My cases',   icon: Briefcase },
+    { id: 'records', label: 'Past cases', icon: Lock },
+  ];
   return (
-    <div style={{ maxWidth: 760, margin: '0 auto' }}>
-      <CourtroomBanner stats={stats} onStart={() => setTab('file')} />
-
-      {constitution?.hasConstitution && (
-        <button
-          type="button"
-          onClick={() => openConstitution(estateId, constitution.fileName)}
-          style={{
-            width: '100%', textAlign: 'left', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16,
-            padding: '12px 16px', borderRadius: 12, textDecoration: 'none',
-            background: 'linear-gradient(135deg, rgba(236,72,153,0.06), rgba(139,92,246,0.05))',
-            border: '1px solid rgba(236,72,153,0.20)',
-          }}>
-          <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(236,72,153,0.14)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <FileText size={16} color="#EC4899" />
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#0F172A' }}>Estate Constitution</div>
-            <div style={{ fontSize: 11, color: '#64748B', marginTop: 1 }}>
-              {constitution.pageCount ? `${constitution.pageCount} pages · ` : ''}Governs every case in this estate
-            </div>
-          </div>
-          <ChevronRight size={16} color="#EC4899" />
-        </button>
-      )}
-
-      <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: '#F8FAFC', borderRadius: 14, padding: 4, border: '1px solid #E2E8F0' }}>
-        {TABS.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)}
-            style={{ flex: 1, padding: '9px 0', borderRadius: 10, fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer', transition: 'all 0.15s',
-              background: tab === t.id ? (t.id === 'file' ? `linear-gradient(135deg,${PRIMARY},${PRIMARY_DARK})` : '#fff') : 'transparent',
-              color: tab === t.id ? (t.id === 'file' ? '#fff' : '#0F172A') : '#64748B',
-              boxShadow: tab === t.id && t.id !== 'file' ? '0 1px 4px rgba(0,0,0,0.08)' : 'none' }}>
-            {t.label}
+    <div className="space-y-5 pb-2">
+      <header className="dash-rise flex items-end justify-between gap-3">
+        <div className="min-w-0">
+          <div className="text-[12px] font-medium text-slate-400">Estate court · Judge Orizu presiding</div>
+          <h1 className="text-[22px] font-semibold text-slate-900 leading-tight" style={{ letterSpacing: '-0.03em' }}>Courtroom</h1>
+        </div>
+        {tab !== 'file' && (
+          <button onClick={() => setTab('file')}
+            className="flex-shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[13px] font-semibold text-white active:scale-95 transition-transform"
+            style={{ background: `linear-gradient(135deg, ${PRIMARY}, ${PRIMARY_DARK})`, boxShadow: `0 10px 20px -12px ${PRIMARY}` }}>
+            <Plus size={15} /> Start a case
           </button>
-        ))}
-      </div>
+        )}
+      </header>
 
-      {tab === 'file' && (
-        <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #E2E8F0', padding: '24px 24px' }}>
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 18, fontWeight: 800, color: '#0F172A', marginBottom: 4 }}>Start a Case</div>
-            <div style={{ fontSize: 13, color: '#64748B' }}>Just answer a few quick questions. We'll handle the legal part — you only need to tell us what happened in your own words.</div>
-          </div>
+      {tab === 'file' ? (
+        <div className="dash-rise rounded-[22px] bg-white border border-slate-200/70 p-4">
+          <button onClick={() => setTab('active')} className="inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-500 mb-3"><ArrowLeft size={14} /> Back to cases</button>
+          <div className="text-[17px] font-semibold text-slate-900" style={{ letterSpacing: '-0.02em' }}>Start a case</div>
+          <p className="text-[13px] text-slate-500 mt-1 mb-4">Just answer a few quick questions. We'll handle the legal part — tell us what happened in your own words.</p>
           <FileDisputeForm onFiled={() => { setTab('mine'); loadCases('mine'); }} residents={residents} />
         </div>
-      )}
-
-      {tab !== 'file' && (
-        <div>
-          {loading
-            ? (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 60 }}>
-                <Spinner size={28} />
-              </div>
-            )
-            : cases.length === 0
-              ? (
-                <div style={{ textAlign: 'center', padding: '60px 0' }}>
-                  <div style={{ background: '#EEF2FF', borderRadius: '50%', width: 64, height: 64, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-                    <Scale size={28} color={PRIMARY} />
-                  </div>
-                  <div style={{ fontWeight: 700, fontSize: 16, color: '#0F172A', marginBottom: 6 }}>
-                    {tab === 'active' ? 'All quiet right now' : tab === 'mine' ? "You haven't started a case" : 'Nothing in the archive'}
-                  </div>
-                  <div style={{ fontSize: 13, color: '#94A3B8', maxWidth: 300, margin: '0 auto 16px' }}>
-                    {tab === 'mine'
-                      ? "If something's bothering you, start a case. It's free and takes a minute."
-                      : tab === 'active'
-                        ? "No one in your estate has an open case. Peaceful times!"
-                        : "No past cases to show here yet."}
-                  </div>
-                  {tab === 'mine' && (
-                    <button onClick={() => setTab('file')}
-                      style={{ padding: '10px 24px', borderRadius: 12, background: `linear-gradient(135deg,${PRIMARY},${PRIMARY_DARK})`, color: '#fff', fontWeight: 700, fontSize: 13, border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                      <Plus size={14} /> Start a case
-                    </button>
-                  )}
-                </div>
-              )
-              : cases.map(c => <CaseCard key={c._id} c={c} onClick={() => setSelectedCaseId(c._id)} userId={user?._id} />)}
-        </div>
-      )}
-
-      {/* Good to know */}
-      <div style={{ marginTop: 32, background: '#F8FAFC', borderRadius: 16, padding: '20px 22px', border: '1px solid #E2E8F0' }}>
-        <div style={{ fontSize: 15, fontWeight: 800, color: '#0F172A', marginBottom: 4 }}>Good to know</div>
-        <div style={{ fontSize: 12, color: '#64748B', marginBottom: 14 }}>Common questions people ask before starting a case.</div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 12 }}>
-          {[
-            { icon: Scale,      title: 'Does it cost anything?',   desc: "No. Starting a case and getting an AI lawyer is 100% free." },
-            { icon: Briefcase,  title: "I'm not a lawyer — ok?",   desc: 'Totally fine. An AI lawyer is assigned to you and does the legal talking.' },
-            { icon: Star,       title: 'Who decides who\'s right?', desc: '5 random neighbours vote, then Judge Orizu makes the final call.' },
-            { icon: TrendingUp, title: 'What if we agree?',        desc: 'Offer a settlement any time. If both sides accept, the case closes right there.' },
-            { icon: RotateCcw,  title: 'Can the decision change?', desc: 'Yes — if you think it\'s unfair, ask the judge to review it.' },
-            { icon: Shield,     title: 'Is my case private?',      desc: 'Only your name and the facts of the case are shared. Chats with your lawyer stay private.' },
-          ].map(({ icon: Icon, title, desc }) => (
-            <div key={title} style={{ display: 'flex', gap: 10 }}>
-              <div style={{ background: '#EEF2FF', borderRadius: 8, padding: '6px', flexShrink: 0, height: 'fit-content', border: '1px solid #C7D2FE' }}>
-                <Icon size={14} color={PRIMARY_DARK} />
-              </div>
-              <div>
-                <div style={{ color: '#0F172A', fontSize: 12.5, fontWeight: 700, marginBottom: 2 }}>{title}</div>
-                <div style={{ color: '#64748B', fontSize: 11.5, lineHeight: 1.5 }}>{desc}</div>
+      ) : (
+        <>
+          {/* Court at a glance */}
+          <section className="dash-rise relative overflow-hidden rounded-[26px] p-5 text-white"
+            style={{ animationDelay: '60ms', background: 'linear-gradient(150deg, #0F172A 0%, #1E1B4B 50%, #4338CA 135%)', boxShadow: '0 24px 44px -24px rgba(30,27,75,0.95)' }}>
+            <div className="dash-blob absolute -top-20 -right-16 w-56 h-56 rounded-full blur-3xl pointer-events-none" style={{ background: 'rgba(129,140,248,0.4)' }} />
+            <Scale size={150} className="absolute -right-6 -bottom-8 text-white/[0.05] pointer-events-none" />
+            <div className="relative flex items-center gap-3">
+              <span className="w-11 h-11 rounded-2xl flex items-center justify-center bg-white/10 border border-white/15 flex-shrink-0"><Gavel size={19} className="text-indigo-200" /></span>
+              <div className="min-w-0">
+                <div className="text-[16px] font-semibold leading-tight">{counts.active ? `${counts.active} case${counts.active !== 1 ? 's' : ''} in progress` : 'All quiet in the court'}</div>
+                <div className="text-[12px] text-white/60">Free, fair help settling disputes with neighbours</div>
               </div>
             </div>
-          ))}
-        </div>
-      </div>
+            <div className="relative mt-4 grid grid-cols-4 gap-2">
+              {[
+                ['Total', stats?.total, '#E2E8F0'],
+                ['Hearing', by.in_hearing, '#FCD34D'],
+                ['Decided', by.verdict_delivered, '#6EE7B7'],
+                ['Settled', by.settled, '#C4B5FD'],
+              ].map(([label, v, color], i) => <CourtStat key={label} label={label} value={v} color={color} delay={140 + i * 50} />)}
+            </div>
+          </section>
+
+          {constitution?.hasConstitution && (
+            <button type="button" onClick={() => openConstitution(estateId, constitution.fileName)}
+              className="dash-rise w-full flex items-center gap-3 text-left rounded-2xl px-4 py-3 border active:scale-[0.99] transition-transform"
+              style={{ animationDelay: '100ms', background: 'linear-gradient(135deg, rgba(236,72,153,0.07), rgba(139,92,246,0.05))', borderColor: 'rgba(236,72,153,0.22)' }}>
+              <span className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(236,72,153,0.14)' }}><FileText size={16} color="#EC4899" /></span>
+              <span className="flex-1 min-w-0">
+                <span className="block text-[13px] font-semibold text-slate-900">Estate constitution</span>
+                <span className="block text-[11px] text-slate-500">{constitution.pageCount ? `${constitution.pageCount} pages · ` : ''}The rules every case is judged by</span>
+              </span>
+              <ChevronRight size={16} color="#EC4899" />
+            </button>
+          )}
+
+          {/* How it works */}
+          {guideHidden ? (
+            <button onClick={() => hideGuide(false)} className="inline-flex items-center gap-1.5 text-[12px] font-semibold" style={{ color: PRIMARY_DARK }}>
+              <Scale size={13} /> How does the court work?
+            </button>
+          ) : (
+            <section className="dash-rise rounded-[22px] bg-white border border-slate-200/70 p-4" style={{ animationDelay: '120ms' }}>
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-[15px] font-semibold text-slate-900" style={{ letterSpacing: '-0.02em' }}>How the court works</h2>
+                <button onClick={() => hideGuide(true)} className="text-[12px] font-medium text-slate-400">Hide</button>
+              </div>
+              <ol className="relative space-y-3">
+                <span className="absolute left-[13px] top-3 bottom-3 w-px bg-slate-200" />
+                {GUIDE_STEPS.map((g, i) => (
+                  <li key={g.title} className="relative flex items-start gap-3">
+                    <span className="relative z-10 w-7 h-7 rounded-full bg-slate-900 text-white text-[12px] font-semibold flex items-center justify-center flex-shrink-0 ring-4 ring-white">{i + 1}</span>
+                    <span className="min-w-0 pt-0.5">
+                      <span className="flex items-center gap-1.5 text-[13px] font-semibold text-slate-900"><g.icon size={13} style={{ color: PRIMARY }} /> {g.title}</span>
+                      <span className="block text-[12px] text-slate-500 leading-snug mt-0.5">{g.desc}</span>
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )}
+
+          {/* Tabs */}
+          <div className="sticky -top-4 z-10 -mx-4 px-4 py-2 bg-[#F8FAFC]/90 backdrop-blur">
+            <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
+              {PHONE_TABS.map(t => {
+                const on = tab === t.id;
+                const n = counts[t.id];
+                return (
+                  <button key={t.id} onClick={() => setTab(t.id)}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[13px] font-semibold whitespace-nowrap flex-shrink-0 transition-all"
+                    style={on ? { background: '#0F172A', color: '#fff' } : { background: '#fff', color: '#475569', border: '1px solid #E2E8F0' }}>
+                    <t.icon size={13} /> {t.label}
+                    {n > 0 && <span className="min-w-[18px] h-[18px] px-1 rounded-full text-[10px] leading-[18px] text-center" style={on ? { background: 'rgba(255,255,255,0.18)' } : { background: '#F1F5F9', color: '#64748B' }}>{n}</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="space-y-3">{[0, 1, 2].map(k => <div key={k} className="skeleton h-[118px] rounded-[22px]" />)}</div>
+          ) : cases.length === 0 ? (
+            <div className="dash-rise rounded-[22px] bg-white border border-slate-200/70 px-6 py-10 text-center">
+              <span className="mx-auto w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center"><Scale size={24} color={PRIMARY} /></span>
+              <div className="mt-3 text-[15px] font-semibold text-slate-900">{tab === 'active' ? 'All quiet right now' : tab === 'mine' ? "You haven't started a case" : 'Nothing in the archive'}</div>
+              <div className="text-[13px] text-slate-500 mt-1">{tab === 'mine' ? "If something's bothering you, start a case. It's free and takes a minute." : tab === 'active' ? 'No one in your estate has an open case.' : 'No past cases to show yet.'}</div>
+              <button onClick={() => setTab('file')} className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-[13px] font-semibold text-white" style={{ background: `linear-gradient(135deg, ${PRIMARY}, ${PRIMARY_DARK})` }}><Plus size={14} /> Start a case</button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {cases.map((c, i) => <CaseCardMobile key={c._id} c={c} i={i} userId={user?._id} onClick={() => setSelectedCaseId(c._id)} />)}
+            </div>
+          )}
+
+          {/* Good to know */}
+          <details className="group dash-rise rounded-[22px] bg-white border border-slate-200/70 p-4">
+            <summary className="list-none cursor-pointer flex items-center justify-between">
+              <span className="text-[15px] font-semibold text-slate-900" style={{ letterSpacing: '-0.02em' }}>Good to know</span>
+              <ChevronRight size={16} className="text-slate-400 transition-transform group-open:rotate-90" />
+            </summary>
+            <div className="mt-3 space-y-3">
+              {[
+                { icon: Scale,      title: 'Does it cost anything?',    desc: 'No. Starting a case and getting an AI lawyer is 100% free.' },
+                { icon: Briefcase,  title: "I'm not a lawyer — ok?",    desc: 'Totally fine. An AI lawyer is assigned to you and does the legal talking.' },
+                { icon: Star,       title: "Who decides who's right?",  desc: '5 random neighbours vote, then Judge Orizu makes the final call.' },
+                { icon: TrendingUp, title: 'What if we agree?',         desc: 'Offer a settlement any time. If both sides accept, the case closes right there.' },
+                { icon: RotateCcw,  title: 'Can the decision change?',  desc: "Yes — if you think it's unfair, ask the judge to review it." },
+                { icon: Shield,     title: 'Is my case private?',       desc: 'Only your name and the facts of the case are shared. Chats with your lawyer stay private.' },
+              ].map(({ icon: Icon, title, desc }) => (
+                <div key={title} className="flex gap-2.5">
+                  <span className="w-7 h-7 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center flex-shrink-0"><Icon size={13} color={PRIMARY_DARK} /></span>
+                  <span>
+                    <span className="block text-[13px] font-semibold text-slate-900">{title}</span>
+                    <span className="block text-[12px] text-slate-500 leading-snug">{desc}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          </details>
+        </>
+      )}
     </div>
   );
 }

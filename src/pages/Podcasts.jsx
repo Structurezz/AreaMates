@@ -93,7 +93,7 @@ function AudioPlayer({ item, kind, onClose }) {
           )}
 
           <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.1em', color: '#C4B5FD', textTransform: 'uppercase' }}>{item.hostName}</div>
-          <h2 style={{ fontSize: 22, fontWeight: 800, margin: '4px 0 8px' }}>{item.title}</h2>
+          <h2 style={{ fontSize: 22, fontWeight: 800, margin: '4px 0 8px', color: '#fff' }}>{item.title}</h2>
           {kind === 'ep' && item.description && <p style={{ color: '#CBD5E1', fontSize: 13, lineHeight: 1.55, marginBottom: 16 }}>{item.description}</p>}
           {kind === 'mix' && <div style={{ fontSize: 13, color: '#CBD5E1', marginBottom: 16 }}>Now: {np?.title || '—'}{np?.artist && ` · ${np.artist}`}</div>}
 
@@ -185,7 +185,7 @@ export default function Podcasts() {
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '5px 11px', borderRadius: 999, background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.25)', fontSize: 10, fontWeight: 800, letterSpacing: '0.14em', marginBottom: 10 }}>
             <Radio size={12}/> PODCAST
           </div>
-          <h1 style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-0.02em', margin: 0, lineHeight: 1.15 }}>
+          <h1 style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-0.02em', margin: 0, lineHeight: 1.15, color: '#fff' }}>
             Live rooms, mixtapes, FM shows.
           </h1>
           <p style={{ fontSize: 13, opacity: 0.9, lineHeight: 1.55, marginTop: 8 }}>
