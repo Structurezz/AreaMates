@@ -5,6 +5,8 @@ import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import BottomSheet from '../components/payments/BottomSheet';
 import InvoiceModal from '../components/ui/InvoiceModal';
+import PaymentsDesktop from '../components/payments/PaymentsDesktop';
+import useIsDesktop from '../hooks/useIsDesktop';
 import {
   Clock, AlertTriangle, CheckCircle2, XCircle, RefreshCw, Receipt, Eye, EyeOff,
   ShieldCheck, Wrench, FileText, Gift, CreditCard, ArrowUpRight, ChevronRight,
@@ -120,6 +122,7 @@ export default function Payments() {
   const [detail, setDetail] = useState(null);
   const [showHelp, setShowHelp] = useState(false);
   const [invoiceId, setInvoiceId] = useState(null);
+  const isDesktop = useIsDesktop();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -213,6 +216,134 @@ export default function Payments() {
   }
 
   const payMeta = payFor ? (TYPE_META[payFor.scheduleId?.type] || TYPE_META.other) : null;
+
+  // Pay / detail / help sheets + invoice — shared by the phone and desktop layouts
+  const sheets = (
+    <>
+      {/* ── Pay: review before leaving for Paystack ── */}
+      <BottomSheet open={!!payFor} onClose={() => !paying && setPayFor(null)} title="Confirm payment" subtitle="Check the details before you pay"
+        footer={payFor && (
+          <div className="flex gap-3">
+            <button onClick={() => setPayFor(null)} disabled={paying} className="btn-outline flex-1 py-3.5">Cancel</button>
+            <button onClick={() => handlePay(payFor)} disabled={paying} className="btn-primary flex-[2] py-3.5 gap-2 text-base">
+              {paying ? <><RefreshCw size={16} className="animate-spin" /> Opening Paystack…</> : <><Lock size={15} /> Pay {naira(payFor.amount)}</>}
+            </button>
+          </div>
+        )}>
+        {payFor && (
+          <>
+            <div className="text-center py-5">
+              <p className="text-xs uppercase tracking-widest font-semibold text-slate-400 mb-1">You're paying</p>
+              <div className="text-4xl font-black text-slate-900 tracking-tight">{naira(payFor.amount)}</div>
+              {payFor.status === 'overdue' && (
+                <span className="inline-flex items-center gap-1 mt-2 text-xs font-semibold px-2.5 py-1 rounded-full bg-red-50 text-red-600">
+                  <AlertTriangle size={12} /> Overdue
+                </span>
+              )}
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 overflow-hidden">
+              <div className="flex items-center gap-3 p-4">
+                <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${payMeta.tint}`}><payMeta.icon size={20} /></div>
+                <div className="min-w-0">
+                  <div className="text-[11px] uppercase tracking-wider font-semibold text-slate-400">Bill</div>
+                  <div className="text-sm font-semibold text-slate-900 truncate">{payFor.scheduleId?.title || 'Payment due'}</div>
+                  <div className="text-xs text-slate-400 truncate">{payMeta.label} · Due {format(new Date(dueDateOf(payFor)), 'MMM d, yyyy')}</div>
+                </div>
+              </div>
+              <div className="border-t border-slate-200 flex items-center gap-3 p-4">
+                <div className="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0"><Building2 size={20} /></div>
+                <div className="min-w-0">
+                  <div className="text-[11px] uppercase tracking-wider font-semibold text-slate-400">Paid to</div>
+                  <div className="text-sm font-semibold text-slate-900 truncate">{estateName || 'Your estate'}</div>
+                  <div className="text-xs text-slate-400 truncate">Card, bank transfer or USSD via Paystack</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 flex items-start gap-2 text-xs text-slate-500">
+              <ShieldCheck size={14} className="text-emerald-500 shrink-0 mt-0.5" />
+              You'll finish on Paystack's secure page and come straight back here. Your card details never touch AreaMates.
+            </div>
+          </>
+        )}
+      </BottomSheet>
+
+      {/* ── History item detail ── */}
+      <BottomSheet open={!!detail} onClose={() => setDetail(null)} title="Payment details"
+        footer={detail && (
+          <div className="flex gap-3">
+            <button onClick={() => setDetail(null)} className="btn-outline flex-1 py-3">Close</button>
+            {detail.status === 'paid' && (
+              <button onClick={() => { setInvoiceId(detail._id); setDetail(null); }} className="btn-primary flex-[2] py-3 gap-2">
+                <Receipt size={15} /> View receipt
+              </button>
+            )}
+          </div>
+        )}>
+        {detail && (
+          <>
+            <div className="text-center py-4">
+              <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-3 ${detail.status === 'paid' ? 'bg-emerald-50' : 'bg-slate-100'}`}>
+                {detail.status === 'paid' ? <CheckCircle2 size={34} className="text-emerald-500" /> : <XCircle size={30} className="text-slate-400" />}
+              </div>
+              <div className="text-4xl font-black text-slate-900 tracking-tight">{naira(detail.amount)}</div>
+              <span className={`inline-block mt-2 text-xs font-semibold px-3 py-1 rounded-full ${STATUS[detail.status]?.pill}`}>{STATUS[detail.status]?.label}</span>
+            </div>
+            <div className="rounded-2xl bg-slate-50 divide-y divide-slate-100 text-sm">
+              <Row label="Bill" value={detail.scheduleId?.title || 'Payment'} sub={TYPE_META[detail.scheduleId?.type]?.label} />
+              {detail.status === 'paid' && <Row label="Method" value={METHOD_LABEL[detail.method] || detail.method || '—'} />}
+              <Row label="Date" value={detail.paidAt ? format(new Date(detail.paidAt), 'MMM d, yyyy · h:mm a') : '—'} />
+              {detail.paystackReference && (
+                <Row label="Reference" value={
+                  <button onClick={() => { navigator.clipboard?.writeText(detail.paystackReference); toast.success('Reference copied'); }}
+                    className="inline-flex items-center gap-1.5 font-mono text-xs text-slate-700 hover:text-indigo-600 break-all">
+                    {detail.paystackReference} <Copy size={12} className="shrink-0" />
+                  </button>
+                } />
+              )}
+            </div>
+          </>
+        )}
+      </BottomSheet>
+
+      {/* ── Help ── */}
+      <BottomSheet open={showHelp} onClose={() => setShowHelp(false)} title="How payments work"
+        footer={<button onClick={() => setShowHelp(false)} className="btn-primary w-full py-3">Got it</button>}>
+        <ol className="space-y-4 text-sm">
+          {[
+            [FileText, 'Your estate creates a bill', 'Dues, levies and contributions show up under My bills with their due date.'],
+            [Lock, 'Pay securely with Paystack', 'Tap Pay, check the details, then pay by card, bank transfer or USSD on Paystack.'],
+            [Receipt, 'Get your receipt', 'Once confirmed, the payment moves to History. Tap it any time to view or download the receipt.'],
+          ].map(([Icon, title, body]) => (
+            <li key={title} className="flex gap-3">
+              <span className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0"><Icon size={17} /></span>
+              <span><span className="block font-semibold text-slate-900">{title}</span><span className="text-slate-500">{body}</span></span>
+            </li>
+          ))}
+        </ol>
+        <div className="mt-5 p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800 flex gap-2">
+          <ChevronRight size={14} className="shrink-0 mt-0.5" />
+          Paid but it still shows as due? Give it a minute and tap refresh. If it doesn't update, send your Paystack reference to your estate manager.
+        </div>
+      </BottomSheet>
+
+      <InvoiceModal paymentId={invoiceId} onClose={() => setInvoiceId(null)} />
+    </>
+  );
+
+  if (isDesktop) return (
+    <>
+      <PaymentsDesktop
+        loading={loading} outstanding={outstanding} history={history} overdue={overdue} overdueTotal={overdueTotal}
+        totalDue={totalDue} paidThisYear={paidThisYear} paidCount={paidCount} nextBill={nextBill} thisYear={thisYear}
+        hideBalance={hideBalance} toggleHide={toggleHide} shown={shown} naira={naira} onRefresh={load}
+        tab={tab} setTab={setTab} onPay={setPayFor} onInvoice={setInvoiceId} onDetail={setDetail} onHelp={() => setShowHelp(true)}
+        TYPE_META={TYPE_META} STATUS={STATUS} METHOD_LABEL={METHOD_LABEL} dueDateOf={dueDateOf}
+      />
+      {sheets}
+    </>
+  );
 
   return (
     <div className="space-y-5 animate-fade-in">
@@ -399,115 +530,7 @@ export default function Payments() {
         </section>
       </div>
 
-      {/* ── Pay: review before leaving for Paystack ── */}
-      <BottomSheet open={!!payFor} onClose={() => !paying && setPayFor(null)} title="Confirm payment" subtitle="Check the details before you pay"
-        footer={payFor && (
-          <div className="flex gap-3">
-            <button onClick={() => setPayFor(null)} disabled={paying} className="btn-outline flex-1 py-3.5">Cancel</button>
-            <button onClick={() => handlePay(payFor)} disabled={paying} className="btn-primary flex-[2] py-3.5 gap-2 text-base">
-              {paying ? <><RefreshCw size={16} className="animate-spin" /> Opening Paystack…</> : <><Lock size={15} /> Pay {naira(payFor.amount)}</>}
-            </button>
-          </div>
-        )}>
-        {payFor && (
-          <>
-            <div className="text-center py-5">
-              <p className="text-xs uppercase tracking-widest font-semibold text-slate-400 mb-1">You're paying</p>
-              <div className="text-4xl font-black text-slate-900 tracking-tight">{naira(payFor.amount)}</div>
-              {payFor.status === 'overdue' && (
-                <span className="inline-flex items-center gap-1 mt-2 text-xs font-semibold px-2.5 py-1 rounded-full bg-red-50 text-red-600">
-                  <AlertTriangle size={12} /> Overdue
-                </span>
-              )}
-            </div>
-
-            <div className="rounded-2xl border border-slate-200 overflow-hidden">
-              <div className="flex items-center gap-3 p-4">
-                <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${payMeta.tint}`}><payMeta.icon size={20} /></div>
-                <div className="min-w-0">
-                  <div className="text-[11px] uppercase tracking-wider font-semibold text-slate-400">Bill</div>
-                  <div className="text-sm font-semibold text-slate-900 truncate">{payFor.scheduleId?.title || 'Payment due'}</div>
-                  <div className="text-xs text-slate-400 truncate">{payMeta.label} · Due {format(new Date(dueDateOf(payFor)), 'MMM d, yyyy')}</div>
-                </div>
-              </div>
-              <div className="border-t border-slate-200 flex items-center gap-3 p-4">
-                <div className="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0"><Building2 size={20} /></div>
-                <div className="min-w-0">
-                  <div className="text-[11px] uppercase tracking-wider font-semibold text-slate-400">Paid to</div>
-                  <div className="text-sm font-semibold text-slate-900 truncate">{estateName || 'Your estate'}</div>
-                  <div className="text-xs text-slate-400 truncate">Card, bank transfer or USSD via Paystack</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-4 flex items-start gap-2 text-xs text-slate-500">
-              <ShieldCheck size={14} className="text-emerald-500 shrink-0 mt-0.5" />
-              You'll finish on Paystack's secure page and come straight back here. Your card details never touch AreaMates.
-            </div>
-          </>
-        )}
-      </BottomSheet>
-
-      {/* ── History item detail ── */}
-      <BottomSheet open={!!detail} onClose={() => setDetail(null)} title="Payment details"
-        footer={detail && (
-          <div className="flex gap-3">
-            <button onClick={() => setDetail(null)} className="btn-outline flex-1 py-3">Close</button>
-            {detail.status === 'paid' && (
-              <button onClick={() => { setInvoiceId(detail._id); setDetail(null); }} className="btn-primary flex-[2] py-3 gap-2">
-                <Receipt size={15} /> View receipt
-              </button>
-            )}
-          </div>
-        )}>
-        {detail && (
-          <>
-            <div className="text-center py-4">
-              <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-3 ${detail.status === 'paid' ? 'bg-emerald-50' : 'bg-slate-100'}`}>
-                {detail.status === 'paid' ? <CheckCircle2 size={34} className="text-emerald-500" /> : <XCircle size={30} className="text-slate-400" />}
-              </div>
-              <div className="text-4xl font-black text-slate-900 tracking-tight">{naira(detail.amount)}</div>
-              <span className={`inline-block mt-2 text-xs font-semibold px-3 py-1 rounded-full ${STATUS[detail.status]?.pill}`}>{STATUS[detail.status]?.label}</span>
-            </div>
-            <div className="rounded-2xl bg-slate-50 divide-y divide-slate-100 text-sm">
-              <Row label="Bill" value={detail.scheduleId?.title || 'Payment'} sub={TYPE_META[detail.scheduleId?.type]?.label} />
-              {detail.status === 'paid' && <Row label="Method" value={METHOD_LABEL[detail.method] || detail.method || '—'} />}
-              <Row label="Date" value={detail.paidAt ? format(new Date(detail.paidAt), 'MMM d, yyyy · h:mm a') : '—'} />
-              {detail.paystackReference && (
-                <Row label="Reference" value={
-                  <button onClick={() => { navigator.clipboard?.writeText(detail.paystackReference); toast.success('Reference copied'); }}
-                    className="inline-flex items-center gap-1.5 font-mono text-xs text-slate-700 hover:text-indigo-600 break-all">
-                    {detail.paystackReference} <Copy size={12} className="shrink-0" />
-                  </button>
-                } />
-              )}
-            </div>
-          </>
-        )}
-      </BottomSheet>
-
-      {/* ── Help ── */}
-      <BottomSheet open={showHelp} onClose={() => setShowHelp(false)} title="How payments work"
-        footer={<button onClick={() => setShowHelp(false)} className="btn-primary w-full py-3">Got it</button>}>
-        <ol className="space-y-4 text-sm">
-          {[
-            [FileText, 'Your estate creates a bill', 'Dues, levies and contributions show up under My bills with their due date.'],
-            [Lock, 'Pay securely with Paystack', 'Tap Pay, check the details, then pay by card, bank transfer or USSD on Paystack.'],
-            [Receipt, 'Get your receipt', 'Once confirmed, the payment moves to History. Tap it any time to view or download the receipt.'],
-          ].map(([Icon, title, body]) => (
-            <li key={title} className="flex gap-3">
-              <span className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0"><Icon size={17} /></span>
-              <span><span className="block font-semibold text-slate-900">{title}</span><span className="text-slate-500">{body}</span></span>
-            </li>
-          ))}
-        </ol>
-        <div className="mt-5 p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800 flex gap-2">
-          <ChevronRight size={14} className="shrink-0 mt-0.5" />
-          Paid but it still shows as due? Give it a minute and tap refresh. If it doesn't update, send your Paystack reference to your estate manager.
-        </div>
-      </BottomSheet>
-
-      <InvoiceModal paymentId={invoiceId} onClose={() => setInvoiceId(null)} />
+      {sheets}
     </div>
   );
 }

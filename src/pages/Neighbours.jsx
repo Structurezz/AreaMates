@@ -11,6 +11,8 @@ import { useCall } from '../context/CallContext';
 import { useAuth } from '../context/AuthContext';
 import BottomSheet from '../components/payments/BottomSheet';
 import { PersonAvatar } from '../components/calls/CallOverlay';
+import NeighboursDesktop from '../components/calls/NeighboursDesktop';
+import useIsDesktop from '../hooks/useIsDesktop';
 
 const BUZZES = [
   { kind: 'checkin',         emoji: '👋', label: 'Check in',        sub: '“Just checking up on you”' },
@@ -55,6 +57,7 @@ export default function Neighbours() {
   const [sending, setSending] = useState(false);
   const [showTopup, setShowTopup] = useState(false);
   const [buying, setBuying] = useState(null);
+  const isDesktop = useIsDesktop();
 
   const load = useCallback(async () => {
     try {
@@ -153,6 +156,75 @@ export default function Neighbours() {
 
   const staffIcon = (role) => (role === 'security' ? ShieldCheck : Briefcase);
   const staffLabel = (role) => (role === 'security' ? 'Security' : 'Estate Manager');
+
+  // Buzz + top-up sheets — shared by the phone and desktop layouts
+  const sheets = (
+    <>
+      {/* ── Buzz sheet ── */}
+      <BottomSheet open={!!buzzFor} onClose={() => !sending && setBuzzFor(null)} title={buzzFor ? `Buzz ${buzzFor.name.split(' ')[0]}` : ''}
+        subtitle="They'll get a notification and an email with your profile"
+        footer={<button onClick={sendBuzz} disabled={sending} className="btn-primary w-full py-3.5 text-base gap-2">
+          {sending ? 'Sending…' : <><Hand size={17} /> Send buzz</>}
+        </button>}>
+        {buzzFor && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50">
+              <PersonAvatar person={buzzFor} size={48} />
+              <div className="min-w-0">
+                <div className="font-semibold text-slate-900 truncate">{buzzFor.name}</div>
+                <div className="text-xs text-slate-400">{buzzFor.unit || 'Resident'}</div>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {BUZZES.map((b) => (
+                <button key={b.kind} type="button" onClick={() => setBuzzKind(b.kind)}
+                  className={`p-3 rounded-2xl border text-center transition-all ${buzzKind === b.kind ? 'border-indigo-400 bg-indigo-50' : 'border-slate-200'}`}>
+                  <div className="text-2xl">{b.emoji}</div>
+                  <div className="text-xs font-semibold text-slate-800 mt-1">{b.label}</div>
+                </button>
+              ))}
+            </div>
+            <textarea value={buzzNote} onChange={(e) => setBuzzNote(e.target.value.slice(0, 200))} rows={2}
+              placeholder="Add a short note (optional)" className="input-field resize-none" />
+            <p className="text-[11px] text-slate-400">Sent as {user?.name}. You can buzz each neighbour once every 2 hours.</p>
+          </div>
+        )}
+      </BottomSheet>
+
+      {/* ── Top-up sheet ── */}
+      <BottomSheet open={showTopup} onClose={() => !buying && setShowTopup(false)} title="Top up call credits"
+        subtitle={credits ? `Balance: ${credits.balance} credits · ${credits.ratePerMinute} credit per minute` : ''}>
+        <div className="space-y-3">
+          {(credits?.packs || []).map((p) => (
+            <button key={p.id} onClick={() => buy(p)} disabled={!!buying}
+              className="w-full flex items-center gap-3 p-4 rounded-2xl border border-slate-200 hover:border-indigo-300 text-left transition-colors disabled:opacity-60">
+              <span className="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0"><Coins size={20} /></span>
+              <span className="flex-1 min-w-0">
+                <span className="block font-bold text-slate-900">{p.label}</span>
+                <span className="block text-xs text-slate-400">≈ {Math.floor(p.credits / (credits.ratePerMinute || 1))} minutes of calls</span>
+              </span>
+              {p.badge && <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 flex items-center gap-1"><Sparkles size={10} /> {p.badge}</span>}
+              <span className="font-black text-indigo-700 shrink-0">{buying === p.id ? '…' : `₦${p.price.toLocaleString('en-NG')}`}</span>
+            </button>
+          ))}
+          <p className="text-[11px] text-slate-400 flex items-start gap-1.5 pt-1">
+            <Lock size={12} className="shrink-0 mt-0.5" /> Paid securely with Paystack. Credits don't expire and are only used for calls to neighbours — calls to security and management are free.
+          </p>
+        </div>
+      </BottomSheet>
+    </>
+  );
+
+  if (isDesktop) return (
+    <>
+      <NeighboursDesktop
+        dir={dir} credits={credits} history={history} buzzes={buzzes} loading={loading} q={q} setQ={setQ} call={call}
+        minutes={minutes} onRefresh={load} onTopup={() => setShowTopup(true)} onCall={callPerson} onBuzz={openBuzz}
+        onReceipt={downloadReceipt} downloading={downloading}
+      />
+      {sheets}
+    </>
+  );
 
   return (
     <div className="space-y-5 animate-fade-in">
@@ -374,58 +446,7 @@ export default function Neighbours() {
         </section>
       </div>
 
-      {/* ── Buzz sheet ── */}
-      <BottomSheet open={!!buzzFor} onClose={() => !sending && setBuzzFor(null)} title={buzzFor ? `Buzz ${buzzFor.name.split(' ')[0]}` : ''}
-        subtitle="They'll get a notification and an email with your profile"
-        footer={<button onClick={sendBuzz} disabled={sending} className="btn-primary w-full py-3.5 text-base gap-2">
-          {sending ? 'Sending…' : <><Hand size={17} /> Send buzz</>}
-        </button>}>
-        {buzzFor && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50">
-              <PersonAvatar person={buzzFor} size={48} />
-              <div className="min-w-0">
-                <div className="font-semibold text-slate-900 truncate">{buzzFor.name}</div>
-                <div className="text-xs text-slate-400">{buzzFor.unit || 'Resident'}</div>
-              </div>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              {BUZZES.map((b) => (
-                <button key={b.kind} type="button" onClick={() => setBuzzKind(b.kind)}
-                  className={`p-3 rounded-2xl border text-center transition-all ${buzzKind === b.kind ? 'border-indigo-400 bg-indigo-50' : 'border-slate-200'}`}>
-                  <div className="text-2xl">{b.emoji}</div>
-                  <div className="text-xs font-semibold text-slate-800 mt-1">{b.label}</div>
-                </button>
-              ))}
-            </div>
-            <textarea value={buzzNote} onChange={(e) => setBuzzNote(e.target.value.slice(0, 200))} rows={2}
-              placeholder="Add a short note (optional)" className="input-field resize-none" />
-            <p className="text-[11px] text-slate-400">Sent as {user?.name}. You can buzz each neighbour once every 2 hours.</p>
-          </div>
-        )}
-      </BottomSheet>
-
-      {/* ── Top-up sheet ── */}
-      <BottomSheet open={showTopup} onClose={() => !buying && setShowTopup(false)} title="Top up call credits"
-        subtitle={credits ? `Balance: ${credits.balance} credits · ${credits.ratePerMinute} credit per minute` : ''}>
-        <div className="space-y-3">
-          {(credits?.packs || []).map((p) => (
-            <button key={p.id} onClick={() => buy(p)} disabled={!!buying}
-              className="w-full flex items-center gap-3 p-4 rounded-2xl border border-slate-200 hover:border-indigo-300 text-left transition-colors disabled:opacity-60">
-              <span className="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0"><Coins size={20} /></span>
-              <span className="flex-1 min-w-0">
-                <span className="block font-bold text-slate-900">{p.label}</span>
-                <span className="block text-xs text-slate-400">≈ {Math.floor(p.credits / (credits.ratePerMinute || 1))} minutes of calls</span>
-              </span>
-              {p.badge && <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 flex items-center gap-1"><Sparkles size={10} /> {p.badge}</span>}
-              <span className="font-black text-indigo-700 shrink-0">{buying === p.id ? '…' : `₦${p.price.toLocaleString('en-NG')}`}</span>
-            </button>
-          ))}
-          <p className="text-[11px] text-slate-400 flex items-start gap-1.5 pt-1">
-            <Lock size={12} className="shrink-0 mt-0.5" /> Paid securely with Paystack. Credits don't expire and are only used for calls to neighbours — calls to security and management are free.
-          </p>
-        </div>
-      </BottomSheet>
+      {sheets}
     </div>
   );
 }
