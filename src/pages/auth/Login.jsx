@@ -482,7 +482,7 @@ function ResidentPreview() {
             <span className="w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-semibold text-white" style={{ background: 'linear-gradient(135deg,#818CF8,#4F46E5)' }}>F4</span>
             <div>
               <p className="text-[11px] text-white/45">{greet}</p>
-              <p className="text-[14.5px] font-semibold" style={{ color: '#fff' }}>Flat 4B · Pilot Crescent</p>
+              <p className="text-[14.5px] font-semibold" style={{ color: '#fff' }}>Flat 4B · Greenfield Estate</p>
             </div>
           </div>
           <span className="flex items-center gap-1.5 text-[11px] text-indigo-200">
