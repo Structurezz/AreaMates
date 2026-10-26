@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { authAPI } from '../../api';
-import { Eye, EyeOff, AlertCircle, CheckCircle, KeyRound, Mail, ShieldCheck, X } from 'lucide-react';
+import { Eye, EyeOff, AlertCircle, CheckCircle, KeyRound, Mail, ShieldCheck, X, Lock, ArrowRight, UserCheck, Package, Radio, Vote, Wallet, Megaphone, Building2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Portal from '../../components/ui/Portal';
 
@@ -437,6 +437,191 @@ function MobileLogin({ form, setForm, showPw, setShowPw, loading, error, handleS
   );
 }
 
+/* ── Desktop: split screen with a live resident preview ── */
+const FEED = [
+  { icon: UserCheck, tone: '#34D399', title: 'Your visitor has arrived',  sub: 'Ada Obi · checked in at Gate A' },
+  { icon: Package,   tone: '#FBBF24', title: 'Package at the gate',       sub: 'Jumia delivery · held by Guard Musa' },
+  { icon: Radio,     tone: '#F472B6', title: 'Lounge is live',            sub: 'Friday night podcast · 23 listening' },
+  { icon: Vote,      tone: '#60A5FA', title: 'New estate poll',           sub: 'Repaint the main gate? · 61% yes' },
+  { icon: Wallet,    tone: '#A5B4FC', title: 'Payment received',          sub: 'Service charge · ₦25,000' },
+  { icon: Megaphone, tone: '#FB923C', title: 'Announcement',              sub: 'Water maintenance on Saturday' },
+];
+
+const DESKTOP_CSS = `
+  @keyframes rlFeedIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: none; } }
+  @keyframes rlFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+  @keyframes rlPing { 0% { transform: scale(1); opacity: .7; } 100% { transform: scale(2.4); opacity: 0; } }
+  @keyframes rlRise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  .rl-input { width: 100%; height: 44px; padding: 0 14px; border-radius: 10px; border: 1px solid #D0D5DD; background: #fff;
+    font-size: 14px; color: #101828; outline: none; transition: border-color .15s, box-shadow .15s; box-shadow: 0 1px 2px rgba(16,24,40,.05); }
+  .rl-input:focus { border-color: #6366F1; box-shadow: 0 0 0 4px rgba(99,102,241,.14); }
+  .rl-input::placeholder { color: #98A2B3; }
+`;
+
+function useTicker(n, ms) {
+  const [i, setI] = useState(0);
+  useEffect(() => { const t = setInterval(() => setI((x) => (x + 1) % n), ms); return () => clearInterval(t); }, [n, ms]);
+  return i;
+}
+
+function ResidentPreview() {
+  const tick = useTicker(FEED.length, 2600);
+  const rows = [0, 1, 2].map((k) => FEED[(tick - k + FEED.length * 4) % FEED.length]);
+  const hour = new Date().getHours();
+  const greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  return (
+    <div style={{ animation: 'rlFloat 7s ease-in-out infinite' }}
+      className="w-full max-w-[440px] rounded-2xl bg-white/[0.05] border border-white/10 backdrop-blur-xl shadow-[0_30px_80px_-20px_rgba(0,0,0,.6)] overflow-hidden">
+      <div className="flex items-center gap-1.5 px-4 h-9 border-b border-white/[0.07]">
+        {['#F97066', '#FDB022', '#32D583'].map((c) => <span key={c} className="w-2.5 h-2.5 rounded-full" style={{ background: c, opacity: .8 }} />)}
+        <span className="ml-3 text-[11px] text-white/35">area-mates.areaconnect.pro</span>
+      </div>
+      <div className="p-5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-semibold text-white" style={{ background: 'linear-gradient(135deg,#818CF8,#4F46E5)' }}>F4</span>
+            <div>
+              <p className="text-[11px] text-white/45">{greet}</p>
+              <p className="text-[14.5px] font-semibold" style={{ color: '#fff' }}>Flat 4B · Pilot Crescent</p>
+            </div>
+          </div>
+          <span className="flex items-center gap-1.5 text-[11px] text-indigo-200">
+            <span className="relative flex w-2 h-2"><span className="absolute inset-0 rounded-full bg-indigo-300" style={{ animation: 'rlPing 1.6s ease-out infinite' }} /><span className="relative w-2 h-2 rounded-full bg-indigo-300" /></span>
+            Live
+          </span>
+        </div>
+        <div className="mt-4 grid grid-cols-3 gap-2.5">
+          {[['Visitors today', '2', '#34D399'], ['Next dues', '₦25k', '#A5B4FC'], ['Neighbours online', '18', '#FBBF24']].map(([l, v, c]) => (
+            <div key={l} className="rounded-xl bg-white/[0.05] border border-white/[0.07] px-3 py-2.5">
+              <p className="text-[10.5px] text-white/45 truncate">{l}</p>
+              <p className="mt-0.5 text-[18px] font-semibold tabular-nums" style={{ color: c }}>{v}</p>
+            </div>
+          ))}
+        </div>
+        <p className="mt-4 mb-2 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-white/35">For you</p>
+        <div className="space-y-1.5">
+          {rows.map((r, k) => (
+            <div key={`${tick}-${k}`} className="flex items-center gap-3 rounded-lg px-2.5 py-2"
+              style={{ background: k === 0 ? 'rgba(255,255,255,.07)' : 'transparent', opacity: 1 - k * 0.25, animation: k === 0 ? 'rlFeedIn .5s cubic-bezier(.22,1,.36,1)' : undefined }}>
+              <span className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: `${r.tone}22`, color: r.tone }}><r.icon size={14} /></span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[12.5px] font-medium text-white/90 truncate">{r.title}</span>
+                <span className="block text-[11px] text-white/45 truncate">{r.sub}</span>
+              </span>
+              <span className="text-[10.5px] text-white/30">{k === 0 ? 'now' : `${k * 4}m`}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DesktopLogin({ form, setForm, showPw, setShowPw, loading, error, handleSubmit, openForgot }) {
+  return (
+    <div className="h-screen min-h-[640px] grid grid-cols-[1.1fr_1fr] bg-white overflow-hidden">
+      <style>{DESKTOP_CSS}</style>
+
+      <aside className="relative overflow-hidden flex flex-col px-14 py-10 text-white h-full"
+        style={{ background: 'radial-gradient(90% 70% at 85% 10%, rgba(99,102,241,.35) 0%, transparent 60%), radial-gradient(70% 60% at 0% 100%, rgba(79,70,229,.22) 0%, transparent 60%), #0A0F24' }}>
+        <div className="absolute inset-0 pointer-events-none opacity-[0.07]"
+          style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.6) 1px, transparent 1px)', backgroundSize: '44px 44px', maskImage: 'radial-gradient(circle at 60% 40%, #000 0%, transparent 75%)' }} />
+
+        <div className="relative flex items-center gap-3">
+          <img src="/icon-192.png" alt="" className="w-10 h-10 rounded-xl" />
+          <div className="leading-tight">
+            <div className="text-[17px] font-bold tracking-tight" style={{ color: '#fff' }}>Area<span style={{ color: '#A5B4FC' }}>Mates</span></div>
+            <div className="text-[11px] text-white/45">For residents</div>
+          </div>
+        </div>
+
+        <div className="relative flex-1 min-h-0 flex flex-col justify-center py-6" style={{ animation: 'rlRise .8s cubic-bezier(.22,1,.36,1) both' }}>
+          <h2 className="text-[34px] leading-[1.12] font-semibold tracking-tight max-w-[470px]" style={{ color: '#fff' }}>
+            Home, <span style={{ color: '#A5B4FC' }}>a little closer.</span>
+          </h2>
+          <p className="mt-3 text-[14.5px] leading-relaxed text-white/60 max-w-[430px]">
+            Let visitors in, pay dues, hear from your estate and meet your neighbours — all from one place.
+          </p>
+          <div className="mt-7"><ResidentPreview /></div>
+        </div>
+
+        <div className="relative flex gap-8 text-[12px] text-white/45">
+          {[['Instant', 'visitor passes'], ['Paystack', 'secure dues'], ['Lounge', 'podcasts & chat']].map(([a, b]) => (
+            <div key={a}><p className="text-[15px] font-semibold text-white/90">{a}</p><p>{b}</p></div>
+          ))}
+        </div>
+      </aside>
+
+      <main className="flex flex-col px-10 py-8 h-full overflow-y-auto">
+        <div className="flex justify-end text-[13px] text-[#475467]">
+          New resident?&nbsp;<Link to="/register" className="font-semibold text-[#4F46E5] hover:text-[#4338CA]">Join with estate code</Link>
+        </div>
+
+        <div className="flex-1 flex items-center justify-center">
+          <div className="w-full max-w-[380px]" style={{ animation: 'rlRise .6s .1s cubic-bezier(.22,1,.36,1) both' }}>
+            <span className="w-12 h-12 rounded-xl bg-[#EEF2FF] border border-[#C7D2FE] flex items-center justify-center text-[#4F46E5]"><Building2 size={22} /></span>
+            <h1 className="mt-6 text-[28px] font-semibold tracking-tight" style={{ color: '#101828' }}>Welcome home</h1>
+            <p className="mt-1.5 text-[14.5px] text-[#475467]">Sign in to your estate account.</p>
+
+            <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+              {error && (
+                <div className="flex items-start gap-2 rounded-lg px-3.5 py-3 text-[13px] bg-[#FEF3F2] border border-[#FECDCA] text-[#B42318]">
+                  <AlertCircle size={15} className="shrink-0 mt-0.5" /> {error}
+                </div>
+              )}
+              <div>
+                <label className="block text-[13px] font-medium text-[#344054] mb-1.5">Email</label>
+                <input type="email" className="rl-input" placeholder="you@example.com" autoFocus
+                  value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required autoComplete="email" />
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-[13px] font-medium text-[#344054]">Password</label>
+                  <button type="button" onClick={openForgot} className="text-[13px] font-semibold text-[#4F46E5] hover:text-[#4338CA]">Forgot password?</button>
+                </div>
+                <div className="relative">
+                  <input type={showPw ? 'text' : 'password'} className="rl-input" style={{ paddingRight: 44 }} placeholder="Enter your password"
+                    value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required autoComplete="current-password" />
+                  <button type="button" onClick={() => setShowPw(!showPw)} aria-label={showPw ? 'Hide password' : 'Show password'}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-[#98A2B3] hover:text-[#475467]">
+                    {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+              <button type="submit" disabled={loading}
+                className="w-full h-11 rounded-[10px] text-[14.5px] font-semibold text-white flex items-center justify-center gap-2 transition-colors disabled:opacity-60 bg-[#4F46E5] hover:bg-[#4338CA]"
+                style={{ boxShadow: '0 1px 2px rgba(16,24,40,.05), inset 0 -2px 0 rgba(0,0,0,.1)' }}>
+                {loading ? (
+                  <>
+                    <svg className="animate-spin" width={15} height={15} viewBox="0 0 24 24" fill="none">
+                      <circle cx="12" cy="12" r="10" stroke="white" strokeWidth="3" strokeOpacity=".3" />
+                      <path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round" />
+                    </svg>
+                    Signing in…
+                  </>
+                ) : <>Sign in <ArrowRight size={16} /></>}
+              </button>
+            </form>
+
+            <div className="mt-8 rounded-xl border border-[#EAECF0] bg-[#F9FAFB] px-4 py-3.5 flex items-center gap-3">
+              <span className="w-9 h-9 rounded-lg bg-white border border-[#EAECF0] flex items-center justify-center text-[#475467]"><ShieldCheck size={16} /></span>
+              <div className="text-[12.5px] leading-snug">
+                <p className="font-medium text-[#101828]">Manage an estate?</p>
+                <p className="text-[#667085]">Use the <a href="https://area-connector.areaconnect.pro/login" className="font-medium text-[#4F46E5] hover:underline">estate manager portal</a>.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between text-[11.5px] text-[#98A2B3]">
+          <span className="flex items-center gap-1.5"><Lock size={12} /> Encrypted connection</span>
+          <span>Powered by <span className="font-semibold text-[#667085]">AREA CONNECTOR TECHNOLOGIES</span> · RC&nbsp;9607864</span>
+        </div>
+      </main>
+    </div>
+  );
+}
+
 export default function Login() {
   const [form, setForm]       = useState({ email: '', password: '' });
   const [showPw, setShowPw]   = useState(false);
@@ -494,84 +679,9 @@ export default function Login() {
         <MobileLogin {...shared}/>
       </div>
 
-      {/* ── Desktop: sidebar + form ── */}
-      <div className="hidden lg:flex min-h-screen" style={{ background: '#060E1A' }}>
-        <AdSidebar />
-
-        {/* Form panel */}
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', overflowY: 'auto', minHeight: '100vh', background: '#F8FAFC', padding: '40px 24px' }}>
-          <div className="w-full max-w-md">
-            {/* Brand mark */}
-            <div className="text-center mb-8">
-              <div style={{
-                width: 64, height: 64, borderRadius: 18,
-                background: 'linear-gradient(135deg,#6366F1,#4F46E5)',
-                boxShadow: '0 4px 24px rgba(99,102,241,0.3)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px',
-              }}>
-                <svg width="36" height="36" viewBox="0 0 40 40" fill="none">
-                  <path d="M20 6L8 13v14l12 7 12-7V13L20 6z" stroke="rgba(255,255,255,0.3)" strokeWidth="1" fill="none"/>
-                  <path d="M20 10L11 15.5v11L20 32l9-5.5v-11L20 10z" fill="rgba(255,255,255,0.15)"/>
-                  <text x="20" y="25" textAnchor="middle" fill="white" fontSize="13" fontWeight="800" fontFamily="system-ui,sans-serif">AM</text>
-                </svg>
-              </div>
-              <h1 className="text-3xl font-bold mb-1" style={{ letterSpacing: '-0.03em', color: '#0F172A' }}>
-                Area<span style={{ color: '#6366F1' }}>Mates</span>
-              </h1>
-              <p className="text-sm" style={{ color: '#64748B' }}>Sign in to your estate account</p>
-            </div>
-
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="glass-card p-6 space-y-4"
-              style={{ border: '1px solid rgba(99,102,241,0.18)', background: 'linear-gradient(135deg,rgba(99,102,241,0.04) 0%,#FFFFFF 100%)' }}>
-              {error && (
-                <div className="flex items-center gap-2 rounded-xl p-3 text-sm"
-                  style={{ color: '#DC2626', background: '#FEF2F2', border: '1px solid rgba(239,68,68,0.25)' }}>
-                  <AlertCircle size={16}/> {error}
-                </div>
-              )}
-              <div>
-                <label className="text-sm mb-1.5 block font-medium" style={{ color: '#475569' }}>Email Address</label>
-                <input type="email" className="input-field" placeholder="you@example.com"
-                  value={form.email} onChange={e => setForm({ ...form, email: e.target.value })}
-                  required autoComplete="email"/>
-              </div>
-              <div>
-                <label className="text-sm mb-1.5 block font-medium" style={{ color: '#475569' }}>Password</label>
-                <div className="relative">
-                  <input type={showPw ? 'text' : 'password'} className="input-field pr-10"
-                    placeholder="••••••••" value={form.password}
-                    onChange={e => setForm({ ...form, password: e.target.value })}
-                    required autoComplete="current-password"/>
-                  <button type="button" onClick={() => setShowPw(!showPw)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
-                    style={{ color: '#94A3B8' }}
-                    onMouseEnter={e => e.currentTarget.style.color = '#475569'}
-                    onMouseLeave={e => e.currentTarget.style.color = '#94A3B8'}>
-                    {showPw ? <EyeOff size={16}/> : <Eye size={16}/>}
-                  </button>
-                </div>
-              </div>
-              <div className="flex justify-end -mt-1">
-                <button type="button" onClick={openForgot}
-                  style={{ background: 'none', border: 'none', color: '#4F46E5', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0 }}>
-                  Forgot password?
-                </button>
-              </div>
-              <button type="submit" disabled={loading} className="btn-primary w-full mt-2"
-                style={{ background: loading ? 'rgba(99,102,241,0.5)' : 'linear-gradient(135deg,#6366F1,#4F46E5)' }}>
-                {loading ? 'Signing in...' : 'Sign In'}
-              </button>
-              <p className="text-center text-sm" style={{ color: '#94A3B8' }}>
-                New resident?{' '}
-                <Link to="/register" className="font-medium" style={{ color: '#6366F1' }}>Join with estate code</Link>
-              </p>
-            </form>
-            <p className="text-[11px] text-slate-400 text-center mt-6 tracking-wide">
-              Powered by <span className="font-semibold text-slate-500">AREA CONNECTOR TECHNOLOGIES</span> · RC&nbsp;9607864
-            </p>
-          </div>
-        </div>
+      {/* ── Desktop ── */}
+      <div className="hidden lg:block">
+        <DesktopLogin {...shared}/>
       </div>
     </>
   );

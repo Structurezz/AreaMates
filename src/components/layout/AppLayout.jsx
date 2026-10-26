@@ -5,7 +5,6 @@ import {
   LayoutDashboard, UserCheck, CreditCard, MessageSquare, Bell, Lock,
 } from 'lucide-react';
 import Sidebar from './Sidebar';
-import { Toaster } from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 import { usePlan } from '../../hooks/usePlan';
 import NotificationBell from '../ui/NotificationBell';
@@ -134,21 +133,6 @@ export default function AppLayout({ children }) {
           })}
         </div>
       </nav>
-
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          style: {
-            background: '#FFFFFF',
-            color: '#0F172A',
-            border: '1px solid #E2E8F0',
-            borderRadius: '10px',
-            fontSize: '0.875rem',
-            boxShadow: '0 4px 16px rgba(15,23,42,0.10)',
-          },
-          success: { iconTheme: { primary: '#6366F1', secondary: '#FFFFFF' } },
-        }}
-      />
     </div>
   );
 }

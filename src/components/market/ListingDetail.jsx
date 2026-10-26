@@ -30,11 +30,19 @@ function Gallery({ listing }) {
   );
 }
 
+// How escrow works — mirrors server/services/marketplaceEscrow.js (48h after delivery, 7 days after payment)
+const ESCROW_STEPS = [
+  { t: 'You pay in the app', d: 'Your money goes into AreaConnect escrow, not to the seller.' },
+  { t: 'We hold it safely', d: 'The seller can see you’ve paid, but can’t touch the money yet.' },
+  { t: 'Seller delivers', d: 'Check the item at the gate or your door before you confirm.' },
+  { t: 'You confirm, seller is paid', d: 'Not right? Raise a problem instead and the payment is frozen.' },
+];
+
 const TIPS = [
+  'Only pay with the Buy button. Cash or bank transfers to the seller aren’t protected.',
+  'Never share your card PIN, OTP or bank login with anyone, including the seller.',
   'Meet at the gate or a common area, in daylight.',
-  'See the item before paying in full.',
-  'Pay by transfer so there\'s a record. Never share OTPs.',
-  'Something off? Report it. Estate management reviews every report.',
+  'Don’t tap “I received it” until you have the item and it works.',
 ];
 
 export default function ListingDetail({ listing: initial, me, onClose, onChat, onChanged, onEdit, onReport, onRate, onBuy }) {
@@ -206,17 +214,42 @@ export default function ListingDetail({ listing: initial, me, onClose, onChat, o
                 )}
               </div>
 
-              {/* Safety */}
+              {/* Safety + escrow */}
               {!mine && (
-                <div className="rounded-2xl bg-indigo-50/70 p-4">
-                  <p className="flex items-center gap-2 text-sm font-bold text-indigo-900"><ShieldCheck size={17} className="text-indigo-600" /> Buy safely</p>
-                  <ul className="mt-2 space-y-1.5">
-                    {TIPS.map((t) => <li key={t} className="text-[13px] text-indigo-900/80 flex gap-2"><span className="text-indigo-400">•</span>{t}</li>)}
-                  </ul>
-                  <button onClick={() => onReport(l, () => setL((x) => ({ ...x, reported: true })))} disabled={l.reported}
-                    className="mt-3 inline-flex items-center gap-1.5 text-[13px] font-semibold text-red-600 disabled:text-slate-400">
-                    <Flag size={14} /> {l.reported ? 'You reported this listing' : 'Report this listing'}
-                  </button>
+                <div className="rounded-2xl border border-indigo-100 bg-indigo-50/60 overflow-hidden">
+                  <div className="p-4">
+                    <p className="flex items-center gap-2 text-sm font-bold text-indigo-950"><ShieldCheck size={17} className="text-indigo-600" /> {l.price > 0 ? 'Buyer protection with escrow' : 'Pick up safely'}</p>
+                    {l.price > 0 && (
+                      <>
+                        <p className="mt-1 text-[12.5px] text-indigo-900/70">When you pay with <b>Buy</b>, the seller only gets the money after you confirm you received the item.</p>
+                        <ol className="mt-3 space-y-2.5">
+                          {ESCROW_STEPS.map((st, k) => (
+                            <li key={st.t} className="flex gap-3">
+                              <span className="w-6 h-6 rounded-full bg-indigo-600 text-white text-[11px] font-bold flex items-center justify-center flex-shrink-0">{k + 1}</span>
+                              <span className="min-w-0">
+                                <span className="block text-[13px] font-semibold text-indigo-950">{st.t}</span>
+                                <span className="block text-[12px] text-indigo-900/70">{st.d}</span>
+                              </span>
+                            </li>
+                          ))}
+                        </ol>
+                        <div className="mt-3 rounded-xl bg-white/80 border border-indigo-100 px-3 py-2.5 text-[12px] text-indigo-950 leading-relaxed">
+                          <b>Good to know:</b> after the seller marks it delivered you have <b>48 hours</b> to confirm or raise a problem — then the money is released automatically.
+                          If it’s never delivered, report it within <b>7 days</b> of paying. Disputes are reviewed by estate management and refunds go back to your card or account.
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  <div className="px-4 py-3 border-t border-indigo-100 bg-white/50">
+                    <p className="text-[11.5px] font-bold uppercase tracking-wider text-indigo-900/60">Stay safe</p>
+                    <ul className="mt-1.5 space-y-1.5">
+                      {(l.price > 0 ? TIPS : TIPS.slice(1)).map((t) => <li key={t} className="text-[12.5px] text-indigo-950/80 flex gap-2"><span className="text-indigo-400">•</span>{t}</li>)}
+                    </ul>
+                    <button onClick={() => onReport(l, () => setL((x) => ({ ...x, reported: true })))} disabled={l.reported}
+                      className="mt-3 inline-flex items-center gap-1.5 text-[13px] font-semibold text-red-600 disabled:text-slate-400">
+                      <Flag size={14} /> {l.reported ? 'You reported this listing' : 'Report this listing'}
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -247,7 +280,7 @@ export default function ListingDetail({ listing: initial, me, onClose, onChat, o
                   <button onClick={() => onChat(l)} className="mk-btn flex-[2] text-white" style={{ background: 'linear-gradient(135deg,#6366F1,#4F46E5)' }}><MessageCircle size={17} /> Chat with {seller.name?.split(' ')[0] || 'seller'}</button>
                 </div>
               )}
-              {l.price > 0 && <p className="text-[11px] text-slate-500 text-center mt-2 flex items-center justify-center gap-1"><ShieldCheck size={12} className="text-indigo-500" /> Paid safely · seller is paid only when you confirm</p>}
+              {l.price > 0 && <p className="text-[11px] text-slate-500 text-center mt-2 flex items-center justify-center gap-1"><ShieldCheck size={12} className="text-indigo-500" /> Held in escrow · seller is paid only when you confirm</p>}
             </div>
           )}
         </div>

@@ -218,7 +218,7 @@ export default function LiveNotificationModal() {
           <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.16em', textTransform: 'uppercase', opacity: 0.95, marginBottom: 6 }}>
             {v.label}
           </div>
-          <h2 style={{ fontSize: dramatic ? 22 : 20, fontWeight: 900, letterSpacing: '-0.02em', margin: 0, lineHeight: 1.22 }}>{activeLive.title}</h2>
+          <h2 style={{ fontSize: dramatic ? 22 : 20, fontWeight: 900, letterSpacing: '-0.02em', margin: 0, lineHeight: 1.22, color: '#fff' }}>{activeLive.title}</h2>
           <p style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.9)', lineHeight: 1.55, margin: '8px 0 20px' }}>
             {activeLive.body}
           </p>

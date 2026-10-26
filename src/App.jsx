@@ -102,8 +102,9 @@ export default function App() {
           <AlertModal />
           <EarlyEntryModal />
           <Toaster position="top-right" toastOptions={{
-            style: { background: '#1C1C20', color: '#E4E4E7', border: '1px solid #2E2E33', borderRadius: '8px', fontSize: '0.875rem' },
-            success: { iconTheme: { primary: '#10B981', secondary: '#1C1C20' } },
+            style: { background: '#FFFFFF', color: '#0F172A', border: '1px solid #E2E8F0', borderRadius: '12px', fontSize: '0.875rem', boxShadow: '0 8px 24px rgba(15,23,42,0.12)', padding: '0.75rem 1rem' },
+            success: { iconTheme: { primary: '#6366F1', secondary: '#FFFFFF' } },
+            error:   { iconTheme: { primary: '#EF4444', secondary: '#FFFFFF' } },
           }} />
           </NotificationProvider>
           </SafetyProvider>
