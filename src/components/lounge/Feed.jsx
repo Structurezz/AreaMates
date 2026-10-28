@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Plus, ImagePlus, ArrowUp, PartyPopper } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { postAPI } from '../../api';
@@ -7,6 +7,7 @@ import { Avatar } from './shared';
 import PostCard from './PostCard';
 import CommentsSheet from './CommentsSheet';
 import Composer from './Composer';
+import { CampaignFeedCard } from '../campaigns/CampaignSlots';
 import StoryViewer from './StoryViewer';
 
 const SEEN_KEY = 'am_lounge_seen_stories';
@@ -241,9 +242,12 @@ export default function Feed({ me }) {
             <button onClick={() => setComposer({ photo: true })} className="px-5 py-2.5 rounded-full text-sm font-bold text-white bg-indigo-600">Share the first post</button>
           </div>
         ) : (
-          posts.map((post) => (
-            <PostCard key={post._id} post={post} me={me} onLikeLocal={onLikeLocal}
+          posts.map((post, i) => (
+            <Fragment key={post._id}>
+            <PostCard post={post} me={me} onLikeLocal={onLikeLocal}
               onOpenComments={(p) => setCommentsFor(p._id)} onDelete={onDelete} />
+            {i === Math.min(1, posts.length - 1) && <CampaignFeedCard />}
+            </Fragment>
           ))
         )}
         <div ref={sentinel} />

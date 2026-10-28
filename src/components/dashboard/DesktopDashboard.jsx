@@ -9,6 +9,7 @@ import { eventAPI, paymentAPI } from '../../api';
 import { VISITOR_STATUS } from '../visitors/MobileVisitors';
 import EstateMap from '../EstateMap';
 import useCountUp from '../../hooks/useCountUp';
+import { CampaignBanner } from '../campaigns/CampaignSlots';
 
 const CATEGORY_COLORS = { general: '#3B82F6', urgent: '#EF4444', event: '#6366F1', maintenance: '#F59E0B' };
 const naira = (n) => `₦${Number(n || 0).toLocaleString('en-NG')}`;
@@ -167,6 +168,8 @@ export default function DesktopDashboard({
           </div>
         </div>
       </div>
+
+      <CampaignBanner />
 
       {/* ── Stats ── */}
       <div className="grid grid-cols-4 gap-4">

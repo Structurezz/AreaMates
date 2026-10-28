@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Bell, X, CheckCheck, Trash2, Siren } from 'lucide-react';
 import { useNotifications, TYPE_CONFIG as TC } from '../../context/NotificationContext';
 
@@ -12,11 +13,13 @@ function timeAgo(iso) {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
-function NotifRow({ n }) {
+function NotifRow({ n, onGo }) {
   const cfg = TC[n.type] || { Icon: Bell, color: PRIMARY, isAlert: false };
   const { Icon } = cfg;
+  const url = n.meta?.url;
   return (
-    <div style={{
+    <div onClick={url ? () => onGo(url) : undefined} style={{
+      cursor: url ? 'pointer' : 'default',
       display: 'flex', alignItems: 'flex-start', gap: 10,
       padding: '11px 16px',
       borderBottom: '1px solid #F8FAFC',
@@ -55,8 +58,10 @@ function NotifRow({ n }) {
 }
 
 export default function NotificationBell() {
+  const navigate = useNavigate();
   const { notifications, unreadCount, alertCount, markAllRead, clearAll, stopSiren } = useNotifications();
   const [open, setOpen] = useState(false);
+  const go = (url) => { setOpen(false); if (/^https?:/.test(url)) window.open(url, '_blank', 'noreferrer'); else navigate(url); };
   const [panelPos, setPanelPos] = useState({ top: 58, right: 12 });
   const buttonRef = useRef(null);
   const wrapperRef = useRef(null);
@@ -205,7 +210,7 @@ export default function NotificationBell() {
                         Security Alerts
                       </span>
                     </div>
-                    {alerts.map(n => <NotifRow key={n.id + n.createdAt} n={n} />)}
+                    {alerts.map(n => <NotifRow key={n.id + n.createdAt} n={n} onGo={go} />)}
                   </>
                 )}
 
@@ -225,7 +230,7 @@ export default function NotificationBell() {
                         </span>
                       </div>
                     )}
-                    {normal.map(n => <NotifRow key={n.id + n.createdAt} n={n} />)}
+                    {normal.map(n => <NotifRow key={n.id + n.createdAt} n={n} onGo={go} />)}
                   </>
                 )}
               </>

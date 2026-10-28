@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import EstateMap from '../EstateMap';
 import useCountUp from '../../hooks/useCountUp';
+import { CampaignBanner } from '../campaigns/CampaignSlots';
 
 const greeting = () => {
   const h = new Date().getHours();
@@ -155,6 +156,8 @@ export default function MobileDashboard({ user, myVisitors, announcements, estat
           <span className="text-[11px] font-bold tracking-wider text-white bg-red-500 px-2.5 py-1 rounded-lg">SOS</span>
         </button>
       </section>
+
+      <CampaignBanner />
 
       {/* Quick actions */}
       <section>

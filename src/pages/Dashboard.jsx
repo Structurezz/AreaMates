@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 import { Siren, X } from 'lucide-react';
 import Spinner from '../components/ui/Spinner';
-import CampaignModal from '../components/ui/CampaignModal';
+import { CampaignModal, CampaignBanner } from '../components/campaigns/CampaignSlots';
 import toast from 'react-hot-toast';
 import Portal from '../components/ui/Portal';
 import DesktopDashboard from '../components/dashboard/DesktopDashboard';

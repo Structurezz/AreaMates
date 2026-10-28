@@ -43,6 +43,7 @@ export const TYPE_CONFIG = {
   // ── Live audio ──────────────────────────────────────────
   live_dj:             { Icon: Mic,           label: 'Lounge Live',     color: '#6366F1', isAlert: false },
   live_announcement:   { Icon: Megaphone,     label: 'Announcement',    color: '#EF4444', isAlert: false },
+  campaign:            { Icon: Megaphone,     label: 'AreaConnect',     color: '#059669', isAlert: false },
   live_podcast:        { Icon: Radio,         label: 'AreaConnect FM',  color: '#8B5CF6', isAlert: false },
 };
 
