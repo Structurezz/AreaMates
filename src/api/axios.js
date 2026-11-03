@@ -17,6 +17,13 @@ api.interceptors.response.use(
   (res) => res,
   async (err) => {
     const original = err.config;
+    // Resident no longer has a unit (or never got one) — sign them out with the reason
+    if (err.response?.data?.code === 'NO_UNIT' && !original.url?.includes('/auth/login')) {
+      localStorage.removeItem('accessToken');
+      try { sessionStorage.setItem('authNotice', err.response.data.message); } catch {}
+      window.dispatchEvent(new CustomEvent('auth:expired'));
+      return Promise.reject(err);
+    }
     if (err.response?.status === 401 && !original._retry) {
       original._retry = true;
       try {

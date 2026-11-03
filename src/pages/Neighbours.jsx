@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { PageLoader } from '../components/ui/Spinner';
 import { useLocation, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { format, isToday, isYesterday } from 'date-fns';
@@ -304,7 +305,7 @@ export default function Neighbours() {
                   className="input-field pl-10 py-3" />
               </div>
               {loading ? (
-                <div className="py-16 flex justify-center"><RefreshCw size={22} className="animate-spin text-indigo-500" /></div>
+                <PageLoader variant="section" />
               ) : filtered.length === 0 ? (
                 <div className="glass-card py-12 text-center text-sm text-slate-400">
                   {q ? `No neighbour matches “${q}”` : 'No neighbours to show yet'}
@@ -312,7 +313,7 @@ export default function Neighbours() {
               ) : (
                 <div className="grid md:grid-cols-2 2xl:grid-cols-3 gap-3">
                   {filtered.map((n) => (
-                    <div key={n._id} className="glass-card p-4 flex items-center gap-3">
+                    <div key={n._id} data-focus-id={n._id} className="glass-card p-4 flex items-center gap-3">
                       <Avatar person={n} />
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-semibold text-slate-900 truncate">{n.name}</div>

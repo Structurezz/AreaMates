@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link, useParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Building2, AlertCircle } from 'lucide-react';
+import { Building2, AlertCircle, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const ROLE_ROUTES = {
@@ -19,6 +19,7 @@ export default function Register() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [pending, setPending] = useState('');
   const { register } = useAuth();
   const navigate = useNavigate();
 
@@ -28,6 +29,7 @@ export default function Register() {
     setError('');
     try {
       const user = await register(form);
+      if (user.pendingUnit) { setPending(user.message); return; }
       toast.success('Account created successfully!');
       navigate(ROLE_ROUTES[user.role] || '/');
     } catch (err) {
@@ -62,7 +64,16 @@ export default function Register() {
           <p className="text-sm" style={{ color: '#64748B' }}>Create your resident account</p>
         </div>
 
-        {/* Registration form */}
+        {pending ? (
+          <div className="glass-card p-6 text-center space-y-3" style={{ border: '1px solid rgba(16,185,129,0.20)' }}>
+            <div className="w-12 h-12 rounded-2xl mx-auto flex items-center justify-center" style={{ background: '#ECFDF5', color: '#059669' }}><Clock size={22} /></div>
+            <p className="text-[15px] font-semibold text-slate-900">Almost there</p>
+            <p className="text-sm text-slate-600">{pending}</p>
+            <p className="text-xs text-slate-400">Once you've been added to your unit, sign in with the email and password you just chose.</p>
+            <Link to="/login" className="inline-block mt-2 text-sm font-semibold" style={{ color: '#059669' }}>Go to sign in</Link>
+          </div>
+        ) : (
+        /* Registration form */
         <form
           onSubmit={handleSubmit}
           className="glass-card p-6 space-y-4"
@@ -155,6 +166,7 @@ export default function Register() {
             </Link>
           </p>
         </form>
+        )}
         <p className="text-[11px] text-slate-400 text-center mt-6 tracking-wide">
           Powered by <span className="font-semibold text-slate-500">AREA CONNECTOR TECHNOLOGIES</span> · RC&nbsp;9607864
         </p>

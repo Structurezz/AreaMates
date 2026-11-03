@@ -211,6 +211,14 @@ export default function Spinner({ size = 24, className = '' }) {
   );
 }
 
+// Centres the logo loader in the part of the screen you can actually see.
+// 'page'    — a whole page loading: fills the space between the top bar and the phone bottom nav.
+// 'section' — a tab or list loading under a page header.
+export function PageLoader({ variant = 'page', className = '' }) {
+  const h = variant === 'section' ? 'min-h-[45dvh]' : 'min-h-[calc(100dvh-11rem)] lg:min-h-[calc(100dvh-9rem)]';
+  return <div className={`w-full flex items-center justify-center ${h} ${className}`}><LogoLoader size={52} /></div>;
+}
+
 export function LoadingScreen() {
   return (
     <div style={{ minHeight: '100vh', background: '#FFFFFF', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 }}>

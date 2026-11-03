@@ -145,7 +145,7 @@ export default function PollsMobile({ polls, loading, userId, onVote }) {
         </div>
       ) : (
         <div className="mt-1 space-y-3">
-          {shown.map((p, i) => <PollCard key={p._id} poll={p} i={i} userId={userId} onVote={onVote} />)}
+          {shown.map((p, i) => <div key={p._id} data-focus-id={p._id}><PollCard poll={p} i={i} userId={userId} onVote={onVote} /></div>)}
         </div>
       )}
     </div>

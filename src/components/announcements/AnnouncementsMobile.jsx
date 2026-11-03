@@ -151,7 +151,7 @@ export default function AnnouncementsMobile({ items, loading }) {
             <section>
               <h2 className="text-[15px] font-semibold text-slate-900 mb-2.5 flex items-center gap-1.5" style={{ letterSpacing: '-0.02em' }}><Pin size={14} className="text-indigo-600" /> Pinned</h2>
               <div className="-mx-4 px-4 flex gap-3 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-1">
-                {pinned.map((a, i) => <PinnedCard key={a._id} a={a} i={i} />)}
+                {pinned.map((a, i) => <div key={a._id} data-focus-id={a._id}><PinnedCard a={a} i={i} /></div>)}
               </div>
             </section>
           )}
@@ -178,7 +178,7 @@ export default function AnnouncementsMobile({ items, loading }) {
           <div className="space-y-3">
             {shown.length === 0
               ? <div className="rounded-[22px] bg-white border border-slate-200/70 p-5 text-center text-[13px] text-slate-400">No {CAT[cat]?.label.toLowerCase()} notices.</div>
-              : shown.map((a, i) => <NoticeCard key={a._id} a={a} i={i} />)}
+              : shown.map((a, i) => <div key={a._id} data-focus-id={a._id}><NoticeCard a={a} i={i} /></div>)}
           </div>
         </>
       )}

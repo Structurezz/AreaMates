@@ -633,6 +633,11 @@ export default function Login() {
 
   // Auto-open the forgot-password modal when linked via /login?forgot=1
   useEffect(() => {
+    // Why we were signed out (e.g. removed from their unit)
+    try {
+      const notice = sessionStorage.getItem('authNotice');
+      if (notice) { setError(notice); sessionStorage.removeItem('authNotice'); }
+    } catch {}
     try {
       const q = new URLSearchParams(window.location.search);
       if (q.get('forgot') === '1') setForgotOpen(true);

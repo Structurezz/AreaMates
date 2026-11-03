@@ -71,7 +71,8 @@ export default function InviteForm({ onCreated, onCancel, sticky = false }) {
         expectedDuration: form.duration,
         notes: form.notes.trim() || undefined,
       });
-      toast.success(instant ? 'Instant pass ready — share it with your visitor' : 'Visitor pass created');
+      if (data.held) toast(data.message, { icon: '⏳', duration: 7000 });
+      else toast.success(instant ? 'Instant pass ready — share it with your visitor' : 'Visitor pass created');
       onCreated(data.data);
     } catch (err) {
       toast.error(err.response?.data?.message || err.response?.data?.errors?.[0]?.msg || 'Couldn\'t create the pass');

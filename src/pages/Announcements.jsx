@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { PageLoader } from '../components/ui/Spinner';
 import { RefreshCw } from 'lucide-react';
 import { announcementAPI } from '../api';
 import { useSocket } from '../context/SocketContext';
@@ -40,11 +41,7 @@ export default function Announcements() {
 
   if (!isDesktop) return <AnnouncementsMobile items={items} loading={loading} />;
 
-  if (loading) return (
-    <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}>
-      <RefreshCw size={20} className="animate-spin" style={{ color: '#6366F1' }} />
-    </div>
-  );
+  if (loading) return <PageLoader />;
 
   return <AnnouncementsDesktop items={items} />;
 }

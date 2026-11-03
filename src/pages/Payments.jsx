@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { PageLoader, LogoLoader } from '../components/ui/Spinner';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { paymentAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
@@ -122,6 +123,16 @@ export default function Payments() {
   const [detail, setDetail] = useState(null);
   const [showHelp, setShowHelp] = useState(false);
   const [invoiceId, setInvoiceId] = useState(null);
+  // From a payment notification: /payments?payment=<id> opens that invoice or receipt
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const pid = params.get('payment');
+    if (!pid) return;
+    setInvoiceId(pid);
+    params.delete('payment');
+    const rest = params.toString();
+    window.history.replaceState(null, '', window.location.pathname + (rest ? `?${rest}` : ''));
+  }, []);
   const isDesktop = useIsDesktop();
 
   const load = useCallback(async () => {
@@ -203,11 +214,9 @@ export default function Payments() {
 
   if (verifying) {
     return (
-      <div className="min-h-[70vh] flex items-center justify-center">
+      <div className="min-h-[calc(100dvh-11rem)] lg:min-h-[calc(100dvh-9rem)] flex items-center justify-center">
         <div className="glass-card p-10 text-center max-w-sm">
-          <div className="w-16 h-16 rounded-full bg-indigo-50 flex items-center justify-center mx-auto mb-4">
-            <RefreshCw size={28} className="text-indigo-500 animate-spin" />
-          </div>
+          <LogoLoader size={56} showPhrase={false} className="mx-auto mb-4" />
           <p className="font-semibold text-lg text-slate-900">Confirming your payment…</p>
           <p className="text-sm mt-1 text-slate-400">Please wait, don't close this tab.</p>
         </div>
@@ -446,7 +455,7 @@ export default function Payments() {
           </div>
 
           {loading ? (
-            <div className="flex justify-center py-16"><RefreshCw size={24} className="text-indigo-500 animate-spin" /></div>
+            <PageLoader variant="section" />
           ) : tab === 'bills' ? (
             outstanding.length === 0 ? (
               <EmptyState icon={CheckCircle2} tone="bg-emerald-50 text-emerald-500" title="You're all caught up!"

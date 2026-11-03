@@ -103,7 +103,7 @@ export const messageAPI = {
   getConversations: () => api.get('/messages/conversations'),
   getUnread: () => api.get('/messages/unread'),
   getEstateUsers: (params) => api.get('/messages/users', { params }),
-  send: (data) => api.post('/messages', data),
+  send: (data, config) => api.post('/messages', data, config),
 };
 
 // Alerts
@@ -167,6 +167,9 @@ export const paymentAPI = {
   initialize: (paymentId) => api.post(`/payments/${paymentId}/initialize`),
   verify: (reference) => api.get(`/payments/verify/${reference}`),
   getInvoice: (paymentId) => api.get(`/payments/${paymentId}/invoice`),
+  // Dues notice / paused services for overdue bills
+  getRestriction: () => api.get('/payments/restriction/mine'),
+  disputeRestriction: (message) => api.post('/payments/restriction/mine/dispute', { message }),
 };
 
 // Social posts (Lounge feed)

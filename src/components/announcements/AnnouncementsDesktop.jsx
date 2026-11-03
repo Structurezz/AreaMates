@@ -124,13 +124,13 @@ export default function AnnouncementsDesktop({ items }) {
               {pinned.length > 0 && (
                 <section className="space-y-3">
                   <h2 className="text-[12px] font-semibold uppercase tracking-wider text-amber-600 flex items-center gap-1.5"><Pin size={12} /> Pinned</h2>
-                  {pinned.map((a, i) => <NoticeCard key={a._id} a={a} i={i} />)}
+                  {pinned.map((a, i) => <div key={a._id} data-focus-id={a._id}><NoticeCard a={a} i={i} /></div>)}
                 </section>
               )}
               {rest.length > 0 && (
                 <section className="space-y-3">
                   {pinned.length > 0 && <h2 className="text-[12px] font-semibold uppercase tracking-wider text-slate-400 pt-1">Latest</h2>}
-                  {rest.map((a, i) => <NoticeCard key={a._id} a={a} i={i + pinned.length} />)}
+                  {rest.map((a, i) => <div key={a._id} data-focus-id={a._id}><NoticeCard a={a} i={i + pinned.length} /></div>)}
                 </section>
               )}
             </>

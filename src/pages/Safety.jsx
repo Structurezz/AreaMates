@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { PageLoader } from '../components/ui/Spinner';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import { ShieldAlert, ShieldCheck, MapPin, Search, UserX, RefreshCw, Siren, Eye, X } from 'lucide-react';
@@ -236,7 +237,7 @@ export default function Safety() {
           </button>
         </div>
         {loading ? (
-          <div className="py-10 flex justify-center"><RefreshCw size={20} className="animate-spin text-slate-400" /></div>
+          <PageLoader variant="section" />
         ) : blocks.length === 0 ? (
           <div className="glass-card p-5 text-sm text-slate-500 flex gap-3">
             <ShieldCheck size={18} className="text-emerald-500 shrink-0 mt-0.5" />

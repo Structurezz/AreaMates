@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { PageLoader } from '../components/ui/Spinner';
 import {
   Music, Calendar, BarChart2, Zap, Activity,
   Play, Pause, Volume2, VolumeX, Radio, Shuffle, SkipBack, SkipForward,
@@ -92,7 +93,7 @@ function EventsTab({ userId }) {
   const upcoming = events.filter(e => new Date(e.date) >= new Date()).sort((a, b) => new Date(a.date) - new Date(b.date));
   const past     = events.filter(e => new Date(e.date) < new Date()).sort((a, b) => new Date(b.date) - new Date(a.date));
 
-  if (loading) return <div className="flex justify-center py-12"><RefreshCw size={18} className="animate-spin" style={{ color: '#6366F1' }} /></div>;
+  if (loading) return <PageLoader variant="section" />;
 
   if (events.length === 0) return (
     <div className="rounded-2xl p-10 text-center text-sm border" style={{ color: '#94A3B8', borderColor: '#F1F5F9' }}>
@@ -382,7 +383,7 @@ function PollsTab({ userId }) {
     finally { setVoting(null); }
   };
 
-  if (loading) return <div className="flex justify-center py-12"><RefreshCw size={18} className="animate-spin" style={{ color: '#6366F1' }} /></div>;
+  if (loading) return <PageLoader variant="section" />;
 
   const active = polls.filter(p => p.isActive);
   const closed = polls.filter(p => !p.isActive);
@@ -602,7 +603,7 @@ function MusicTab({ userId }) {
     finally { setSubmitting(false); }
   };
 
-  if (loading) return <div className="flex justify-center py-12"><RefreshCw size={18} className="animate-spin" style={{ color: '#6366F1' }} /></div>;
+  if (loading) return <PageLoader variant="section" />;
 
   return (
     <div className="space-y-5">

@@ -218,7 +218,7 @@ export default function EventsMobile({ events, loading, userId, onRsvp }) {
         </div>
       ) : (
         <div className="mt-1 space-y-3">
-          {listForTab.map((ev, i) => <EventRow key={ev._id} ev={ev} i={i} userId={userId} onRsvp={onRsvp} />)}
+          {listForTab.map((ev, i) => <div key={ev._id} data-focus-id={ev._id}><EventRow ev={ev} i={i} userId={userId} onRsvp={onRsvp} /></div>)}
         </div>
       )}
     </div>

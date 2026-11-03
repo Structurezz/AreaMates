@@ -1,7 +1,9 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, X, CheckCheck, Trash2, Siren } from 'lucide-react';
+import { Bell, X, CheckCheck, Trash2, Siren, ChevronRight, Sparkles } from 'lucide-react';
+import { isToday, isYesterday } from 'date-fns';
 import { useNotifications, TYPE_CONFIG as TC } from '../../context/NotificationContext';
+import { linkFor } from '../../utils/notificationLinks';
 
 const PRIMARY = '#6366F1';
 
@@ -13,229 +15,203 @@ function timeAgo(iso) {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
-function NotifRow({ n, onGo }) {
+const dayOf = (iso) => { const d = new Date(iso); return isToday(d) ? 'Today' : isYesterday(d) ? 'Yesterday' : 'Earlier'; };
+
+function NotifRow({ n, i, onGo }) {
   const cfg = TC[n.type] || { Icon: Bell, color: PRIMARY, isAlert: false };
-  const { Icon } = cfg;
-  const url = n.meta?.url;
+  const { Icon, color } = cfg;
+  const link = linkFor(n);
+  const url = link.to || link.action;
+  const unread = !n.readAt;
   return (
-    <div onClick={url ? () => onGo(url) : undefined} style={{
-      cursor: url ? 'pointer' : 'default',
-      display: 'flex', alignItems: 'flex-start', gap: 10,
-      padding: '11px 16px',
-      borderBottom: '1px solid #F8FAFC',
-      background: n.readAt ? 'transparent' : (cfg.isAlert ? '#FFF5F5' : '#F5F3FF'),
-      borderLeft: cfg.isAlert ? '3px solid #EF4444' : `3px solid ${n.readAt ? 'transparent' : PRIMARY}`,
-      transition: 'background 0.2s',
-    }}>
-      <div style={{
-        width: 34, height: 34, borderRadius: 10, flexShrink: 0,
-        background: cfg.color + '18',
-        border: `1.5px solid ${cfg.color}28`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}>
-        <Icon size={15} color={cfg.color} />
-      </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: '#0F172A', lineHeight: 1.3 }}>{n.title}</span>
-          {!n.readAt && <span style={{ width: 7, height: 7, borderRadius: 99, background: cfg.isAlert ? '#EF4444' : PRIMARY, flexShrink: 0 }} />}
+    <div onClick={() => onGo(n)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') onGo(n); }}
+      className="notif-row group relative flex items-start gap-3 mx-2 my-1 px-3 py-2.5 rounded-xl transition-all cursor-pointer hover:bg-slate-50 hover:-translate-y-px"
+      style={{ animationDelay: `${Math.min(i, 12) * 35}ms`, background: unread ? (cfg.isAlert ? '#FEF2F2' : '#F5F3FF') : undefined }}>
+      {unread && <span className="absolute left-0 top-3 bottom-3 w-[3px] rounded-full" style={{ background: cfg.isAlert ? '#EF4444' : PRIMARY }} />}
+      <span className="relative w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+        style={{ background: `linear-gradient(135deg, ${color}, ${color}CC)`, boxShadow: `0 6px 14px -8px ${color}` }}>
+        <Icon size={15} className="text-white" />
+        {cfg.isAlert && unread && <span className="absolute inset-0 rounded-xl animate-ping opacity-40" style={{ background: color }} />}
+      </span>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-start justify-between gap-2">
+          <span className={`text-[13px] leading-snug ${unread ? 'font-semibold text-slate-900' : 'font-medium text-slate-700'}`}>{n.title}</span>
+          <span className="text-[10.5px] text-slate-400 whitespace-nowrap mt-0.5">{timeAgo(n.createdAt)}</span>
         </div>
-        <p style={{ fontSize: 12, color: '#64748B', margin: '2px 0 4px', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {n.body}
-        </p>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{
-            fontSize: 10, fontWeight: 600, padding: '1px 6px', borderRadius: 99,
-            background: cfg.color + '18', color: cfg.color,
-          }}>
-            {TC[n.type]?.label || 'Notification'}
-          </span>
-          <span style={{ fontSize: 11, color: '#94A3B8' }}>{timeAgo(n.createdAt)}</span>
+        {n.body && <p className="text-[12px] text-slate-500 mt-0.5 leading-snug line-clamp-2">{n.body}</p>}
+        <div className="mt-1.5 flex items-center gap-1.5">
+          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md" style={{ background: `${color}14`, color }}>{cfg.label || 'Notification'}</span>
+          {unread && <span className="w-1.5 h-1.5 rounded-full" style={{ background: cfg.isAlert ? '#EF4444' : PRIMARY }} />}
         </div>
       </div>
+      {url && <ChevronRight size={15} className="self-center text-slate-300 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />}
     </div>
   );
 }
 
 export default function NotificationBell() {
   const navigate = useNavigate();
-  const { notifications, unreadCount, alertCount, markAllRead, clearAll, stopSiren } = useNotifications();
+  const { notifications, unreadCount, alertCount, markAllRead, markRead, openAlert, openLive, clearAll, stopSiren } = useNotifications();
   const [open, setOpen] = useState(false);
-  const go = (url) => { setOpen(false); if (/^https?:/.test(url)) window.open(url, '_blank', 'noreferrer'); else navigate(url); };
-  const [panelPos, setPanelPos] = useState({ top: 58, right: 12 });
+  const [tab, setTab] = useState('all');
+  const [ring, setRing] = useState(0);
+  const [panelPos, setPanelPos] = useState({ top: 58, left: 12, width: 380 });
   const buttonRef = useRef(null);
   const wrapperRef = useRef(null);
+  const lastCount = useRef(unreadCount);
+
+  // Open the exact page/item the notification is about, and mark it read
+  const go = (n) => {
+    markRead(n.id);
+    setOpen(false);
+    const { to, action } = linkFor(n);
+    if (action === 'alert') return openAlert(n);
+    if (action === 'live') return openLive(n);
+    if (!to) return;
+    if (/^https?:/.test(to)) window.open(to, '_blank', 'noreferrer');
+    else navigate(to);
+  };
+
+  // Ring the bell when something new arrives, and nudge it now and then while unread
+  useEffect(() => {
+    if (unreadCount > lastCount.current) setRing((r) => r + 1);
+    lastCount.current = unreadCount;
+  }, [unreadCount]);
+  useEffect(() => {
+    if (!unreadCount || open) return undefined;
+    const id = setInterval(() => setRing((r) => r + 1), 12000);
+    return () => clearInterval(id);
+  }, [unreadCount, open]);
 
   useEffect(() => {
-    if (!open) return;
-    const handler = (e) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) setOpen(false);
-    };
+    if (!open) return undefined;
+    const handler = (e) => { if (wrapperRef.current && !wrapperRef.current.contains(e.target)) setOpen(false); };
+    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
     document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    window.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('mousedown', handler); window.removeEventListener('keydown', onKey); };
   }, [open]);
 
   const handleOpen = useCallback(() => {
     stopSiren();
     if (!open && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
-      const panelWidth = Math.min(340, window.innerWidth - 24);
+      const width = Math.min(380, window.innerWidth - 24);
       let left = rect.left;
-      if (left + panelWidth > window.innerWidth - 12) left = window.innerWidth - panelWidth - 12;
-      setPanelPos({ top: rect.bottom + 8, left });
+      if (left + width > window.innerWidth - 12) left = window.innerWidth - width - 12;
+      setPanelPos({ top: rect.bottom + 8, left: Math.max(12, left), width });
+      setTab(alertCount > 0 ? 'alerts' : 'all');
     }
-    setOpen(o => !o);
-  }, [open, stopSiren]);
+    setOpen((o) => !o);
+  }, [open, stopSiren, alertCount]);
 
-  const alerts = notifications.filter(n => TC[n.type]?.isAlert);
-  const normal = notifications.filter(n => !TC[n.type]?.isAlert);
+  const shown = useMemo(() => notifications.filter((n) => (
+    tab === 'unread' ? !n.readAt : tab === 'alerts' ? TC[n.type]?.isAlert : true
+  )), [notifications, tab]);
+
+  const groups = useMemo(() => {
+    const order = ['Today', 'Yesterday', 'Earlier'];
+    const m = new Map(order.map((k) => [k, []]));
+    shown.forEach((n) => m.get(dayOf(n.createdAt)).push(n));
+    return order.map((k) => [k, m.get(k)]).filter(([, l]) => l.length);
+  }, [shown]);
+
+  const tabs = [
+    ['all', 'All', notifications.length],
+    ['unread', 'Unread', unreadCount],
+    ['alerts', 'Alerts', notifications.filter((n) => TC[n.type]?.isAlert).length],
+  ];
+  const hot = alertCount > 0;
+  let idx = 0;
 
   return (
     <div ref={wrapperRef}>
       {/* Bell button */}
-      <button
-        ref={buttonRef}
-        onClick={handleOpen}
-        style={{
-          position: 'relative', width: 36, height: 36, borderRadius: 10,
-          border: 'none', background: open ? '#EEF2FF' : 'transparent',
-          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: open ? PRIMARY : '#64748B', transition: 'background 0.15s', flexShrink: 0,
-        }}
-        onMouseEnter={e => { if (!open) { e.currentTarget.style.background = '#EEF2FF'; e.currentTarget.style.color = PRIMARY; } }}
-        onMouseLeave={e => { if (!open) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#64748B'; } }}
-        aria-label="Notifications"
-      >
-        {/* show Siren when there are unread alerts, else Bell */}
-        {alertCount > 0 ? <Siren size={19} color="#EF4444" /> : <Bell size={19} />}
-
+      <button ref={buttonRef} onClick={handleOpen} aria-label="Notifications"
+        className={`relative w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${open ? 'bg-indigo-50 text-indigo-600' : 'text-slate-500 hover:bg-indigo-50 hover:text-indigo-600'}`}>
+        {hot && <span className="absolute inset-0 rounded-xl bg-red-400/30 animate-ping" />}
+        <span key={ring} className={ring ? 'bell-ring' : ''}>
+          {hot ? <Siren size={19} className="text-red-500" /> : <Bell size={19} />}
+        </span>
         {unreadCount > 0 && (
-          <span style={{
-            position: 'absolute', top: 4, right: 4,
-            minWidth: 16, height: 16, borderRadius: 8,
-            background: alertCount > 0 ? '#EF4444' : PRIMARY,
-            color: '#fff', fontSize: 9, fontWeight: 800,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: '0 3px', border: '1.5px solid #fff',
-          }}>
+          <span key={`b${unreadCount}`} className="badge-pop absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full text-white text-[9.5px] font-bold flex items-center justify-center border-2 border-white"
+            style={{ background: hot ? 'linear-gradient(135deg, #F87171, #DC2626)' : 'linear-gradient(135deg, #818CF8, #4F46E5)', boxShadow: `0 4px 10px -3px ${hot ? '#DC2626' : '#4F46E5'}` }}>
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
       </button>
 
       {open && (
-        <div style={{
-          position: 'fixed', top: panelPos.top, left: panelPos.left,
-          width: Math.min(340, window.innerWidth - 24),
-          background: '#fff', borderRadius: 16,
-          boxShadow: '0 16px 48px rgba(15,23,42,0.18)',
-          border: '1px solid #E2E8F0', zIndex: 1000, overflow: 'hidden',
-        }}>
+        <div className="notif-panel fixed z-[1000] bg-white rounded-2xl border border-slate-200 overflow-hidden flex flex-col"
+          style={{ top: panelPos.top, left: panelPos.left, width: panelPos.width, maxHeight: `min(560px, calc(100dvh - ${panelPos.top + 16}px))`, boxShadow: '0 24px 60px -18px rgba(15,23,42,0.35)' }}>
           {/* Header */}
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '14px 16px', borderBottom: '1px solid #F1F5F9',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontWeight: 700, fontSize: 14, color: '#0F172A' }}>Notifications</span>
-              {unreadCount > 0 && (
-                <span style={{
-                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  background: alertCount > 0 ? '#EF4444' : PRIMARY,
-                  color: '#fff', borderRadius: 99, fontSize: 10, fontWeight: 800, padding: '1px 7px',
-                }}>
-                  {unreadCount}
+          <div className="relative px-4 pt-4 pb-3 flex-shrink-0" style={{ background: hot ? 'linear-gradient(135deg, #FEF2F2, #FFFFFF 70%)' : 'linear-gradient(135deg, #EEF2FF, #F5F3FF 45%, #FFFFFF 80%)' }}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="w-8 h-8 rounded-xl flex items-center justify-center text-white" style={{ background: hot ? 'linear-gradient(135deg, #F87171, #DC2626)' : 'linear-gradient(135deg, #818CF8, #4F46E5)', boxShadow: `0 6px 14px -6px ${hot ? '#DC2626' : '#4F46E5'}` }}>
+                  {hot ? <Siren size={15} /> : <Bell size={15} />}
                 </span>
-              )}
-              {alertCount > 0 && (
-                <span style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 3,
-                  background: '#FEF2F2', color: '#EF4444', borderRadius: 99,
-                  fontSize: 10, fontWeight: 700, padding: '2px 7px',
-                  border: '1px solid #FECACA',
-                }}>
-                  <Siren size={9} /> {alertCount} alert{alertCount > 1 ? 's' : ''}
-                </span>
-              )}
+                <div>
+                  <div className="text-[14.5px] font-semibold text-slate-900 leading-tight">Notifications</div>
+                  <div className="text-[11px] text-slate-500">
+                    {hot ? <span className="text-red-600 font-semibold">{alertCount} security alert{alertCount > 1 ? 's' : ''}</span> : unreadCount ? `${unreadCount} unread` : "You're all caught up"}
+                  </div>
+                </div>
+              </div>
+              <button onClick={() => setOpen(false)} className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-white" aria-label="Close"><X size={15} /></button>
             </div>
-            <div style={{ display: 'flex', gap: 4 }}>
-              {unreadCount > 0 && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); markAllRead(); }}
-                  title="Mark all read"
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 6px', borderRadius: 8, color: '#10B981', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600 }}
-                >
-                  <CheckCheck size={14} /> Read
+            {/* Tabs */}
+            <div className="mt-3 flex items-center gap-1 p-1 rounded-xl bg-white/80 border border-slate-200/70">
+              {tabs.map(([k, label, n]) => (
+                <button key={k} onClick={() => setTab(k)}
+                  className={`flex-1 inline-flex items-center justify-center gap-1.5 text-[12px] font-semibold py-1.5 rounded-lg transition-all ${tab === k ? 'text-white shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+                  style={tab === k ? { background: k === 'alerts' ? 'linear-gradient(135deg, #F87171, #DC2626)' : 'linear-gradient(135deg, #6366F1, #4F46E5)' } : undefined}>
+                  {label}
+                  {n > 0 && <span className={`text-[10px] font-bold px-1.5 rounded-md tabular-nums ${tab === k ? 'bg-white/25' : 'bg-slate-100 text-slate-500'}`}>{n}</span>}
                 </button>
-              )}
-              {notifications.length > 0 && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); clearAll(); }}
-                  title="Clear all"
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 6px', borderRadius: 8, color: '#94A3B8', display: 'flex', alignItems: 'center' }}
-                >
-                  <Trash2 size={14} />
-                </button>
-              )}
-              <button
-                onClick={() => setOpen(false)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 6px', borderRadius: 8, color: '#94A3B8', display: 'flex', alignItems: 'center' }}
-              >
-                <X size={14} />
-              </button>
+              ))}
             </div>
           </div>
 
           {/* Body */}
-          <div style={{ maxHeight: 420, overflowY: 'auto' }}>
-            {notifications.length === 0 ? (
-              <div style={{ padding: '36px 16px', textAlign: 'center' }}>
-                <Bell size={28} style={{ color: '#CBD5E1', margin: '0 auto 8px', display: 'block' }} />
-                <p style={{ fontSize: 13, color: '#94A3B8', fontWeight: 500 }}>No notifications yet</p>
-                <p style={{ fontSize: 11, color: '#CBD5E1', marginTop: 4 }}>You'll see alerts and updates here</p>
+          <div className="flex-1 overflow-y-auto overscroll-contain pb-1">
+            {shown.length === 0 ? (
+              <div className="px-6 py-10 text-center">
+                <div className="relative mx-auto w-16 h-16">
+                  <span className="absolute inset-0 rounded-full bg-indigo-100 animate-ping opacity-40" />
+                  <span className="relative w-16 h-16 rounded-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #EEF2FF, #E0E7FF)' }}>
+                    <Bell size={26} className="bell-swing text-indigo-500" />
+                  </span>
+                  <Sparkles size={14} className="absolute -top-1 -right-1 text-amber-400 animate-pulse" />
+                </div>
+                <p className="mt-4 text-[14px] font-semibold text-slate-900">
+                  {tab === 'unread' ? 'Nothing unread' : tab === 'alerts' ? 'No security alerts' : 'No notifications yet'}
+                </p>
+                <p className="mt-1 text-[12px] text-slate-400">
+                  {tab === 'alerts' ? 'The estate is calm. We’ll ring if anything happens.' : 'Visitors, payments, events and messages will show up here.'}
+                </p>
               </div>
-            ) : (
-              <>
-                {/* Security alerts section */}
-                {alerts.length > 0 && (
-                  <>
-                    <div style={{
-                      display: 'flex', alignItems: 'center', gap: 6,
-                      padding: '7px 16px 5px',
-                      background: '#FFF5F5',
-                      borderBottom: '1px solid #FEE2E2',
-                    }}>
-                      <Siren size={11} color="#EF4444" />
-                      <span style={{ fontSize: 11, fontWeight: 700, color: '#EF4444', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                        Security Alerts
-                      </span>
-                    </div>
-                    {alerts.map(n => <NotifRow key={n.id + n.createdAt} n={n} onGo={go} />)}
-                  </>
-                )}
-
-                {/* Regular notifications section */}
-                {normal.length > 0 && (
-                  <>
-                    {alerts.length > 0 && (
-                      <div style={{
-                        display: 'flex', alignItems: 'center', gap: 6,
-                        padding: '7px 16px 5px',
-                        background: '#F5F3FF',
-                        borderBottom: '1px solid #EDE9FE',
-                      }}>
-                        <Bell size={11} color={PRIMARY} />
-                        <span style={{ fontSize: 11, fontWeight: 700, color: PRIMARY, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                          Notifications
-                        </span>
-                      </div>
-                    )}
-                    {normal.map(n => <NotifRow key={n.id + n.createdAt} n={n} onGo={go} />)}
-                  </>
-                )}
-              </>
-            )}
+            ) : groups.map(([day, list]) => (
+              <div key={day}>
+                <div className="sticky top-0 z-10 px-4 pt-2.5 pb-1 bg-white/95 backdrop-blur text-[10.5px] font-bold uppercase tracking-wider text-slate-400">{day}</div>
+                {list.map((n) => <NotifRow key={n.id + n.createdAt} n={n} i={idx++} onGo={go} />)}
+              </div>
+            ))}
           </div>
+
+          {/* Footer */}
+          {notifications.length > 0 && (
+            <div className="flex-shrink-0 flex items-center justify-between gap-2 px-3 py-2.5 border-t border-slate-100 bg-slate-50/60">
+              <button onClick={(e) => { e.stopPropagation(); markAllRead(); }} disabled={!unreadCount}
+                className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-2.5 py-1.5 rounded-lg text-indigo-600 hover:bg-indigo-50 disabled:text-slate-300 disabled:hover:bg-transparent transition-colors">
+                <CheckCheck size={14} /> Mark all as read
+              </button>
+              <button onClick={(e) => { e.stopPropagation(); clearAll(); }}
+                className="inline-flex items-center gap-1.5 text-[12px] font-medium px-2.5 py-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors">
+                <Trash2 size={13} /> Clear all
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

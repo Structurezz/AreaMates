@@ -3,7 +3,7 @@ import { visitorAPI, announcementAPI, alertAPI, estateAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 import { Siren, X } from 'lucide-react';
-import Spinner from '../components/ui/Spinner';
+import Spinner, { PageLoader } from '../components/ui/Spinner';
 import { CampaignModal, CampaignBanner } from '../components/campaigns/CampaignSlots';
 import toast from 'react-hot-toast';
 import Portal from '../components/ui/Portal';
@@ -52,7 +52,7 @@ export default function ResidentDashboard() {
     }
   };
 
-  if (loading) return <div className="flex justify-center p-12"><Spinner /></div>;
+  if (loading) return <PageLoader />;
 
   const unitLabel = user?.unitId
     ? `Unit ${user.unitId.unitNumber}${user.unitId.block ? ` · Block ${user.unitId.block}` : ''}`

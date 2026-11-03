@@ -147,7 +147,7 @@ export default function PollsDesktop({ polls, loading, userId, onVote }) {
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-4 items-start">
-              {shown.map((p, i) => <PollCard key={p._id} poll={p} i={i} userId={userId} onVote={onVote} />)}
+              {shown.map((p, i) => <div key={p._id} data-focus-id={p._id}><PollCard poll={p} i={i} userId={userId} onVote={onVote} /></div>)}
             </div>
           )}
         </div>

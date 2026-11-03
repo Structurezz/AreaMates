@@ -177,6 +177,18 @@ export default function Feed({ me }) {
 
   const commentsPost = posts.find((p) => p._id === commentsFor) || stories.find((p) => p._id === commentsFor);
 
+  // From a "commented on your post" notification: /lounge?focus=<postId>&comments=1
+  useEffect(() => {
+    if (loading) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('comments') !== '1') return;
+    const id = params.get('focus') || params.get('post');
+    if (id && posts.some((p) => p._id === id)) setTimeout(() => setCommentsFor(id), 700);
+    params.delete('comments');
+    const rest = params.toString();
+    window.history.replaceState(null, '', window.location.pathname + (rest ? `?${rest}` : ''));
+  }, [loading]); // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     // Full-bleed on phones (cancel <main> padding), centred 470px column above.
     <div className="-mx-4 sm:mx-auto sm:max-w-[470px] lg:max-w-[580px]">
@@ -244,8 +256,10 @@ export default function Feed({ me }) {
         ) : (
           posts.map((post, i) => (
             <Fragment key={post._id}>
+            <div data-focus-id={post._id}>
             <PostCard post={post} me={me} onLikeLocal={onLikeLocal}
               onOpenComments={(p) => setCommentsFor(p._id)} onDelete={onDelete} />
+            </div>
             {i === Math.min(1, posts.length - 1) && <CampaignFeedCard />}
             </Fragment>
           ))

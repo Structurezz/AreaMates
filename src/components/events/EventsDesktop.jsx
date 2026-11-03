@@ -192,7 +192,7 @@ export default function EventsDesktop({ events, loading, userId, onRsvp }) {
             <>
               {tab === 'upcoming' && <h3 className="text-[14px] font-semibold text-slate-900">Coming up after</h3>}
               <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
-                {gridList.map((ev, i) => <EventTile key={ev._id} ev={ev} i={i} userId={userId} onRsvp={onRsvp} />)}
+                {gridList.map((ev, i) => <div key={ev._id} data-focus-id={ev._id}><EventTile ev={ev} i={i} userId={userId} onRsvp={onRsvp} /></div>)}
               </div>
             </>
           )}

@@ -8,10 +8,12 @@ import Sidebar from './Sidebar';
 import { useAuth } from '../../context/AuthContext';
 import { usePlan } from '../../hooks/usePlan';
 import NotificationBell from '../ui/NotificationBell';
+import useFocusItem from '../../hooks/useFocusItem';
 import SafetyShareBanner from '../SafetyShareBanner';
 import PodcastLivePill from '../PodcastLivePill';
 import LiveNotificationModal from '../LiveNotificationModal';
 import CallAlertsPrompt from '../calls/CallAlertsPrompt';
+import DuesRestrictionBanner from '../payments/DuesRestrictionBanner';
 
 
 const BOTTOM_NAV = [
@@ -24,6 +26,7 @@ const BOTTOM_NAV = [
 
 
 export default function AppLayout({ children }) {
+  useFocusItem();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { can } = usePlan();
 
@@ -84,6 +87,7 @@ export default function AppLayout({ children }) {
         <SafetyShareBanner />
         <main className="flex-1 overflow-y-auto p-4 pb-24 md:p-6 lg:p-8 lg:pb-8">
           <CallAlertsPrompt appName="AreaMates" />
+          <DuesRestrictionBanner />
           {children}
         </main>
       </div>

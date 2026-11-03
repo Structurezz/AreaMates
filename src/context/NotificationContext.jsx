@@ -1,4 +1,6 @@
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { linkFor } from '../utils/notificationLinks';
 import {
   Siren, AlertTriangle, UserCheck, UserMinus, Megaphone, Banknote,
   Clock, AlertCircle, UserPlus, Bell, BellRing, MessageSquare,
@@ -62,6 +64,9 @@ export function NotificationProvider({ children }) {
   const { user }      = useAuth() || {};
   const currentUserId = user?._id ? String(user._id) : null;
   const [notifications, setNotifications] = useState(loadStored);
+  const navigateRef = useRef(null);
+  const markReadRef = useRef(null);
+  navigateRef.current = useNavigate();
   const [unreadCount, setUnreadCount] = useState(() => loadStored().filter(n => !n.readAt).length);
   const [activeAlert, setActiveAlert] = useState(null);
   const [activeLive, setActiveLive]   = useState(null);
@@ -142,9 +147,11 @@ export function NotificationProvider({ children }) {
     }
 
     const Icon = cfg.Icon;
+    const dest = linkFor(entry).to;
     toast(
-      () => (
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+      (t) => (
+        <div onClick={dest ? () => { toast.dismiss(t.id); markReadRef.current?.(entry.id); navigateRef.current?.(dest); } : undefined}
+          style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: dest ? 'pointer' : 'default' }}>
           <div style={{
             width: 32, height: 32, borderRadius: 8, flexShrink: 0,
             background: cfg.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -251,6 +258,27 @@ export function NotificationProvider({ children }) {
     setUnreadCount(0);
   }, []);
 
+  const markRead = useCallback((id) => {
+    const ts = new Date().toISOString();
+    let changed = false;
+    setNotifications(prev => {
+      const updated = prev.map(n => {
+        if (n.id !== id || n.readAt) return n;
+        changed = true;
+        return { ...n, readAt: ts };
+      });
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      return updated;
+    });
+    if (changed) setUnreadCount(c => Math.max(0, c - 1));
+  }, []);
+
+  markReadRef.current = markRead;
+
+  // Re-open an alert or live room from the bell (no siren the second time)
+  const openAlert = useCallback((entry) => setActiveAlert(entry), []);
+  const openLive = useCallback((entry) => setActiveLive(entry), []);
+
   const clearAll = useCallback(() => {
     setNotifications([]);
     setUnreadCount(0);
@@ -267,7 +295,7 @@ export function NotificationProvider({ children }) {
     return () => window.removeEventListener('app:notification', on);
   }, [addNotification]);
   return (
-    <NotificationContext.Provider value={{ notifications, unreadCount, alertCount, activeAlert, dismissAlert, activeLive, dismissLive, markAllRead, clearAll, stopSiren, TYPE_CONFIG }}>
+    <NotificationContext.Provider value={{ notifications, unreadCount, alertCount, activeAlert, dismissAlert, activeLive, dismissLive, markAllRead, markRead, openAlert, openLive, clearAll, stopSiren, TYPE_CONFIG }}>
       {children}
     </NotificationContext.Provider>
   );

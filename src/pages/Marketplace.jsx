@@ -122,6 +122,29 @@ export default function Marketplace() {
   useEffect(() => { loadOrders(); loadSales(); }, [loadOrders, loadSales]);
   useEffect(() => { if (tab === 'orders') loadOrders(); if (tab === 'mine') { loadSales(); loadWallet(); } }, [tab, loadOrders, loadSales, loadWallet]);
 
+  // From marketplace notifications: ?listing=<id> opens the listing; ?orderId=<id>
+  // jumps to that order on the right tab (purchases or sales) and highlights it.
+  const [pendingOrder, setPendingOrder] = useState(null);
+  useEffect(() => {
+    const listingId = params.get('listing');
+    const orderId = params.get('orderId');
+    if (!listingId && !orderId) return;
+    setParams({}, { replace: true });
+    if (listingId) {
+      marketplaceAPI.getOne(listingId)
+        .then(({ data }) => data?.data && setOpen(data.data))
+        .catch(() => toast.error('That listing is no longer available'));
+    }
+    if (orderId) setPendingOrder(orderId);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!pendingOrder || orders === null || sales === null) return;
+    const isSale = (sales || []).some((o) => o._id === pendingOrder);
+    setTab(isSale ? 'mine' : 'orders');
+    setPendingOrder(null);
+    setTimeout(() => setParams({ focus: pendingOrder }, { replace: true }), 50);
+  }, [pendingOrder, orders, sales]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Back from Paystack: /marketplace?order=MKT-…
   useEffect(() => {
     const ref = params.get('order');
@@ -193,7 +216,7 @@ export default function Marketplace() {
             <Empty title="No orders yet" body="When you buy from a neighbour, your order and its status show here. Your money is held safely until you confirm delivery." cta="Browse the market" onCta={() => setTab('browse')} />
           ) : (
             <div className="space-y-2.5">
-              {orders.map((o) => <OrderCard key={o._id} order={o} as="buyer" onChanged={updateOrder} onChat={chatAbout} onCall={(p) => startCall?.(p)} onDispute={setDisputeFor} />)}
+              {orders.map((o) => <div key={o._id} data-focus-id={o._id}><OrderCard order={o} as="buyer" onChanged={updateOrder} onChat={chatAbout} onCall={(p) => startCall?.(p)} onDispute={setDisputeFor} /></div>)}
             </div>
           )
         ) : tab === 'mine' ? (
@@ -202,13 +225,13 @@ export default function Marketplace() {
             {toFulfil.length > 0 && (
               <section>
                 <h2 className="text-sm font-bold text-slate-900 mb-2">Orders to handle <span className="text-amber-600">({toFulfil.length})</span></h2>
-                <div className="space-y-2.5">{toFulfil.map((o) => <OrderCard key={o._id} order={o} as="seller" onChanged={updateOrder} onChat={chatAbout} onCall={(p) => startCall?.(p)} onCancel={setCancelFor} />)}</div>
+                <div className="space-y-2.5">{toFulfil.map((o) => <div key={o._id} data-focus-id={o._id}><OrderCard order={o} as="seller" onChanged={updateOrder} onChat={chatAbout} onCall={(p) => startCall?.(p)} onCancel={setCancelFor} /></div>)}</div>
               </section>
             )}
             {(sales || []).some((o) => o.status === 'delivered') && (
               <section>
                 <h2 className="text-sm font-bold text-slate-900 mb-2">Waiting for buyers to confirm</h2>
-                <div className="space-y-2.5">{sales.filter((o) => o.status === 'delivered').map((o) => <OrderCard key={o._id} order={o} as="seller" onChanged={updateOrder} onChat={chatAbout} onCall={(p) => startCall?.(p)} onCancel={setCancelFor} />)}</div>
+                <div className="space-y-2.5">{sales.filter((o) => o.status === 'delivered').map((o) => <div key={o._id} data-focus-id={o._id}><OrderCard order={o} as="seller" onChanged={updateOrder} onChat={chatAbout} onCall={(p) => startCall?.(p)} onCancel={setCancelFor} /></div>)}</div>
               </section>
             )}
             <section>

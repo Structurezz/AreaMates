@@ -4,7 +4,7 @@ import QRCode from 'qrcode';
 import { visitorAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
 import Badge, { visitorStatusBadge } from '../components/ui/Badge';
-import Spinner from '../components/ui/Spinner';
+import Spinner, { PageLoader } from '../components/ui/Spinner';
 import {
   ArrowLeft, UserCheck, Share2, CheckCircle, MessageCircle, LogIn, Copy, XCircle, Calendar, Clock, Timer,
   Phone, Mail, StickyNote, ChevronRight, Zap, Users, Package, Wrench, Heart, MoreHorizontal,
@@ -382,7 +382,7 @@ export default function VisitorDetailPage() {
     toast.success('Access code copied!');
   };
 
-  if (loading) return <div className="flex justify-center p-16"><Spinner /></div>;
+  if (loading) return <PageLoader />;
   if (!visitor) return null;
 
   const statusColor = {
@@ -392,18 +392,21 @@ export default function VisitorDetailPage() {
     expired:       { bg: '#FFFBEB', text: '#D97706', border: '#FDE68A' },
     blacklisted:   { bg: '#FEF2F2', text: '#DC2626', border: '#FECACA' },
     cancelled:     { bg: '#F1F5F9', text: '#64748B', border: '#E2E8F0' },
+    pending:       { bg: '#EEF2FF', text: '#4338CA', border: '#C7D2FE' },
   }[visitor.status] || { bg: '#F8FAFC', text: '#475569', border: '#E2E8F0' };
 
   const isDone     = visitor.status === 'checked-out';
   const isIn       = visitor.status === 'checked-in';
   const isBlocked  = ['blacklisted', 'expired', 'cancelled'].includes(visitor.status);
-  const canCancel  = visitor.status === 'active';
+  // Held for estate-management approval (overdue estate bills)
+  const isHeld     = visitor.status === 'pending' && visitor.awaitingApproval;
+  const canCancel  = visitor.status === 'active' || isHeld;
   const cancelPass = async () => {
     if (!window.confirm(`Cancel ${visitor.visitorName}'s pass? The code will stop working at the gate.`)) return;
     try { const { data } = await visitorAPI.cancel(visitor._id); setVisitor((v) => ({ ...v, ...data.data })); toast.success('Pass cancelled'); }
     catch (e) { toast.error(e.response?.data?.message || 'Couldn\'t cancel the pass'); }
   };
-  const canShare   = !isDone && !isBlocked;
+  const canShare   = !isDone && !isBlocked && !isHeld;
   const expectedAt = new Date(visitor.expectedDate);
 
   const PURPOSE = {
@@ -411,7 +414,7 @@ export default function VisitorDetailPage() {
     contractor: ['#F97316', Wrench], medical: ['#EF4444', Heart],
   }[String(visitor.purpose || '').toLowerCase()] || ['#64748B', MoreHorizontal];
   const [pColor, PIcon] = PURPOSE;
-  const STATUS_LABEL = { active: 'Expected', 'checked-in': 'Inside now', 'checked-out': 'Left', expired: 'Expired', blacklisted: 'Blocked', cancelled: 'Cancelled' };
+  const STATUS_LABEL = { active: 'Expected', 'checked-in': 'Inside now', 'checked-out': 'Left', expired: 'Expired', blacklisted: 'Blocked', cancelled: 'Cancelled', pending: 'Awaiting approval' };
   const initials = (visitor.visitorName || '?').split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase();
   const validUntil = new Date(expectedAt.getTime() + (visitor.expectedDuration || 60) * 60000);
   const steps = [
@@ -474,11 +477,11 @@ export default function VisitorDetailPage() {
           <div className="p-5 pt-4 flex flex-col items-center">
             {canShare ? <QRCanvas value={visitor.visitorCode} size={176} /> : (
               <div className="w-44 h-44 rounded-xl bg-slate-50 border border-slate-200 flex flex-col items-center justify-center text-center px-4">
-                <XCircle size={30} className={visitor.status === 'cancelled' ? 'text-slate-400' : 'text-red-400'} />
-                <p className="text-xs text-slate-500 mt-2">{visitor.status === 'cancelled' ? 'This pass was cancelled' : isDone ? 'Pass already used' : `Pass ${visitor.status}`}</p>
+                {isHeld ? <Clock size={30} className="text-indigo-400" /> : <XCircle size={30} className={visitor.status === 'cancelled' ? 'text-slate-400' : 'text-red-400'} />}
+                <p className="text-xs text-slate-500 mt-2">{isHeld ? 'Waiting for estate management to approve' : visitor.status === 'cancelled' ? 'This pass was cancelled' : isDone ? 'Pass already used' : `Pass ${visitor.status}`}</p>
               </div>
             )}
-            <p className="text-[11px] text-slate-400 mt-2">{canShare ? 'Guards scan the QR or type the code' : 'The gate will refuse this code'}</p>
+            <p className="text-[11px] text-slate-400 mt-2">{canShare ? 'Guards scan the QR or type the code' : isHeld ? 'Your visitor gets the code once it is approved' : 'The gate will refuse this code'}</p>
           </div>
         </div>
 

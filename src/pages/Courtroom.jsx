@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { PageLoader } from '../components/ui/Spinner';
 import openConstitution from '../utils/openConstitution';
 import {
   Scale, Gavel, Users, FileText, Clock, CheckCircle2, XCircle,
@@ -1137,11 +1138,7 @@ function CaseDetail({ caseId, onBack, user }) {
     return () => { u1 && u1(); u2 && u2(); };
   }, [subscribe, caseId]);
 
-  if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 80 }}>
-      <Spinner size={32} />
-    </div>
-  );
+  if (loading) return <PageLoader />;
   if (!c) return <div style={{ padding: 32, color: '#94A3B8' }}>Case not found.</div>;
 
   const userId      = user?._id;
@@ -1980,7 +1977,15 @@ export default function Courtroom() {
   const [stats, setStats]             = useState(null);
   const [loading, setLoading]         = useState(true);
   const [residents, setResidents]     = useState([]);
-  const [selectedCaseId, setSelectedCaseId] = useState(null);
+  // From a court notification: /courtroom?case=<id> opens that case
+  const [selectedCaseId, setSelectedCaseId] = useState(() => new URLSearchParams(window.location.search).get('case'));
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (!params.get('case')) return;
+    params.delete('case');
+    const rest = params.toString();
+    window.history.replaceState(null, '', window.location.pathname + (rest ? `?${rest}` : ''));
+  }, []);
   const [constitution, setConstitution] = useState(null);
   const isDesktop = useIsDesktop();
   const [q, setQ] = useState('');

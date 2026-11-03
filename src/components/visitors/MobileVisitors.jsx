@@ -11,6 +11,7 @@ export const VISITOR_STATUS = {
   'checked-out': { label: 'Left',       dot: '#94A3B8', bg: '#F1F5F9', text: '#475569' },
   expired:       { label: 'Expired',    dot: '#F59E0B', bg: '#FFFBEB', text: '#B45309' },
   blacklisted:   { label: 'Blocked',    dot: '#EF4444', bg: '#FEF2F2', text: '#B91C1C' },
+  pending:       { label: 'Awaiting approval', dot: '#6366F1', bg: '#EEF2FF', text: '#4338CA' },
   cancelled:     { label: 'Cancelled',  dot: '#CBD5E1', bg: '#F1F5F9', text: '#64748B' },
 };
 
