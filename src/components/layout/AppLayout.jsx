@@ -14,13 +14,14 @@ import PodcastLivePill from '../PodcastLivePill';
 import LiveNotificationModal from '../LiveNotificationModal';
 import CallAlertsPrompt from '../calls/CallAlertsPrompt';
 import DuesRestrictionBanner from '../payments/DuesRestrictionBanner';
+import { useHousehold } from '../../hooks/useHousehold';
 
 
 const BOTTOM_NAV = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Home' },
-  { to: '/visitors',  icon: UserCheck,       label: 'Visitors', feature: 'visitorManagement' },
-  { to: '/payments',  icon: CreditCard,      label: 'Payments', feature: 'paymentSystem' },
-  { to: '/chat',      icon: MessageSquare,   label: 'Chat',     feature: 'communityChat' },
+  { to: '/visitors',  icon: UserCheck,       label: 'Visitors', feature: 'visitorManagement', perm: 'visitors' },
+  { to: '/payments',  icon: CreditCard,      label: 'Payments', feature: 'paymentSystem', perm: 'payments' },
+  { to: '/chat',      icon: MessageSquare,   label: 'Chat',     feature: 'communityChat', perm: 'chat' },
   { to: '/alerts',    icon: Bell,            label: 'Alerts',   feature: 'securityPortal' },
 ];
 
@@ -29,6 +30,7 @@ export default function AppLayout({ children }) {
   useFocusItem();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { can } = usePlan();
+  const { allowed } = useHousehold();
 
 
   return (
@@ -65,11 +67,11 @@ export default function AppLayout({ children }) {
             </span>
           </Link>
           {/* Calls & neighbours — always one tap away */}
-          <NavLink to="/neighbours" aria-label="Call or buzz a neighbour"
+          {allowed('neighbours') && <NavLink to="/neighbours" aria-label="Call or buzz a neighbour"
             className="p-2 rounded-xl transition-all"
             style={({ isActive }) => ({ color: isActive ? '#4F46E5' : '#64748B', background: isActive ? '#EEF2FF' : 'transparent' })}>
             <PhoneCall size={20} />
-          </NavLink>
+          </NavLink>}
           <NotificationBell />
           <button
             onClick={() => setSidebarOpen(true)}
@@ -102,7 +104,7 @@ export default function AppLayout({ children }) {
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t"
         style={{ borderTopColor: '#E2E8F0', paddingBottom: 'env(safe-area-inset-bottom)' }}>
         <div className="flex">
-          {BOTTOM_NAV.map(({ to, icon: Icon, label, feature }) => {
+          {BOTTOM_NAV.filter(l => allowed(l.perm)).map(({ to, icon: Icon, label, feature }) => {
             const locked = feature ? !can(feature) : false;
             return (
               <NavLink

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { visitorAPI, announcementAPI, alertAPI, estateAPI } from '../api';
+import { useHousehold } from '../hooks/useHousehold';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 import { Siren, X } from 'lucide-react';
@@ -22,10 +23,12 @@ export default function ResidentDashboard() {
   const isDesktop = useIsDesktop();
 
   const estateId = user?.estateId?._id || user?.estateId;
+  const { allowed } = useHousehold();
+  const canVisitors = allowed('visitors');
 
   useEffect(() => {
     const calls = [
-      visitorAPI.getAll({ limit: 4 }),
+      canVisitors ? visitorAPI.getAll({ limit: 4 }) : Promise.resolve({ data: { data: [] } }),
       announcementAPI.getAll({ limit: 4 }),
     ];
     if (estateId) calls.push(estateAPI.getOne(estateId));
@@ -36,7 +39,7 @@ export default function ResidentDashboard() {
       setAnnouncements(a.data.data);
       if (e) setEstate(e.data.data);
     }).catch(console.error).finally(() => setLoading(false));
-  }, [estateId]);
+  }, [estateId, canVisitors]);
 
   const handleAlert = async () => {
     setAlerting(true);

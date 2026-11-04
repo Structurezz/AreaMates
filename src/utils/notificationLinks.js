@@ -26,6 +26,7 @@ export function linkFor(n) {
     case 'marketplace_order':  return { to: m.orderId ? `/marketplace?orderId=${m.orderId}` : '/marketplace' };
     case 'court_update':
     case 'jury_summoned':      return { to: m.caseId ? `/courtroom?case=${m.caseId}` : '/courtroom' };
+    case 'household_update':   return { to: '/household' };
     case 'new_resident':       return { to: m.residentId ? `/neighbours?focus=${m.residentId}` : '/neighbours' };
     case 'neighbour_buzz':     return { to: m.from?.role === 'resident' && m.from?._id ? `/neighbours?buzzback=${m.from._id}` : '/neighbours' };
     case 'missed_call':

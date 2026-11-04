@@ -1,3 +1,4 @@
+import { useHousehold } from '../../hooks/useHousehold';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -83,12 +84,12 @@ function Stat({ i, label, value, display, Icon, color, to, sub, live }) {
 }
 
 const SHORTCUTS = [
-  { to: '/visitors/new', icon: UserCheck,     label: 'Invite guest', color: '#6366F1' },
-  { to: '/marketplace',  icon: ShoppingBag,   label: 'Market',       color: '#F59E0B' },
-  { to: '/chat',         icon: MessageSquare, label: 'Chat',         color: '#3B82F6' },
-  { to: '/lounge',       icon: Coffee,        label: 'Lounge',       color: '#8B5CF6' },
-  { to: '/payments',     icon: Wallet,        label: 'Payments',     color: '#10B981' },
-  { to: '/neighbours',   icon: Users,         label: 'Neighbours',   color: '#EC4899' },
+  { to: '/visitors/new', icon: UserCheck,     label: 'Invite guest', color: '#6366F1', perm: 'visitors' },
+  { to: '/marketplace',  icon: ShoppingBag,   label: 'Market',       color: '#F59E0B', perm: 'marketplace' },
+  { to: '/chat',         icon: MessageSquare, label: 'Chat',         color: '#3B82F6', perm: 'chat' },
+  { to: '/lounge',       icon: Coffee,        label: 'Lounge',       color: '#8B5CF6', perm: 'community' },
+  { to: '/payments',     icon: Wallet,        label: 'Payments',     color: '#10B981', perm: 'payments' },
+  { to: '/neighbours',   icon: Users,         label: 'Neighbours',   color: '#EC4899', perm: 'neighbours' },
 ];
 
 export default function DesktopDashboard({
@@ -98,13 +99,14 @@ export default function DesktopDashboard({
   const [events, setEvents] = useState(null);
   const [bills, setBills] = useState(null); // null = unavailable / loading
 
+  const { allowed } = useHousehold();
   useEffect(() => {
-    eventAPI.getAll()
+    if (!allowed('community')) setEvents([]); else eventAPI.getAll()
       .then(({ data }) => setEvents((data.data || [])
         .filter((e) => new Date(e.date) >= new Date(new Date().toDateString()))
         .sort((a, b) => new Date(a.date) - new Date(b.date))))
       .catch(() => setEvents([]));
-    paymentAPI.getMine()
+    if (allowed('payments')) paymentAPI.getMine()
       .then(({ data }) => setBills((data.data || []).filter((p) => p.status === 'pending' || p.status === 'overdue')))
       .catch(() => setBills(null));
   }, []);
@@ -154,11 +156,11 @@ export default function DesktopDashboard({
             <Link to="/alerts" className="inline-flex items-center gap-1.5 text-[13px] font-medium px-3 py-2 rounded-xl text-white bg-white/10 border border-white/25 hover:bg-white/20 transition-all hover:-translate-y-0.5 backdrop-blur">
               <Bell size={14} /> Alerts
             </Link>
-            <Link to="/visitors/new" className="group inline-flex items-center gap-1.5 text-[13px] font-semibold px-3.5 py-2 rounded-xl bg-white text-indigo-700 hover:-translate-y-0.5 transition-all"
+            {allowed('visitors') && <Link to="/visitors/new" className="group inline-flex items-center gap-1.5 text-[13px] font-semibold px-3.5 py-2 rounded-xl bg-white text-indigo-700 hover:-translate-y-0.5 transition-all"
               style={{ boxShadow: '0 8px 18px -8px rgba(0,0,0,0.35)' }}>
               <UserCheck size={14} /> Invite a visitor
               <ArrowRight size={13} className="transition-transform group-hover:translate-x-0.5" />
-            </Link>
+            </Link>}
             <button onClick={onSOS} disabled={alerting}
               className="relative inline-flex items-center gap-1.5 text-[13px] font-bold px-3.5 py-2 rounded-xl text-white bg-red-500 hover:bg-red-600 transition-all hover:-translate-y-0.5 disabled:opacity-70"
               style={{ boxShadow: '0 10px 22px -10px rgba(239,68,68,0.9)' }}>
@@ -334,7 +336,7 @@ export default function DesktopDashboard({
           <div className={CARD} style={delay(10)}>
             <CardHead title="Shortcuts" Icon={Zap} color="#6366F1" />
             <div className="grid grid-cols-2 gap-2 p-3">
-              {SHORTCUTS.map(({ to, icon: Icon, label, color }) => (
+              {SHORTCUTS.filter(l => allowed(l.perm)).map(({ to, icon: Icon, label, color }) => (
                 <Link key={to} to={to}
                   className="group flex items-center gap-2.5 px-3 py-2.5 rounded-xl border transition-all hover:-translate-y-0.5 hover:shadow-md"
                   style={{ textDecoration: 'none', background: `linear-gradient(135deg, ${color}12, #fff 70%)`, borderColor: `${color}26` }}>

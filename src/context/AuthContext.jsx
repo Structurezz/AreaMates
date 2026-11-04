@@ -39,6 +39,18 @@ export const AuthProvider = ({ children }) => {
     return () => window.removeEventListener('auth:expired', handleExpiry);
   }, []);
 
+  // Re-read the account when the server says access changed (household members)
+  useEffect(() => {
+    let last = 0;
+    const refresh = () => {
+      if (Date.now() - last < 5000 || !localStorage.getItem('accessToken')) return;
+      last = Date.now();
+      authAPI.getMe().then(({ data }) => setUser(data.data)).catch(() => {});
+    };
+    window.addEventListener('auth:refresh', refresh);
+    return () => window.removeEventListener('auth:refresh', refresh);
+  }, []);
+
   const login = async (email, password) => {
     const { data } = await authAPI.login({ email, password });
     const { user: u, accessToken, estate: e } = data.data;

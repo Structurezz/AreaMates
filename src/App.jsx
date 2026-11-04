@@ -35,8 +35,10 @@ import GuestLive from './pages/GuestLive';
 import ResidentLive from './pages/ResidentLive';
 import Podcasts from './pages/Podcasts';
 import Announcements from './pages/Announcements';
+import Household from './pages/Household';
+import HouseholdGate from './components/household/HouseholdGate';
 
-function RequireResident({ children }) {
+function RequireResident({ children, perm }) {
   const { user, loading } = useAuth();
   if (loading) return <LoadingScreen />;
   if (!user) return <Navigate to="/login" replace />;
@@ -50,7 +52,7 @@ function RequireResident({ children }) {
       </div>
     );
   }
-  return <AppLayout>{children}</AppLayout>;
+  return <AppLayout>{perm ? <HouseholdGate perm={perm}>{children}</HouseholdGate> : children}</AppLayout>;
 }
 
 function AppRoutes() {
@@ -64,22 +66,23 @@ function AppRoutes() {
       <Route path="/invite/:estateCode" element={<Register />} />
       <Route path="/live-guest/:token" element={<GuestLive />} />
       <Route path="/dashboard" element={<RequireResident><Dashboard /></RequireResident>} />
-      <Route path="/visitors" element={<RequireResident><PlanGate feature="visitorManagement" featureName="Visitor Management"><Visitors /></PlanGate></RequireResident>} />
-      <Route path="/visitors/new" element={<RequireResident><PlanGate feature="visitorManagement" featureName="Visitor Management"><NewVisitorPage /></PlanGate></RequireResident>} />
-      <Route path="/visitors/:id" element={<RequireResident><PlanGate feature="visitorManagement" featureName="Visitor Management"><VisitorDetail /></PlanGate></RequireResident>} />
-      <Route path="/marketplace" element={<RequireResident><PlanGate feature="marketplace" featureName="Marketplace"><Marketplace /></PlanGate></RequireResident>} />
-      <Route path="/neighbours" element={<RequireResident><Neighbours /></RequireResident>} />
+      <Route path="/visitors" element={<RequireResident perm="visitors"><PlanGate feature="visitorManagement" featureName="Visitor Management"><Visitors /></PlanGate></RequireResident>} />
+      <Route path="/visitors/new" element={<RequireResident perm="visitors"><PlanGate feature="visitorManagement" featureName="Visitor Management"><NewVisitorPage /></PlanGate></RequireResident>} />
+      <Route path="/visitors/:id" element={<RequireResident perm="visitors"><PlanGate feature="visitorManagement" featureName="Visitor Management"><VisitorDetail /></PlanGate></RequireResident>} />
+      <Route path="/marketplace" element={<RequireResident perm="marketplace"><PlanGate feature="marketplace" featureName="Marketplace"><Marketplace /></PlanGate></RequireResident>} />
+      <Route path="/neighbours" element={<RequireResident perm="neighbours"><Neighbours /></RequireResident>} />
       <Route path="/safety" element={<RequireResident><Safety /></RequireResident>} />
-      <Route path="/chat" element={<RequireResident><PlanGate feature="communityChat" featureName="Community Chat"><Chat /></PlanGate></RequireResident>} />
-      <Route path="/payments" element={<RequireResident><PlanGate feature="paymentSystem" featureName="Payments"><Payments /></PlanGate></RequireResident>} />
+      <Route path="/chat" element={<RequireResident perm="chat"><PlanGate feature="communityChat" featureName="Community Chat"><Chat /></PlanGate></RequireResident>} />
+      <Route path="/payments" element={<RequireResident perm="payments"><PlanGate feature="paymentSystem" featureName="Payments"><Payments /></PlanGate></RequireResident>} />
       <Route path="/alerts" element={<RequireResident><PlanGate feature="securityPortal" featureName="Security & Alerts"><AlertPage /></PlanGate></RequireResident>} />
-      <Route path="/lounge" element={<RequireResident><PlanGate feature="residentLounge" featureName="Resident Lounge"><Lounge /></PlanGate></RequireResident>} />
-      <Route path="/lounge/live" element={<RequireResident><PlanGate feature="residentLounge" featureName="Resident Lounge"><ResidentLive /></PlanGate></RequireResident>} />
-      <Route path="/podcasts" element={<RequireResident><PlanGate feature="residentLounge" featureName="Podcast"><Podcasts /></PlanGate></RequireResident>} />
+      <Route path="/lounge" element={<RequireResident perm="community"><PlanGate feature="residentLounge" featureName="Resident Lounge"><Lounge /></PlanGate></RequireResident>} />
+      <Route path="/lounge/live" element={<RequireResident perm="community"><PlanGate feature="residentLounge" featureName="Resident Lounge"><ResidentLive /></PlanGate></RequireResident>} />
+      <Route path="/podcasts" element={<RequireResident perm="community"><PlanGate feature="residentLounge" featureName="Podcast"><Podcasts /></PlanGate></RequireResident>} />
       <Route path="/announcements" element={<RequireResident><Announcements /></RequireResident>} />
-      <Route path="/events" element={<RequireResident><PlanGate feature="eventBoard" featureName="Event Board"><EventBoard /></PlanGate></RequireResident>} />
-      <Route path="/polls" element={<RequireResident><PlanGate feature="pollsAndVoting" featureName="Polls & Voting"><Polls /></PlanGate></RequireResident>} />
-      <Route path="/courtroom" element={<RequireResident><Courtroom /></RequireResident>} />
+      <Route path="/events" element={<RequireResident perm="community"><PlanGate feature="eventBoard" featureName="Event Board"><EventBoard /></PlanGate></RequireResident>} />
+      <Route path="/polls" element={<RequireResident perm="community"><PlanGate feature="pollsAndVoting" featureName="Polls & Voting"><Polls /></PlanGate></RequireResident>} />
+      <Route path="/courtroom" element={<RequireResident perm="community"><Courtroom /></RequireResident>} />
+      <Route path="/household" element={<RequireResident><Household /></RequireResident>} />
       <Route path="/settings" element={<RequireResident><Settings /></RequireResident>} />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />

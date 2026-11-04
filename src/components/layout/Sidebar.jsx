@@ -1,6 +1,7 @@
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { PhoneCall, ShieldAlert, LayoutDashboard, UserCheck, ShoppingBag, MessageSquare, Bell, LogOut, CreditCard, Music, Calendar, BarChart2, Lock, Scale, Settings as SettingsIcon, Radio, Megaphone } from 'lucide-react';
+import { PhoneCall, ShieldAlert, LayoutDashboard, UserCheck, ShoppingBag, MessageSquare, Bell, LogOut, CreditCard, Music, Calendar, BarChart2, Lock, Scale, Settings as SettingsIcon, Radio, Megaphone, Users } from 'lucide-react';
+import { useHousehold } from '../../hooks/useHousehold';
 import { usePlan } from '../../hooks/usePlan';
 import NotificationBell from '../ui/NotificationBell';
 
@@ -9,21 +10,22 @@ const NAV = [
     section: 'Home',
     links: [
       { to: '/dashboard',  icon: LayoutDashboard, label: 'Dashboard' },
-      { to: '/visitors',   icon: UserCheck,        label: 'My Visitors',    feature: 'visitorManagement' },
-      { to: '/payments',   icon: CreditCard,       label: 'Payments',       feature: 'paymentSystem' },
+      { to: '/visitors',   icon: UserCheck,        label: 'My Visitors',    feature: 'visitorManagement', perm: 'visitors' },
+      { to: '/payments',   icon: CreditCard,       label: 'Payments',       feature: 'paymentSystem', perm: 'payments' },
+      { to: '/household',  icon: Users,            label: 'My Household' },
     ],
   },
   {
     section: 'Community',
     links: [
       { to: '/announcements', icon: Megaphone,  label: 'Announcements' },
-      { to: '/lounge',      icon: Music,        label: 'Resident Lounge', feature: 'residentLounge' },
-      { to: '/podcasts',    icon: Radio,        label: 'Podcast',         feature: 'residentLounge' },
-      { to: '/events',      icon: Calendar,     label: 'Event Board',     feature: 'eventBoard' },
-      { to: '/polls',       icon: BarChart2,    label: 'Polls & Voting',  feature: 'pollsAndVoting' },
-      { to: '/marketplace', icon: ShoppingBag,  label: 'Marketplace',     feature: 'marketplace' },
-      { to: '/neighbours',  icon: PhoneCall,    label: 'Neighbours' },
-      { to: '/chat',        icon: MessageSquare,label: 'Community Chat',  feature: 'communityChat' },
+      { to: '/lounge',      icon: Music,        label: 'Resident Lounge', feature: 'residentLounge', perm: 'community' },
+      { to: '/podcasts',    icon: Radio,        label: 'Podcast',         feature: 'residentLounge', perm: 'community' },
+      { to: '/events',      icon: Calendar,     label: 'Event Board',     feature: 'eventBoard', perm: 'community' },
+      { to: '/polls',       icon: BarChart2,    label: 'Polls & Voting',  feature: 'pollsAndVoting', perm: 'community' },
+      { to: '/marketplace', icon: ShoppingBag,  label: 'Marketplace',     feature: 'marketplace', perm: 'marketplace' },
+      { to: '/neighbours',  icon: PhoneCall,    label: 'Neighbours', perm: 'neighbours' },
+      { to: '/chat',        icon: MessageSquare,label: 'Community Chat',  feature: 'communityChat', perm: 'chat' },
     ],
   },
   {
@@ -31,7 +33,7 @@ const NAV = [
     links: [
       { to: '/alerts',    icon: Bell,  label: 'Alert Security', feature: 'securityPortal' },
       { to: '/safety',    icon: ShieldAlert, label: 'Personal Safety' },
-      { to: '/courtroom', icon: Scale, label: 'Courtroom' },
+      { to: '/courtroom', icon: Scale, label: 'Courtroom', perm: 'community' },
     ],
   },
 ];
@@ -40,6 +42,7 @@ export default function Sidebar({ mobile = false, onClose }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { can } = usePlan();
+  const { allowed } = useHousehold();
   const estateName = user?.estateId && typeof user.estateId === 'object' ? user.estateId.name : 'AreaMates';
 
   return (
@@ -64,11 +67,11 @@ export default function Sidebar({ mobile = false, onClose }) {
             <div className="text-xs font-medium mt-0.5 truncate" style={{ color: '#94A3B8' }}>{estateName}</div>
           </div>
         </Link>
-        <NavLink to="/neighbours" aria-label="Call or buzz a neighbour" onClick={onClose}
+        {allowed('neighbours') && <NavLink to="/neighbours" aria-label="Call or buzz a neighbour" onClick={onClose}
           className="p-2 rounded-xl transition-all hover:bg-slate-100"
           style={({ isActive }) => ({ color: isActive ? '#4F46E5' : '#64748B' })}>
           <PhoneCall size={19} />
-        </NavLink>
+        </NavLink>}
         <NotificationBell />
       </div>
 
@@ -80,7 +83,7 @@ export default function Sidebar({ mobile = false, onClose }) {
               {section}
             </p>
             <div className="space-y-0.5">
-              {links.map(({ to, icon: Icon, label, feature }) => {
+              {links.filter(l => allowed(l.perm)).map(({ to, icon: Icon, label, feature }) => {
                 const locked = feature ? !can(feature) : false;
                 return (
                   <NavLink

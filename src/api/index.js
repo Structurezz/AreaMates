@@ -241,3 +241,13 @@ export const safetyAPI = {
   startLocation:   () => api.post('/safety/location/start'),
   stopLocation:    () => api.post('/safety/location/stop'),
 };
+
+// Household: the head adds family members and sets what each can use
+export const householdAPI = {
+  options:      () => api.get('/household/options'),
+  get:          () => api.get('/household'),
+  invite:       (data) => api.post('/household', data),
+  update:       (id, data) => api.patch(`/household/${id}`, data),
+  resendInvite: (id) => api.post(`/household/${id}/resend-invite`),
+  remove:       (id) => api.delete(`/household/${id}`),
+};

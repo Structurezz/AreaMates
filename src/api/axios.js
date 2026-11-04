@@ -24,6 +24,17 @@ api.interceptors.response.use(
       window.dispatchEvent(new CustomEvent('auth:expired'));
       return Promise.reject(err);
     }
+    // Household head suspended — family members are signed out with the reason
+    if (err.response?.data?.code === 'HOUSEHOLD_INACTIVE') {
+      localStorage.removeItem('accessToken');
+      try { sessionStorage.setItem('authNotice', err.response.data.message); } catch {}
+      window.dispatchEvent(new CustomEvent('auth:expired'));
+      return Promise.reject(err);
+    }
+    // The household head changed this member's access — pick up the new list
+    if (err.response?.data?.code === 'HOUSEHOLD_NO_ACCESS') {
+      window.dispatchEvent(new CustomEvent('auth:refresh'));
+    }
     if (err.response?.status === 401 && !original._retry) {
       original._retry = true;
       try {
