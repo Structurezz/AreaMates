@@ -62,11 +62,11 @@ export const MODULE_KEYS = ['payments', 'marketplace', 'community', 'events', 'n
 const ALL_ON = { payments: true, marketplace: true, community: true, events: true, neighbours: true, household: true };
 export const DEFAULT_MODULES = {
   estate:     { ...ALL_ON, gatelog: false, shifts: false, stays: false, visiting: false, requests: false, rollcall: false },
-  school:     { ...ALL_ON, marketplace: false, neighbours: false, gatelog: true, shifts: true, stays: false, visiting: false, requests: true, rollcall: true },
-  university: { ...ALL_ON, household: false, gatelog: true, shifts: true, stays: false, visiting: true, requests: true, rollcall: true },
-  hotel:      { ...ALL_ON, payments: false, marketplace: false, community: false, neighbours: false, gatelog: true, shifts: true, stays: true, visiting: false, requests: true, rollcall: true },
+  school:     { ...ALL_ON, marketplace: false, neighbours: false, gatelog: false, shifts: true, stays: false, visiting: false, requests: true, rollcall: true },
+  university: { ...ALL_ON, household: false, gatelog: false, shifts: true, stays: false, visiting: true, requests: true, rollcall: true },
+  hotel:      { ...ALL_ON, payments: false, marketplace: false, community: false, neighbours: false, gatelog: false, shifts: true, stays: true, visiting: false, requests: true, rollcall: true },
   industrial: { ...ALL_ON, payments: false, marketplace: false, household: false, gatelog: true, shifts: true, stays: false, visiting: false, requests: true, rollcall: true },
-  hospital:   { ...ALL_ON, payments: false, marketplace: false, community: false, events: false, neighbours: false, gatelog: true, shifts: true, stays: true, visiting: true, requests: true, rollcall: true },
+  hospital:   { ...ALL_ON, payments: false, marketplace: false, community: false, events: false, neighbours: false, gatelog: false, shifts: true, stays: true, visiting: true, requests: true, rollcall: true },
 };
 
 export const CATEGORY_INFO = {
@@ -360,20 +360,24 @@ export const ASSIGN_LABEL = {
 export const REQUEST_KINDS = {
   estate: [],
   hospital: [
-    { key: 'call_nurse', label: 'Call a nurse',        roles: ['nurse'],  urgent: true },
-    { key: 'assistance', label: 'Help with something', roles: ['nurse'] },
-    { key: 'meal',       label: 'Food & drink',        roles: ['staff'] },
-    { key: 'other',      label: 'Something else',      roles: ['staff', 'nurse'] },
+    { key: 'call_nurse',  label: 'Call a nurse',        roles: ['nurse'],  urgent: true },
+    { key: 'call_doctor', label: 'Call a doctor',       roles: ['doctor'], urgent: true },
+    { key: 'assistance',  label: 'Help with something', roles: ['nurse'] },
+    { key: 'meal',        label: 'Food & drink',        roles: ['staff'] },
+    { key: 'management',  label: 'Hospital management', roles: [], managers: true },
+    { key: 'other',       label: 'Something else',      roles: ['staff', 'nurse'] },
   ],
   university: [
     { key: 'hostel_repair', label: 'Hostel repair',      roles: ['warden'] },
     { key: 'clinic',        label: 'See the clinic',     roles: ['clinic'] },
     { key: 'other',         label: 'Ask the hall office', roles: ['warden'] },
+    { key: 'management',    label: 'Student affairs',     roles: [], managers: true },
   ],
   school: [
     { key: 'sick_bay', label: 'Sick bay',             roles: ['nurse'], urgent: true },
     { key: 'teacher',  label: 'Message the teacher',  roles: ['teacher'] },
     { key: 'other',    label: 'School office',        roles: ['staff'] },
+    { key: 'management', label: 'School management',  roles: [], managers: true },
   ],
   hotel: [
     { key: 'housekeeping', label: 'Housekeeping',  roles: ['housekeeping'] },
@@ -381,11 +385,13 @@ export const REQUEST_KINDS = {
     { key: 'room_service', label: 'Room service',  roles: ['front_desk'] },
     { key: 'concierge',    label: 'Concierge',     roles: ['front_desk'] },
     { key: 'other',        label: 'Something else', roles: ['front_desk', 'duty_manager'] },
+    { key: 'management',   label: 'Hotel management', roles: [], managers: true },
   ],
   industrial: [
     { key: 'incident',  label: 'Report an injury or incident', roles: ['supervisor', 'safety_officer', 'first_aider'], urgent: true },
     { key: 'hazard',    label: 'Report a hazard',               roles: ['safety_officer', 'supervisor'] },
     { key: 'equipment', label: 'Equipment fault',               roles: ['supervisor'] },
+    { key: 'management', label: 'Site management',              roles: [], managers: true },
   ],
 };
 

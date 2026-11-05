@@ -183,11 +183,6 @@ export default function DesktopDashboard({
         </div>
       </div>
 
-      {site.isStaff && <StaffHome />}
-      <StayCard user={user} />
-      <MyTeamCard />
-      <MyPlaceCard />
-
       <CampaignBanner />
 
       {/* ── Stats ── */}
@@ -290,6 +285,9 @@ export default function DesktopDashboard({
         </div>
       </div>
 
+      {/* Staff home (doctor, nurse, warden…): their people, on-call, emergencies */}
+      {site.isStaff && <StaffHome />}
+
       {/* ── Notices + rail ── */}
       <div className="grid grid-cols-12 gap-5 items-start">
         <div className="col-span-8">
@@ -327,6 +325,10 @@ export default function DesktopDashboard({
         </div>
 
         <div className="col-span-4 space-y-5">
+          {/* Site cards: stay / admission, care team, my hall */}
+          <StayCard user={user} compact />
+          <MyTeamCard compact />
+          <MyPlaceCard compact />
           {site.moduleOn('events') && <div className={`${CARD} overflow-hidden`} style={delay(9)}>
             <CardHead title="Upcoming events" Icon={CalendarDays} color="#8B5CF6" right={<HeadLink to="/events">All events</HeadLink>} />
             {events === null ? (

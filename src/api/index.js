@@ -278,4 +278,5 @@ export const requestAPI = {
   getAll: (params) => api.get('/requests', { params }),
   create: (data) => api.post('/requests', data),
   update: (id, data) => api.patch(`/requests/${id}`, data),
+  message: (id, text) => api.post(`/requests/${id}/messages`, { text }),
 };
