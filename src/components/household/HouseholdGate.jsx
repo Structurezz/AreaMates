@@ -1,14 +1,17 @@
 import { Link } from 'react-router-dom';
 import { Lock, Users, ArrowRight } from 'lucide-react';
 import { useHousehold, PERMISSION_LABELS } from '../../hooks/useHousehold';
+import { useSite } from '../../context/SiteContext';
 
 // Shown to a family member who opens a feature their household head hasn't
 // switched on for them.
 export default function HouseholdGate({ perm, children }) {
-  const { allowed, head } = useHousehold();
-  if (allowed(perm)) return children;
-  const feature = PERMISSION_LABELS[perm] || 'This feature';
-  const headName = head?.name?.split(' ')[0] || 'the head of your household';
+  const { householdAllows, head } = useHousehold();
+  const { terms, isEstate } = useSite();
+  if (householdAllows(perm)) return children;
+  const feature = (perm === 'payments' && !isEstate ? terms.dues : PERMISSION_LABELS[perm]) || 'This feature';
+  const hh = terms.household.toLowerCase();
+  const headName = head?.name?.split(' ')[0] || `the head of your ${hh}`;
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[calc(100dvh-11rem)] lg:min-h-[calc(100dvh-9rem)] text-center px-6">
@@ -24,11 +27,11 @@ export default function HouseholdGate({ perm, children }) {
       </div>
       <h2 className="text-xl font-bold mb-2" style={{ color: '#0F172A' }}>{feature} isn't on for you yet</h2>
       <p className="text-sm max-w-sm leading-relaxed mb-6" style={{ color: '#64748B' }}>
-        Your household decides what family members can use. Ask <span className="font-semibold text-slate-700">{headName}</span> to
-        turn on <span className="font-semibold text-slate-700">{feature.toLowerCase()}</span> for you in My Household.
+        Your {hh} decides what {terms.familyPlural.toLowerCase()} can use. Ask <span className="font-semibold text-slate-700">{headName}</span> to
+        turn on <span className="font-semibold text-slate-700">{feature.toLowerCase()}</span> for you in My {terms.household}.
       </p>
       <Link to="/household" className="btn-primary inline-flex items-center gap-2">
-        See my household <ArrowRight size={14} />
+        See my {hh} <ArrowRight size={14} />
       </Link>
     </div>
   );

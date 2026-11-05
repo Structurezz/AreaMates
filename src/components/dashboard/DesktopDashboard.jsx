@@ -1,4 +1,7 @@
 import { useHousehold } from '../../hooks/useHousehold';
+import { useSite } from '../../context/SiteContext';
+import { StayCard, ShiftLine } from './StayCard';
+import MyPlaceCard from '../map/MyPlaceCard';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -88,20 +91,23 @@ const SHORTCUTS = [
   { to: '/marketplace',  icon: ShoppingBag,   label: 'Market',       color: '#F59E0B', perm: 'marketplace' },
   { to: '/chat',         icon: MessageSquare, label: 'Chat',         color: '#3B82F6', perm: 'chat' },
   { to: '/lounge',       icon: Coffee,        label: 'Lounge',       color: '#8B5CF6', perm: 'community' },
-  { to: '/payments',     icon: Wallet,        label: 'Payments',     color: '#10B981', perm: 'payments' },
-  { to: '/neighbours',   icon: Users,         label: 'Neighbours',   color: '#EC4899', perm: 'neighbours' },
+  { to: '/payments',     icon: Wallet,        label: 'Payments',     color: '#10B981', perm: 'payments', siteLabel: (t) => t.dues },
+  { to: '/neighbours',   icon: Users,         label: 'Neighbours',   color: '#EC4899', perm: 'neighbours', siteLabel: () => 'Directory' },
 ];
 
 export default function DesktopDashboard({
-  myVisitors, announcements, estate, estateName, firstName, unitLabel, activeVisitors, alerting, onSOS,
+  user, myVisitors, announcements, estate, estateName, firstName, unitLabel, activeVisitors, alerting, onSOS,
 }) {
   const now = useClock();
   const [events, setEvents] = useState(null);
   const [bills, setBills] = useState(null); // null = unavailable / loading
 
   const { allowed } = useHousehold();
+  const site = useSite();
+  const { terms } = site;
+  const siteWord = terms.site.toLowerCase();
   useEffect(() => {
-    if (!allowed('community')) setEvents([]); else eventAPI.getAll()
+    if (!allowed('community', 'events')) setEvents([]); else eventAPI.getAll()
       .then(({ data }) => setEvents((data.data || [])
         .filter((e) => new Date(e.date) >= new Date(new Date().toDateString()))
         .sort((a, b) => new Date(a.date) - new Date(b.date))))
@@ -149,8 +155,9 @@ export default function DesktopDashboard({
               <span className="text-white/40">·</span>
               {unitLabel
                 ? <span className="inline-flex items-center gap-1"><Home size={12} /> {unitLabel}</span>
-                : <span className="text-white/60">No unit assigned</span>}
+                : <span className="text-white/60">No {terms.unit.toLowerCase()} assigned</span>}
             </p>
+            <ShiftLine user={user} light className="mt-1 text-[12px] max-w-full" />
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             <Link to="/alerts" className="inline-flex items-center gap-1.5 text-[13px] font-medium px-3 py-2 rounded-xl text-white bg-white/10 border border-white/25 hover:bg-white/20 transition-all hover:-translate-y-0.5 backdrop-blur">
@@ -171,21 +178,26 @@ export default function DesktopDashboard({
         </div>
       </div>
 
+      <StayCard user={user} />
+      <MyPlaceCard />
+
       <CampaignBanner />
 
       {/* ── Stats ── */}
       <div className="grid grid-cols-4 gap-4">
         <Stat i={0} label="Active passes" value={activeVisitors.length} Icon={UserCheck} color="#6366F1" to="/visitors"
-          sub={insideNow ? `${insideNow} inside the estate now` : 'Expected or checked in'} live={insideNow > 0} />
+          sub={insideNow ? `${insideNow} inside the ${siteWord} now` : 'Expected or checked in'} live={insideNow > 0} />
         <Stat i={1} label="Recent passes" value={myVisitors.length} Icon={LogIn} color="#0EA5E9" to="/visitors" sub="Your latest visitor passes" />
-        <Stat i={2} label="Estate notices" value={announcements.length} Icon={Megaphone} color="#F59E0B" to="/announcements"
+        <Stat i={2} label={`${terms.site} notices`} value={announcements.length} Icon={Megaphone} color="#F59E0B" to="/announcements"
           sub={announcements.some((a) => a.isPinned) ? 'Includes pinned notices' : 'Latest from management'} />
         {bills !== null ? (
           <Stat i={3} label={bills.length ? 'Bills due' : 'All bills paid'} value={bills.length} display={bills.length ? naira(billsDue) : undefined}
             Icon={Wallet} color={overdue ? '#EF4444' : '#10B981'} to="/payments"
             sub={bills.length ? `${bills.length} bill${bills.length === 1 ? '' : 's'}${overdue ? ` · ${overdue} overdue` : ''}` : 'Nothing outstanding'} live={overdue > 0} />
+        ) : site.moduleOn('events') ? (
+          <Stat i={3} label="Upcoming events" value={events?.length || 0} Icon={CalendarDays} color="#8B5CF6" to="/events" sub={`Happening in your ${siteWord}`} />
         ) : (
-          <Stat i={3} label="Upcoming events" value={events?.length || 0} Icon={CalendarDays} color="#8B5CF6" to="/events" sub="Happening in your estate" />
+          <Stat i={3} label="Inside now" value={insideNow} Icon={LogIn} color="#10B981" to="/visitors" sub={`Your visitors in the ${siteWord}`} live={insideNow > 0} />
         )}
       </div>
 
@@ -263,7 +275,7 @@ export default function DesktopDashboard({
                 <Shield size={28} strokeWidth={2.5} />
                 <span className="mt-1">{alerting ? 'SENDING' : 'SOS'}</span>
               </button>
-              <p className="mt-4 text-[12px] text-red-100/80 text-center max-w-[220px]">One tap alerts security and estate management with your name and unit.</p>
+              <p className="mt-4 text-[12px] text-red-100/80 text-center max-w-[220px]">One tap alerts security and {siteWord} management with your name and {terms.unit.toLowerCase()}.</p>
             </div>
           </div>
         </div>
@@ -273,7 +285,7 @@ export default function DesktopDashboard({
       <div className="grid grid-cols-12 gap-5 items-start">
         <div className="col-span-8">
           <div className={`${CARD} overflow-hidden`} style={delay(8)}>
-            <CardHead title="Estate notices" Icon={Megaphone} color="#F59E0B" right={<HeadLink to="/announcements">All notices</HeadLink>} />
+            <CardHead title={`${terms.site} notices`} Icon={Megaphone} color="#F59E0B" right={<HeadLink to="/announcements">All notices</HeadLink>} />
             {announcements.length === 0 ? (
               <div className="py-10 text-center">
                 <Megaphone size={22} className="mx-auto text-slate-300" />
@@ -306,7 +318,7 @@ export default function DesktopDashboard({
         </div>
 
         <div className="col-span-4 space-y-5">
-          <div className={`${CARD} overflow-hidden`} style={delay(9)}>
+          {site.moduleOn('events') && <div className={`${CARD} overflow-hidden`} style={delay(9)}>
             <CardHead title="Upcoming events" Icon={CalendarDays} color="#8B5CF6" right={<HeadLink to="/events">All events</HeadLink>} />
             {events === null ? (
               <div className="p-4 space-y-2">{[0, 1].map((k) => <div key={k} className="skeleton h-10 rounded-lg" />)}</div>
@@ -331,12 +343,12 @@ export default function DesktopDashboard({
                 })}
               </div>
             )}
-          </div>
+          </div>}
 
           <div className={CARD} style={delay(10)}>
             <CardHead title="Shortcuts" Icon={Zap} color="#6366F1" />
             <div className="grid grid-cols-2 gap-2 p-3">
-              {SHORTCUTS.filter(l => allowed(l.perm)).map(({ to, icon: Icon, label, color }) => (
+              {SHORTCUTS.filter(l => allowed(l.perm, l.module)).map(({ to, icon: Icon, label: baseLabel, color, siteLabel }) => { const label = !site.isEstate && siteLabel ? siteLabel(terms) : baseLabel; return (
                 <Link key={to} to={to}
                   className="group flex items-center gap-2.5 px-3 py-2.5 rounded-xl border transition-all hover:-translate-y-0.5 hover:shadow-md"
                   style={{ textDecoration: 'none', background: `linear-gradient(135deg, ${color}12, #fff 70%)`, borderColor: `${color}26` }}>
@@ -346,7 +358,7 @@ export default function DesktopDashboard({
                   </span>
                   <span className="text-[12px] font-medium text-slate-700">{label}</span>
                 </Link>
-              ))}
+              ); })}
             </div>
           </div>
 

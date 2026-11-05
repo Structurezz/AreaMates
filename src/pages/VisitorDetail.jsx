@@ -3,13 +3,17 @@ import { useParams, useNavigate } from 'react-router-dom';
 import QRCode from 'qrcode';
 import { visitorAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
+import { passKindLabel, passPurposeLine, passShareLines } from '../utils/passText';
 import Badge, { visitorStatusBadge } from '../components/ui/Badge';
 import Spinner, { PageLoader } from '../components/ui/Spinner';
 import {
   ArrowLeft, UserCheck, Share2, CheckCircle, MessageCircle, LogIn, Copy, XCircle, Calendar, Clock, Timer,
-  Phone, Mail, StickyNote, ChevronRight, Zap, Users, Package, Wrench, Heart, MoreHorizontal,
+  Phone, Mail, StickyNote, ChevronRight, Zap, Users, Package, Wrench, Heart, MoreHorizontal, MapPin, Navigation,
 } from 'lucide-react';
 import { useSocket } from '../context/SocketContext';
+import { useSite } from '../context/SiteContext';
+import { CategoryBadge, DetailsList } from '../components/visitors/PassCategory';
+import { directionsFor } from '../utils/googleMaps';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 
@@ -110,7 +114,7 @@ const generatePassCanvas = async (v, estate) => {
   // Divider pill
   ctx.fillStyle = 'rgba(255,255,255,0.70)'; ctx.font = 'bold 11px sans-serif';
   ctx.fillText('·', 36 + ctx.measureText(estateName.toUpperCase()).width + 6, 46);
-  ctx.fillText('GUEST PASS', 36 + ctx.measureText(estateName.toUpperCase()).width + 18, 46);
+  ctx.fillText(passKindLabel(v), 36 + ctx.measureText(estateName.toUpperCase()).width + 18, 46);
 
   // Visitor name (big)
   ctx.fillStyle = '#FFFFFF'; ctx.font = 'bold 28px sans-serif';
@@ -118,7 +122,7 @@ const generatePassCanvas = async (v, estate) => {
 
   // Purpose
   ctx.fillStyle = 'rgba(255,255,255,0.82)'; ctx.font = '15px sans-serif';
-  ctx.fillText(truncate(v.purpose, 36), 36, 132);
+  ctx.fillText(truncate(passPurposeLine(v), 52), 36, 132);
 
   // Date
   ctx.fillStyle = 'rgba(255,255,255,0.70)'; ctx.font = '13px sans-serif';
@@ -173,11 +177,14 @@ const generatePassCanvas = async (v, estate) => {
   }
 
   // Secondary address line (in white area, in case it was clipped above)
-  if (estateAddress) {
-    ctx.fillStyle = '#94A3B8'; ctx.font = 'bold 10px sans-serif';
-    ctx.fillText('LOCATION', 40, 685);
-    ctx.fillStyle = '#334155'; ctx.font = '12px sans-serif';
-    ctx.fillText(estateAddress, 40, 705);
+  if (v.place?.name) {
+    // Where the visitor is going (hall / building) — directions go in the share text
+    ctx.fillStyle = '#94A3B8'; ctx.font = 'bold 10px sans-serif'; ctx.fillText('GOING TO', 40, 685);
+    ctx.fillStyle = '#0F172A'; ctx.font = 'bold 13px sans-serif'; ctx.fillText(truncate(v.place.name, 40), 40, 705);
+    if (estateAddress) { ctx.fillStyle = '#64748B'; ctx.font = '11px sans-serif'; ctx.fillText(truncate(estateAddress, 70), 40, 722); }
+  } else if (estateAddress) {
+    ctx.fillStyle = '#94A3B8'; ctx.font = 'bold 10px sans-serif'; ctx.fillText('LOCATION', 40, 685);
+    ctx.fillStyle = '#334155'; ctx.font = '12px sans-serif'; ctx.fillText(estateAddress, 40, 705);
   }
 
   // ── Brand footer (y=740-820) ──
@@ -214,8 +221,9 @@ const generatePassCanvas = async (v, estate) => {
 
 const shareVisitorPass = async (v, estate) => {
   const date = format(new Date(v.expectedDate), 'MMM d, yyyy · h:mm a');
-  const estateLine = estate?.name ? `\n*Estate:* ${estate.name}` : '';
-  const waText = `🏠 *Visitor Pass — ${v.visitorName}*${estateLine}\n\n*Code:* ${v.visitorCode}\n*Purpose:* ${v.purpose}\n*Expected:* ${date}\n\n_Powered by Area Connector Technologies · RC 9607864_\n${BRAND_URL}`;
+  const { siteWord, extra } = passShareLines(v, estate);
+  const estateLine = estate?.name ? `\n*${siteWord}:* ${estate.name}` : '';
+  const waText = `🏠 *Visitor Pass — ${v.visitorName}*${estateLine}\n\n*Code:* ${v.visitorCode}\n*Purpose:* ${v.purpose}${extra}\n*Expected:* ${date}\n\n_Powered by Area Connector Technologies · RC 9607864_\n${BRAND_URL}`;
 
   let file = null;
   try {
@@ -348,6 +356,7 @@ function PassTimer({ visitor }) {
 
 export default function VisitorDetailPage() {
   const { id } = useParams();
+  const site = useSite();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { subscribe } = useSocket() || {};
@@ -356,7 +365,7 @@ export default function VisitorDetailPage() {
 
   useEffect(() => {
     visitorAPI.getOne(id)
-      .then(({ data }) => setVisitor(data.data))
+      .then(({ data }) => setVisitor({ ...data.data, place: data.place || data.data?.place || null }))
       .catch(() => { toast.error('Visitor not found'); navigate('/visitors'); })
       .finally(() => setLoading(false));
   }, [id]);
@@ -407,6 +416,7 @@ export default function VisitorDetailPage() {
     catch (e) { toast.error(e.response?.data?.message || 'Couldn\'t cancel the pass'); }
   };
   const canShare   = !isDone && !isBlocked && !isHeld;
+  const isCategory = visitor.category && visitor.category !== 'guest';
   const expectedAt = new Date(visitor.expectedDate);
 
   const PURPOSE = {
@@ -422,7 +432,7 @@ export default function VisitorDetailPage() {
     visitor.status === 'cancelled'
       ? { label: 'Cancelled', at: visitor.cancelledAt, done: true, color: '#64748B' }
       : { label: 'Arrived at the gate', at: visitor.entryTime, done: !!visitor.entryTime, color: '#10B981' },
-    ...(visitor.status === 'cancelled' ? [] : [{ label: 'Left the estate', at: visitor.exitTime, done: !!visitor.exitTime, color: '#3B82F6' }]),
+    ...(visitor.status === 'cancelled' ? [] : [{ label: `Left the ${site.terms.site.toLowerCase()}`, at: visitor.exitTime, done: !!visitor.exitTime, color: '#3B82F6' }]),
   ];
   const rows = [
     { Icon: Calendar, color: '#6366F1', label: 'Date', value: format(expectedAt, 'EEEE, d MMMM yyyy') },
@@ -455,7 +465,10 @@ export default function VisitorDetailPage() {
           <div className="min-w-0">
             <h1 className="text-[22px] font-extrabold tracking-tight truncate" style={{ color: '#fff' }}>{visitor.visitorName}</h1>
             <p className="text-[13px] text-white/80 truncate">{visitor.purpose} · {format(expectedAt, 'EEE d MMM, h:mm a')}</p>
-            {visitor.instant && <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-300 text-amber-950"><Zap size={10} /> Instant pass</span>}
+            <div className="flex flex-wrap items-center gap-1.5">
+              {isCategory && <CategoryBadge visitor={visitor} className="mt-1 ring-1 ring-white/40" />}
+              {visitor.instant && <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-300 text-amber-950"><Zap size={10} /> Instant pass</span>}
+            </div>
           </div>
         </div>
       </div>
@@ -486,6 +499,44 @@ export default function VisitorDetailPage() {
         </div>
 
         <PassTimer visitor={visitor} />
+
+        {/* Where the visitor is going (host's hall / building on the site map) */}
+        {visitor.place?.name && (
+          <div className="rounded-2xl bg-white border border-slate-200 p-4 flex items-center gap-3">
+            <span className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: '#EEF2FF' }}>
+              <MapPin size={18} style={{ color: '#6366F1' }} />
+            </span>
+            <span className="flex-1 min-w-0">
+              <span className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400">Where they're going</span>
+              <span className="block text-[15px] font-semibold text-slate-900 truncate">{visitor.place.name}</span>
+            </span>
+            {directionsFor(visitor.place) && (
+              <a href={directionsFor(visitor.place)} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-3 py-2 rounded-xl text-white shrink-0"
+                style={{ background: 'linear-gradient(135deg,#6366F1,#4F46E5)' }}>
+                <Navigation size={13} /> Directions
+              </a>
+            )}
+          </div>
+        )}
+
+        {/* Pass type details (contractor company, pickup student, patient…) */}
+        {isCategory && (
+          <div className="rounded-2xl bg-white border border-slate-200 p-4 space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-sm font-bold text-slate-900">Pass details</h2>
+              <CategoryBadge visitor={visitor} size="md" />
+            </div>
+            <DetailsList visitor={visitor} />
+            {(visitor.category === 'contractor' || visitor.category === 'supplier') && site.inductionText && (
+              <p className="text-[12px] rounded-xl px-3 py-2" style={{ background: '#FFF7ED', color: '#9A3412' }}>
+                {visitor.inductionAcceptedAt
+                  ? `Safety induction accepted ${format(new Date(visitor.inductionAcceptedAt), 'd MMM, h:mm a')}`
+                  : "They'll accept the site safety induction at the gate."}
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Timeline */}
         <div className="rounded-2xl bg-white border border-slate-200 p-4">

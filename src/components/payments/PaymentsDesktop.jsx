@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useCountUp from '../../hooks/useCountUp';
+import { useSite } from '../../context/SiteContext';
 
 // Desktop layout for the residents Payments page (phones keep the stacked view).
 
@@ -38,6 +39,7 @@ function Tile({ i, label, value, display, Icon, color, sub, pulse }) {
 }
 
 function YearChart({ history, year, shown }) {
+  const site = useSite();
   const months = useMemo(() => {
     const m = Array(12).fill(0);
     history.forEach((p) => {
@@ -95,7 +97,7 @@ export default function PaymentsDesktop({
       <div className="dash-rise flex items-end justify-between gap-4">
         <div>
           <div className="text-[12px] font-medium text-slate-400">Dues, levies & receipts</div>
-          <h1 className="text-[22px] font-semibold text-slate-900" style={{ letterSpacing: '-0.025em' }}>Payments</h1>
+          <h1 className="text-[22px] font-semibold text-slate-900" style={{ letterSpacing: '-0.025em' }}>{site.isEstate ? 'Payments' : site.terms.dues}</h1>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={onHelp} className="btn-outline !text-[13px] !px-3 !py-2 gap-1.5"><HelpCircle size={14} /> How it works</button>

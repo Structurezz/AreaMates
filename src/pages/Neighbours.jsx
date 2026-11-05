@@ -10,6 +10,7 @@ import {
 import { callAPI } from '../api';
 import { useCall } from '../context/CallContext';
 import { useAuth } from '../context/AuthContext';
+import { useSite } from '../context/SiteContext';
 import BottomSheet from '../components/payments/BottomSheet';
 import { PersonAvatar } from '../components/calls/CallOverlay';
 import NeighboursDesktop from '../components/calls/NeighboursDesktop';
@@ -51,6 +52,7 @@ export default function Neighbours() {
   const [buzzes, setBuzzes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('people');
+  const site = useSite();
   const [q, setQ] = useState('');
   const [buzzFor, setBuzzFor] = useState(null);
   const [buzzKind, setBuzzKind] = useState('checkin');
@@ -286,7 +288,7 @@ export default function Neighbours() {
 
         <section className="space-y-4 min-w-0">
           <div className="flex p-1 rounded-2xl bg-slate-100">
-            {[['people', 'Neighbours'], ['recent', 'Recent']].map(([id, label]) => (
+            {[['people', site.isEstate ? 'Neighbours' : 'Directory'], ['recent', 'Recent']].map(([id, label]) => (
               <button key={id} onClick={() => setTab(id)}
                 className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${tab === id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>
                 {label}

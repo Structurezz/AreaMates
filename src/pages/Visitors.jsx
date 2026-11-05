@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import QRCode from 'qrcode';
 import { visitorAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
+import { passKindLabel, passPurposeLine, passShareLines } from '../utils/passText';
 import InviteForm from '../components/visitors/InviteForm';
+import { CategoryBadge, DetailsLine } from '../components/visitors/PassCategory';
 import VisitorsMobile from '../components/visitors/VisitorsMobile';
 import VisitorsDesktop from '../components/visitors/desktop/VisitorsDesktop';
 import {
@@ -108,12 +110,12 @@ const generateBrandedPass = async (v, estate) => {
   const w = ctx.measureText(estateCap).width;
   ctx.fillStyle = 'rgba(255,255,255,0.70)';
   ctx.fillText('·', 36 + w + 6, 46);
-  ctx.fillText('GUEST PASS', 36 + w + 18, 46);
+  ctx.fillText(passKindLabel(v), 36 + w + 18, 46);
 
   ctx.fillStyle = '#FFFFFF'; ctx.font = 'bold 28px sans-serif';
   ctx.fillText(truncate(v.visitorName, 24), 36, 100);
   ctx.fillStyle = 'rgba(255,255,255,0.82)'; ctx.font = '15px sans-serif';
-  ctx.fillText(truncate(v.purpose, 36), 36, 132);
+  ctx.fillText(truncate(passPurposeLine(v), 52), 36, 132);
   ctx.fillStyle = 'rgba(255,255,255,0.70)'; ctx.font = '13px sans-serif';
   ctx.fillText(format(new Date(v.expectedDate), 'MMM d, yyyy · h:mm a'), 36, 162);
   if (estateAddress) {
@@ -152,7 +154,12 @@ const generateBrandedPass = async (v, estate) => {
     ctx.fillStyle = '#94A3B8'; ctx.font = 'bold 10px sans-serif'; ctx.fillText('PHONE', W / 2, 625);
     ctx.fillStyle = '#0F172A'; ctx.font = 'bold 13px sans-serif'; ctx.fillText(v.visitorPhone, W / 2, 646);
   }
-  if (estateAddress) {
+  if (v.place?.name) {
+    // Where the visitor is going (hall / building) — directions go in the share text
+    ctx.fillStyle = '#94A3B8'; ctx.font = 'bold 10px sans-serif'; ctx.fillText('GOING TO', 40, 685);
+    ctx.fillStyle = '#0F172A'; ctx.font = 'bold 13px sans-serif'; ctx.fillText(truncate(v.place.name, 40), 40, 705);
+    if (estateAddress) { ctx.fillStyle = '#64748B'; ctx.font = '11px sans-serif'; ctx.fillText(truncate(estateAddress, 70), 40, 722); }
+  } else if (estateAddress) {
     ctx.fillStyle = '#94A3B8'; ctx.font = 'bold 10px sans-serif'; ctx.fillText('LOCATION', 40, 685);
     ctx.fillStyle = '#334155'; ctx.font = '12px sans-serif'; ctx.fillText(estateAddress, 40, 705);
   }
@@ -184,10 +191,16 @@ const generateBrandedPass = async (v, estate) => {
   return canvas;
 };
 
-const shareVisitorPass = async (v, estate) => {
+const shareVisitorPass = async (pass, estate) => {
+  // List rows don't carry the host's hall / building — fetch it for the directions link
+  let v = pass;
+  if (!('place' in pass)) {
+    try { const { data } = await visitorAPI.getOne(pass._id); v = { ...pass, place: data.place || data.data?.place || null }; } catch { /* share without it */ }
+  }
   const date = format(new Date(v.expectedDate), 'MMM d, yyyy · h:mm a');
-  const estateLine = estate?.name ? `\n*Estate:* ${estate.name}` : '';
-  const waText = `🏠 *Visitor Pass — ${v.visitorName}*${estateLine}\n\n*Code:* ${v.visitorCode}\n*Purpose:* ${v.purpose}\n*Expected:* ${date}\n\n_Powered by Area Connector Technologies · RC 9607864_\n${BRAND_URL}`;
+  const { siteWord, extra } = passShareLines(v, estate);
+  const estateLine = estate?.name ? `\n*${siteWord}:* ${estate.name}` : '';
+  const waText = `🏠 *Visitor Pass — ${v.visitorName}*${estateLine}\n\n*Code:* ${v.visitorCode}\n*Purpose:* ${v.purpose}${extra}\n*Expected:* ${date}\n\n_Powered by Area Connector Technologies · RC 9607864_\n${BRAND_URL}`;
 
   let file = null;
   try {
@@ -418,7 +431,9 @@ function VisitorPassDrawer({ visitor, onClose, onCancelPass }) {
                 {visitor.status}
               </span>
               <span className="text-sm" style={{ color: '#64748B' }}>{visitor.purpose}</span>
+              <CategoryBadge visitor={visitor} />
             </div>
+            <DetailsLine visitor={visitor} className="text-xs mt-1 text-slate-500" />
           </div>
         </div>
       </div>
@@ -434,7 +449,7 @@ function VisitorPassDrawer({ visitor, onClose, onCancelPass }) {
             style={{ background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)' }}>
             <div>
               <div className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: 'rgba(255,255,255,0.70)' }}>
-                Guest Pass
+                {visitor.category && visitor.category !== 'guest' ? passKindLabel(visitor) : 'Guest Pass'}
               </div>
               <div className="text-xl font-bold text-white" style={{ letterSpacing: '-0.02em' }}>{visitor.visitorName}</div>
               <div className="text-sm mt-0.5" style={{ color: 'rgba(255,255,255,0.75)' }}>{visitor.purpose}</div>

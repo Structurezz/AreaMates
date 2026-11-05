@@ -36,9 +36,13 @@ import ResidentLive from './pages/ResidentLive';
 import Podcasts from './pages/Podcasts';
 import Announcements from './pages/Announcements';
 import Household from './pages/Household';
+import SiteMap from './pages/SiteMap';
 import HouseholdGate from './components/household/HouseholdGate';
+import ModuleGate from './components/site/ModuleGate';
+import { SiteProvider } from './context/SiteContext';
+import { PERM_MODULE } from './hooks/useHousehold';
 
-function RequireResident({ children, perm }) {
+function RequireResident({ children, perm, module }) {
   const { user, loading } = useAuth();
   if (loading) return <LoadingScreen />;
   if (!user) return <Navigate to="/login" replace />;
@@ -52,7 +56,10 @@ function RequireResident({ children, perm }) {
       </div>
     );
   }
-  return <AppLayout>{perm ? <HouseholdGate perm={perm}>{children}</HouseholdGate> : children}</AppLayout>;
+  // Site module first (switched off for the whole site), then the household permission
+  const mod = module ?? PERM_MODULE[perm];
+  const page = perm ? <HouseholdGate perm={perm}>{children}</HouseholdGate> : children;
+  return <AppLayout>{mod ? <ModuleGate module={mod}>{page}</ModuleGate> : page}</AppLayout>;
 }
 
 function AppRoutes() {
@@ -79,10 +86,11 @@ function AppRoutes() {
       <Route path="/lounge/live" element={<RequireResident perm="community"><PlanGate feature="residentLounge" featureName="Resident Lounge"><ResidentLive /></PlanGate></RequireResident>} />
       <Route path="/podcasts" element={<RequireResident perm="community"><PlanGate feature="residentLounge" featureName="Podcast"><Podcasts /></PlanGate></RequireResident>} />
       <Route path="/announcements" element={<RequireResident><Announcements /></RequireResident>} />
-      <Route path="/events" element={<RequireResident perm="community"><PlanGate feature="eventBoard" featureName="Event Board"><EventBoard /></PlanGate></RequireResident>} />
+      <Route path="/events" element={<RequireResident perm="community" module="events"><PlanGate feature="eventBoard" featureName="Event Board"><EventBoard /></PlanGate></RequireResident>} />
       <Route path="/polls" element={<RequireResident perm="community"><PlanGate feature="pollsAndVoting" featureName="Polls & Voting"><Polls /></PlanGate></RequireResident>} />
       <Route path="/courtroom" element={<RequireResident perm="community"><Courtroom /></RequireResident>} />
-      <Route path="/household" element={<RequireResident><Household /></RequireResident>} />
+      <Route path="/household" element={<RequireResident module="household"><Household /></RequireResident>} />
+      <Route path="/map" element={<RequireResident><SiteMap /></RequireResident>} />
       <Route path="/settings" element={<RequireResident><Settings /></RequireResident>} />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
@@ -96,6 +104,7 @@ export default function App() {
       <SeoTracker />
       <AuthProvider>
         <SocketProvider>
+          <SiteProvider>
           <CallProvider>
           <SafetyProvider>
           <CallOverlay />
@@ -112,6 +121,7 @@ export default function App() {
           </NotificationProvider>
           </SafetyProvider>
           </CallProvider>
+          </SiteProvider>
         </SocketProvider>
       </AuthProvider>
     </BrowserRouter>

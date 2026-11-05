@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { callAPI } from '../../api';
 import useFillHeight from '../../hooks/useFillHeight';
+import { useSite } from '../../context/SiteContext';
 
 // Desktop Calls page for residents — same layout as the estate manager's
 // CallsDesktop (directory · selected contact · recent), in AreaMates indigo,
@@ -101,6 +102,7 @@ function CallRow({ c, person, onCall, disabled, compact }) {
 export default function NeighboursDesktop({
   dir, credits, history, buzzes, loading, call, minutes, onRefresh, onTopup, onCall, onReceipt, downloading,
 }) {
+  const site = useSite();
   const shellRef = useRef(null);
   const height = useFillHeight(shellRef, true, { min: 560 });
   const [tab, setTab] = useState('residents');
@@ -169,7 +171,7 @@ export default function NeighboursDesktop({
             <h1 className="text-[22px] font-semibold text-white flex items-center gap-2" style={{ letterSpacing: '-0.025em' }}>
               <Phone size={20} /> Calls
             </h1>
-            <p className="mt-0.5 text-[13px] text-white/75 flex items-center gap-1.5"><ShieldCheck size={13} /> Call any neighbour in your estate. Calls to security and management are always free.</p>
+            <p className="mt-0.5 text-[13px] text-white/75 flex items-center gap-1.5"><ShieldCheck size={13} /> {site.isEstate ? 'Call any neighbour in your estate.' : `Call anyone in the ${site.terms.site.toLowerCase()} directory.`} Calls to security and management are always free.</p>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             {[

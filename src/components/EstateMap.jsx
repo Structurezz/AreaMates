@@ -2,7 +2,8 @@ import { useMemo, useState, useEffect } from 'react';
 import { GoogleMap, useJsApiLoader, OverlayView } from '@react-google-maps/api';
 import { MapPin, Navigation, Layers, ExternalLink } from 'lucide-react';
 
-const GOOGLE_MAPS_LIBRARIES = ['places'];
+import { GOOGLE_MAPS_LOADER } from '../utils/googleMaps';
+
 const API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
 // Indigo-accented map style to match AreaMates
@@ -70,11 +71,7 @@ function CustomMarker({ position, label }) {
 export default function EstateMap({
   location, address, name, height = 220, variant = 'card', showControls = true,
 }) {
-  const { isLoaded, loadError } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: API_KEY || '',
-    libraries: GOOGLE_MAPS_LIBRARIES,
-  });
+  const { isLoaded, loadError } = useJsApiLoader(GOOGLE_MAPS_LOADER);
 
   const [mapType, setMapType] = useState('roadmap');
   const [pin, setPin] = useState(location?.lat ? { lat: location.lat, lng: location.lng } : null);

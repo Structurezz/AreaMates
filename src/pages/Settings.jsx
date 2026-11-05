@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useSite } from '../context/SiteContext';
+import { shiftLine, blockName } from '../utils/siteTypes';
 import { authAPI } from '../api';
-import { Camera, Save, Eye, EyeOff, User as UserIcon, Phone, Mail, Home, X, Lock, KeyRound, ShieldCheck } from 'lucide-react';
+import { Camera, Save, Eye, EyeOff, User as UserIcon, Phone, Mail, Home, X, Lock, KeyRound, ShieldCheck, BadgeCheck, Briefcase, GraduationCap, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
@@ -34,6 +36,7 @@ function resizeToDataUrl(file, size = 320) {
 
 export default function Settings() {
   const { user, fetchMe, logout } = useAuth();
+  const site = useSite();
   const navigate = useNavigate();
   const fileRef = useRef(null);
 
@@ -128,8 +131,19 @@ export default function Settings() {
 
   const initial = (form.name || user?.name || '?')[0]?.toUpperCase();
   const unitLabel = user?.unitId
-    ? `Unit ${user.unitId.unitNumber}${user.unitId.block ? ` · Block ${user.unitId.block}` : ''}`
-    : 'No unit assigned';
+    ? site.isEstate
+      ? `Unit ${user.unitId.unitNumber}${user.unitId.block ? ` · Block ${user.unitId.block}` : ''}`
+      : `${site.terms.unit} ${user.unitId.unitNumber}${user.unitId.block ? ` · ${blockName(user.unitId.block, site.terms)}` : ''}`
+    : `No ${site.terms.unit.toLowerCase()} assigned`;
+  // Staff ID / job title / class (schools, industry, hospitals) and shift hours
+  const mp = user?.memberProfile || {};
+  const shift = site.modules.shifts ? shiftLine(user?.shift) : null;
+  const profileFacts = [
+    mp.idNumber && { Icon: BadgeCheck, label: site.terms.idLabel || 'ID number', value: mp.idNumber, showLabel: true },
+    mp.title && { Icon: Briefcase, label: 'Title', value: mp.title },
+    mp.className && { Icon: GraduationCap, label: site.terms.classLabel || 'Class', value: mp.className, showLabel: true },
+    shift && { Icon: Clock, label: 'Your shift', value: shift },
+  ].filter(Boolean);
 
   return (
     <div className="space-y-5 animate-fade-in max-w-2xl mx-auto">
@@ -138,7 +152,7 @@ export default function Settings() {
           Settings
         </h1>
         <p className="text-sm mt-1" style={{ color: '#64748B' }}>
-          Manage how you appear to other residents.
+          Manage how you appear to other {site.terms.members.toLowerCase()}.
         </p>
       </div>
 
@@ -193,6 +207,16 @@ export default function Settings() {
             <div className="flex items-center gap-1.5 text-xs mt-1.5" style={{ color: '#6366F1' }}>
               <Home size={11} /> {unitLabel}
             </div>
+            {profileFacts.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {profileFacts.map(({ Icon, label, value, showLabel }) => (
+                  <span key={label} title={label} className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full"
+                    style={{ background: '#F1F5F9', color: '#475569' }}>
+                    <Icon size={11} style={{ color: '#6366F1' }} /> {label === 'Your shift' ? `Shift ${value}` : showLabel ? <><span className="text-slate-400">{label}:</span> {value}</> : value}
+                  </span>
+                ))}
+              </div>
+            )}
             <div className="flex items-center gap-2 mt-2">
               <button
                 type="button"
@@ -319,7 +343,7 @@ export default function Settings() {
         </button>
 
         <p className="text-[11px] mt-3 leading-relaxed" style={{ color: '#94A3B8' }}>
-          Group chat and estate broadcasts are unaffected — only the resident search for direct messages.
+          Group chat and {site.terms.site.toLowerCase()} broadcasts are unaffected — only the resident search for direct messages.
         </p>
       </div>
 
@@ -392,7 +416,7 @@ export default function Settings() {
               onClick={async () => { try { await logout?.(); } catch {} navigate('/login?forgot=1', { replace: true }); }}
               style={{ background: 'none', border: 'none', color: '#4F46E5', fontWeight: 700, cursor: 'pointer', padding: 0 }}
             >
-              Request a reset from your estate manager
+              Request a reset from your {site.terms.manager.toLowerCase()}
             </button>
           </p>
         </div>

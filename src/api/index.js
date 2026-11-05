@@ -251,3 +251,10 @@ export const householdAPI = {
   resendInvite: (id) => api.post(`/household/${id}/resend-invite`),
   remove:       (id) => api.delete(`/household/${id}`),
 };
+
+// Site type (estate / school / hotel / industrial / hospital): words, modules, pass categories
+export const siteAPI = {
+  get: () => api.get('/site'),
+  // Halls / buildings / gates on Google Maps (members see public places + their own)
+  places: () => api.get('/site/places'),
+};

@@ -31,6 +31,20 @@ api.interceptors.response.use(
       window.dispatchEvent(new CustomEvent('auth:expired'));
       return Promise.reject(err);
     }
+    // Hotel guest's stay is over (checked out) — sign out with the reason
+    if (err.response?.data?.code === 'STAY_ENDED') {
+      localStorage.removeItem('accessToken');
+      try {
+        sessionStorage.setItem('authNotice', err.response.data.message || 'Your stay has ended. Thanks for staying with us!');
+        sessionStorage.setItem('authNoticeTone', 'stay');
+      } catch {}
+      window.dispatchEvent(new CustomEvent('auth:expired'));
+      return Promise.reject(err);
+    }
+    // The manager switched this feature off for the site — re-read the site config
+    if (err.response?.status === 403 && err.response?.data?.code === 'MODULE_OFF') {
+      window.dispatchEvent(new CustomEvent('site:refresh'));
+    }
     // The household head changed this member's access — pick up the new list
     if (err.response?.data?.code === 'HOUSEHOLD_NO_ACCESS') {
       window.dispatchEvent(new CustomEvent('auth:refresh'));
@@ -46,8 +60,15 @@ api.interceptors.response.use(
         localStorage.setItem('accessToken', data.data.accessToken);
         original.headers.Authorization = `Bearer ${data.data.accessToken}`;
         return api(original);
-      } catch {
+      } catch (refreshErr) {
         localStorage.removeItem('accessToken');
+        // Refresh refused because the guest's stay ended — keep the reason for the login screen
+        if (refreshErr.response?.data?.code === 'STAY_ENDED') {
+          try {
+            sessionStorage.setItem('authNotice', refreshErr.response.data.message || 'Your stay has ended. Thanks for staying with us!');
+            sessionStorage.setItem('authNoticeTone', 'stay');
+          } catch {}
+        }
         window.dispatchEvent(new CustomEvent('auth:expired'));
       }
     }

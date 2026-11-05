@@ -7,6 +7,8 @@ import {
 import toast from 'react-hot-toast';
 import { householdAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
+import { useSite } from '../context/SiteContext';
+import { PERM_MODULE } from '../hooks/useHousehold';
 import Portal, { Z } from '../components/ui/Portal';
 import { PageLoader } from '../components/ui/Spinner';
 import useIsDesktop from '../hooks/useIsDesktop';
@@ -20,13 +22,16 @@ const PERM_META = {
   neighbours:  { Icon: PhoneCall,     color: '#EC4899' },
 };
 
-const BASICS = [
-  { Icon: Megaphone,   label: 'Estate announcements' },
+const basicsFor = (terms) => [
+  { Icon: Megaphone,   label: `${terms.site} announcements` },
   { Icon: ShieldAlert, label: 'Security alerts & personal safety' },
   { Icon: UserIcon,    label: 'Their own profile & password' },
 ];
 
-const REL_EMOJI = { Spouse: '💍', Child: '🧒🏾', Parent: '👵🏾', Sibling: '🧑🏾‍🤝‍🧑🏾', Relative: '👨🏾‍👩🏾‍👧🏾', 'Domestic staff': '🧹', Other: '🏠' };
+const REL_EMOJI = {
+  Spouse: '💍', Child: '🧒🏾', Parent: '👵🏾', Sibling: '🧑🏾‍🤝‍🧑🏾', Relative: '👨🏾‍👩🏾‍👧🏾', 'Domestic staff': '🧹', Other: '🏠',
+  Guardian: '🧑🏾‍🍼', Driver: '🚗', Nanny: '🧸', Friend: '🤝🏾', Colleague: '💼', Caregiver: '🩺',
+};
 const GRADS = [
   ['#6366F1', '#8B5CF6'], ['#EC4899', '#F43F5E'], ['#0EA5E9', '#6366F1'],
   ['#10B981', '#0D9488'], ['#F59E0B', '#F97316'], ['#8B5CF6', '#C026D3'],
@@ -68,6 +73,8 @@ function statusOf(m) {
 
 function MemberPanel({ options, member, onClose, onSaved }) {
   const editing = !!member;
+  const { terms, isEstate } = useSite();
+  const BASICS = basicsFor(terms);
   const [form, setForm] = useState({
     name: member?.name || '', email: member?.email || '', phone: member?.phone || '',
     relationship: member?.relationship || '',
@@ -113,7 +120,7 @@ function MemberPanel({ options, member, onClose, onSaved }) {
       {/* Desktop: right-hand side bar · Mobile: bottom sheet */}
       <div className={`fixed inset-0 ${Z.drawer} flex ${isDesktop ? 'justify-end' : 'items-end justify-center'}`}>
         <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]" onClick={onClose} />
-        <form onSubmit={save} role="dialog" aria-modal="true" aria-label={editing ? `Edit ${member.name}` : 'Add family member'}
+        <form onSubmit={save} role="dialog" aria-modal="true" aria-label={editing ? `Edit ${member.name}` : `Add ${terms.family.toLowerCase()}`}
           className={`relative w-full bg-white flex flex-col overflow-hidden ${isDesktop
             ? 'h-full max-w-[440px] animate-slide-in-right'
             : 'rounded-t-3xl max-h-[92dvh] dash-rise'}`}
@@ -123,10 +130,10 @@ function MemberPanel({ options, member, onClose, onSaved }) {
             <div className="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-white/10 dash-blob" />
             <div className="relative flex items-start justify-between gap-3">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-white/70">{editing ? 'Family member' : 'New family member'}</p>
-                <h2 className="text-lg font-bold !text-white mt-0.5">{editing ? member.name : 'Add someone to your home'}</h2>
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-white/70">{editing ? terms.family : `New ${terms.family.toLowerCase()}`}</p>
+                <h2 className="text-lg font-bold !text-white mt-0.5">{editing ? member.name : isEstate ? 'Add someone to your home' : `Add someone to your ${terms.household.toLowerCase()}`}</h2>
                 <p className="text-[12.5px] text-white/75 mt-1">{options.requiresApproval && !editing
-                  ? 'Your estate manager approves new family members, then their AreaMates invite goes out.'
+                  ? `Your ${terms.manager.toLowerCase()} approves new ${terms.familyPlural.toLowerCase()}, then their AreaMates invite goes out.`
                   : "They'll get their own AreaMates login. Bills stay with you."}</p>
               </div>
               <button type="button" onClick={onClose} className="p-1.5 rounded-xl bg-white/15 hover:bg-white/25"><X size={16} /></button>
@@ -221,6 +228,7 @@ function MemberPanel({ options, member, onClose, onSaved }) {
 /* ── Member card ──────────────────────────────────────────────────── */
 
 function MemberCard({ m, i, options, isHead, onEdit, onChanged }) {
+  const { terms } = useSite();
   const [busy, setBusy] = useState(false);
   const st = statusOf(m);
   const first = m.name.split(' ')[0];
@@ -245,7 +253,7 @@ function MemberCard({ m, i, options, isHead, onEdit, onChanged }) {
             <p className="text-[15px] font-bold text-slate-900 truncate">{m.name}</p>
             <span className="text-[10.5px] font-bold px-2 py-0.5 rounded-full" style={{ background: st.bg, color: st.fg }}>{st.label}</span>
           </div>
-          <p className="text-[12.5px] text-slate-500 truncate">{m.relationship || 'Family member'} · {m.email}</p>
+          <p className="text-[12.5px] text-slate-500 truncate">{m.relationship || terms.family} · {m.email}</p>
         </div>
       </div>
 
@@ -265,7 +273,7 @@ function MemberCard({ m, i, options, isHead, onEdit, onChanged }) {
 
       {m.status === 'pending' && (
         <p className="mt-3 text-[12px] text-amber-700 bg-amber-50 rounded-xl px-3 py-2 flex items-center gap-2">
-          <Clock size={13} className="flex-shrink-0" /> Waiting for your estate manager. Their invite goes out once approved.
+          <Clock size={13} className="flex-shrink-0" /> Waiting for your {terms.manager.toLowerCase()}. Their invite goes out once approved.
         </p>
       )}
 
@@ -286,9 +294,9 @@ function MemberCard({ m, i, options, isHead, onEdit, onChanged }) {
             className="p-2 rounded-xl text-slate-400 hover:text-amber-600 hover:bg-amber-50">
             {m.isActive ? <PauseCircle size={16} /> : <PlayCircle size={16} />}
           </button>}
-          <button disabled={busy} title={m.status === 'pending' ? 'Cancel request' : 'Remove from household'}
+          <button disabled={busy} title={m.status === 'pending' ? 'Cancel request' : `Remove from ${terms.household.toLowerCase()}`}
             onClick={() => {
-              const ask = m.status === 'pending' ? `Cancel the request to add ${m.name}?` : `Remove ${m.name} from your household? They won't be able to sign in any more.`;
+              const ask = m.status === 'pending' ? `Cancel the request to add ${m.name}?` : `Remove ${m.name} from your ${terms.household.toLowerCase()}? They won't be able to sign in any more.`;
               if (window.confirm(ask)) run(() => householdAPI.remove(m._id));
             }}
             className="p-2 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50">
@@ -304,8 +312,16 @@ function MemberCard({ m, i, options, isHead, onEdit, onChanged }) {
 
 export default function Household() {
   const { user } = useAuth();
+  const { terms, isEstate, moduleOn } = useSite();
+  const BASICS = basicsFor(terms);
+  const hh = terms.household.toLowerCase();
   const [data, setData] = useState(null);
-  const [options, setOptions] = useState(null);
+  const [rawOptions, setOptions] = useState(null);
+  // Permissions for features switched off at this site aren't offered
+  const options = useMemo(() => rawOptions && {
+    ...rawOptions,
+    permissions: Object.fromEntries(Object.entries(rawOptions.permissions || {}).filter(([k]) => moduleOn(PERM_MODULE[k]))),
+  }, [rawOptions, moduleOn]);
   const [panel, setPanel] = useState(null); // null | 'new' | member
 
   const load = () => householdAPI.get().then(({ data }) => setData(data.data)).catch(() => setData({ error: true }));
@@ -316,7 +332,7 @@ export default function Household() {
 
   const everyone = useMemo(() => data?.head ? [data.head, ...(data.members || [])] : [], [data]);
 
-  if (!data || !options) return <PageLoader />;
+  if (!data || !rawOptions) return <PageLoader />;
   if (data.error) return <p className="text-center text-sm text-slate-500 py-20">Couldn't load your household. Try again shortly.</p>;
 
   const { isHead, head, members, unit, myPermissions } = data;
@@ -328,16 +344,18 @@ export default function Household() {
       {/* Header */}
       <div className="flex items-end justify-between gap-3 flex-wrap dash-rise">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-indigo-500">Your home</p>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">My Household</h1>
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-indigo-500">{isEstate ? 'Your home' : `Your ${terms.site.toLowerCase()}`}</p>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">My {terms.household}</h1>
           <p className="text-[13px] text-slate-500 mt-0.5">
-            {isHead ? 'Add the people who live with you and choose what each of them can use.' : `You're part of ${head?.name?.split(' ')[0] || 'your'}'s household.`}
+            {isHead
+              ? isEstate ? 'Add the people who live with you and choose what each of them can use.' : `Add your ${terms.familyPlural.toLowerCase()} and choose what each of them can use.`
+              : `You're part of ${head?.name?.split(' ')[0] || 'your'}'s ${hh}.`}
           </p>
         </div>
         {isHead && (
           <button onClick={() => setPanel('new')} disabled={!roomLeft || members.length >= options.maxMembers}
             className="btn-primary inline-flex items-center gap-2">
-            <UserPlus size={15} /> Add family member
+            <UserPlus size={15} /> Add {terms.family.toLowerCase()}
           </button>
         )}
       </div>
@@ -350,8 +368,8 @@ export default function Household() {
           <div className="flex items-center gap-3 flex-1 min-w-0">
             <span className="w-12 h-12 rounded-2xl bg-white/15 border border-white/25 flex items-center justify-center flex-shrink-0"><Home size={22} /></span>
             <div className="min-w-0">
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-white/70">{user?.estateId?.name || 'Your estate'}</p>
-              <p className="text-lg font-bold truncate">{unit?.label || 'Your unit'}</p>
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-white/70">{user?.estateId?.name || `Your ${terms.site.toLowerCase()}`}</p>
+              <p className="text-lg font-bold truncate">{unit?.label || `Your ${terms.unit.toLowerCase()}`}</p>
               <p className="text-[12.5px] text-white/75">{everyone.length} {everyone.length === 1 ? 'person' : 'people'} on AreaMates · {unit ? `${unit.occupants}/${unit.maxOccupants} occupants` : ''}</p>
             </div>
           </div>
@@ -373,7 +391,7 @@ export default function Household() {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <p className="text-[15px] font-bold text-slate-900 truncate">{head?.name}{isHead && ' (you)'}</p>
-                <span className="inline-flex items-center gap-1 text-[10.5px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700"><Crown size={10} /> Head of household</span>
+                <span className="inline-flex items-center gap-1 text-[10.5px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700"><Crown size={10} /> {isEstate ? 'Head of household' : 'Main account'}</span>
               </div>
               <p className="text-[12.5px] text-slate-500 truncate flex items-center gap-3">
                 {head?.email && <span className="inline-flex items-center gap-1"><Mail size={11} />{head.email}</span>}
@@ -385,10 +403,12 @@ export default function Household() {
           {members.length === 0 ? (
             <div className="dash-rise rounded-3xl border-2 border-dashed border-indigo-100 bg-indigo-50/30 p-8 text-center" style={{ animationDelay: '140ms' }}>
               <div className="text-4xl mb-3">👨🏾‍👩🏾‍👧🏾‍👦🏾</div>
-              <p className="text-[15px] font-bold text-slate-800">{isHead ? 'Bring your household onto AreaMates' : 'No other family members yet'}</p>
+              <p className="text-[15px] font-bold text-slate-800">{isHead ? `Bring your ${hh} onto AreaMates` : `No other ${terms.familyPlural.toLowerCase()} yet`}</p>
               {isHead && <>
-                <p className="text-[13px] text-slate-500 mt-1 max-w-sm mx-auto">Your spouse can invite guests, your kids can join the lounge, your house help can open the gate for deliveries. You decide.</p>
-                <button onClick={() => setPanel('new')} disabled={!roomLeft} className="btn-primary inline-flex items-center gap-2 mt-4"><UserPlus size={15} /> Add your first family member</button>
+                <p className="text-[13px] text-slate-500 mt-1 max-w-sm mx-auto">{isEstate
+                  ? 'Your spouse can invite guests, your kids can join the lounge, your house help can open the gate for deliveries. You decide.'
+                  : `Each person gets their own AreaMates login. You decide what they can use.`}</p>
+                <button onClick={() => setPanel('new')} disabled={!roomLeft} className="btn-primary inline-flex items-center gap-2 mt-4"><UserPlus size={15} /> Add your first {terms.family.toLowerCase()}</button>
               </>}
             </div>
           ) : (
@@ -408,20 +428,20 @@ export default function Household() {
               <p className="text-[13px] font-bold text-slate-900 flex items-center gap-2"><Sparkles size={14} className="text-indigo-500" /> How it works</p>
               <ul className="mt-3 space-y-3 text-[12.5px] text-slate-600">
                 <li className="flex gap-2.5"><UserPlus size={14} className="text-indigo-500 mt-0.5 flex-shrink-0" />Each person gets their own login by email and sets their own password.</li>
-                {options.requiresApproval && <li className="flex gap-2.5"><Clock size={14} className="text-amber-500 mt-0.5 flex-shrink-0" />Your estate approves new family members before their invite is sent.</li>}
-                <li className="flex gap-2.5"><Receipt size={14} className="text-emerald-500 mt-0.5 flex-shrink-0" />Estate bills are only sent to you. Family members are never billed.</li>
-                <li className="flex gap-2.5"><ShieldAlert size={14} className="text-red-500 mt-0.5 flex-shrink-0" />Everyone can always raise a security alert and get estate notices.</li>
-                <li className="flex gap-2.5"><PauseCircle size={14} className="text-amber-500 mt-0.5 flex-shrink-0" />Pause or remove someone any time, e.g. when house help leaves.</li>
+                {options.requiresApproval && <li className="flex gap-2.5"><Clock size={14} className="text-amber-500 mt-0.5 flex-shrink-0" />Your {terms.site.toLowerCase()} approves new {terms.familyPlural.toLowerCase()} before their invite is sent.</li>}
+                {moduleOn('payments') && <li className="flex gap-2.5"><Receipt size={14} className="text-emerald-500 mt-0.5 flex-shrink-0" />{terms.dues} are only sent to you. {terms.familyPlural} are never billed.</li>}
+                <li className="flex gap-2.5"><ShieldAlert size={14} className="text-red-500 mt-0.5 flex-shrink-0" />Everyone can always raise a security alert and get {terms.site.toLowerCase()} notices.</li>
+                <li className="flex gap-2.5"><PauseCircle size={14} className="text-amber-500 mt-0.5 flex-shrink-0" />Pause or remove someone any time{isEstate ? ', e.g. when house help leaves' : ''}.</li>
               </ul>
               <div className="mt-4 pt-4 border-t border-slate-100 grid grid-cols-2 gap-3 text-center">
                 <div><p className="text-xl font-bold text-slate-900">{activeCount}</p><p className="text-[11px] text-slate-400">Active members</p></div>
-                <div><p className="text-xl font-bold text-slate-900">{roomLeft}</p><p className="text-[11px] text-slate-400">Spaces left in unit</p></div>
+                <div><p className="text-xl font-bold text-slate-900">{roomLeft}</p><p className="text-[11px] text-slate-400">Spaces left in {terms.unit.toLowerCase()}</p></div>
               </div>
             </div>
           ) : (
             <div className="dash-rise bg-white rounded-3xl border border-slate-100 p-5" style={{ animationDelay: '160ms' }}>
               <p className="text-[13px] font-bold text-slate-900">Your access</p>
-              <p className="text-[12px] text-slate-500 mt-0.5">Set by {head?.name?.split(' ')[0] || 'your household head'}.</p>
+              <p className="text-[12px] text-slate-500 mt-0.5">Set by {head?.name?.split(' ')[0] || `your ${hh} head`}.</p>
               <div className="mt-3 space-y-2">
                 {BASICS.map(({ Icon, label }) => (
                   <div key={label} className="flex items-center gap-2.5 text-[12.5px] text-slate-700">

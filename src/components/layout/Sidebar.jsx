@@ -1,7 +1,8 @@
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { PhoneCall, ShieldAlert, LayoutDashboard, UserCheck, ShoppingBag, MessageSquare, Bell, LogOut, CreditCard, Music, Calendar, BarChart2, Lock, Scale, Settings as SettingsIcon, Radio, Megaphone, Users } from 'lucide-react';
+import { PhoneCall, ShieldAlert, LayoutDashboard, UserCheck, ShoppingBag, MessageSquare, Bell, LogOut, CreditCard, Music, Calendar, BarChart2, Lock, Scale, Settings as SettingsIcon, Radio, Megaphone, Users, Map as MapIcon } from 'lucide-react';
 import { useHousehold } from '../../hooks/useHousehold';
+import { useSite } from '../../context/SiteContext';
 import { usePlan } from '../../hooks/usePlan';
 import NotificationBell from '../ui/NotificationBell';
 
@@ -11,20 +12,21 @@ const NAV = [
     links: [
       { to: '/dashboard',  icon: LayoutDashboard, label: 'Dashboard' },
       { to: '/visitors',   icon: UserCheck,        label: 'My Visitors',    feature: 'visitorManagement', perm: 'visitors' },
-      { to: '/payments',   icon: CreditCard,       label: 'Payments',       feature: 'paymentSystem', perm: 'payments' },
-      { to: '/household',  icon: Users,            label: 'My Household' },
+      { to: '/payments',   icon: CreditCard,       label: 'Payments',       feature: 'paymentSystem', perm: 'payments', siteLabel: (t) => t.dues },
+      { to: '/map',        icon: MapIcon,          label: 'Estate map', siteLabel: (t) => `${t.site} map` },
+      { to: '/household',  icon: Users,            label: 'My Household', module: 'household', siteLabel: (t) => `My ${t.household.toLowerCase()}` },
     ],
   },
   {
     section: 'Community',
     links: [
       { to: '/announcements', icon: Megaphone,  label: 'Announcements' },
-      { to: '/lounge',      icon: Music,        label: 'Resident Lounge', feature: 'residentLounge', perm: 'community' },
+      { to: '/lounge',      icon: Music,        label: 'Resident Lounge', feature: 'residentLounge', perm: 'community', siteLabel: () => 'Lounge' },
       { to: '/podcasts',    icon: Radio,        label: 'Podcast',         feature: 'residentLounge', perm: 'community' },
-      { to: '/events',      icon: Calendar,     label: 'Event Board',     feature: 'eventBoard', perm: 'community' },
+      { to: '/events',      icon: Calendar,     label: 'Event Board',     feature: 'eventBoard', perm: 'community', module: 'events' },
       { to: '/polls',       icon: BarChart2,    label: 'Polls & Voting',  feature: 'pollsAndVoting', perm: 'community' },
       { to: '/marketplace', icon: ShoppingBag,  label: 'Marketplace',     feature: 'marketplace', perm: 'marketplace' },
-      { to: '/neighbours',  icon: PhoneCall,    label: 'Neighbours', perm: 'neighbours' },
+      { to: '/neighbours',  icon: PhoneCall,    label: 'Neighbours', perm: 'neighbours', siteLabel: () => 'Directory' },
       { to: '/chat',        icon: MessageSquare,label: 'Community Chat',  feature: 'communityChat', perm: 'chat' },
     ],
   },
@@ -43,6 +45,9 @@ export default function Sidebar({ mobile = false, onClose }) {
   const navigate = useNavigate();
   const { can } = usePlan();
   const { allowed } = useHousehold();
+  const site = useSite();
+  // Estates keep the classic labels; other site types use their own words
+  const labelOf = (l) => (!site.isEstate && l.siteLabel ? l.siteLabel(site.terms) : l.label);
   const estateName = user?.estateId && typeof user.estateId === 'object' ? user.estateId.name : 'AreaMates';
 
   return (
@@ -83,7 +88,9 @@ export default function Sidebar({ mobile = false, onClose }) {
               {section}
             </p>
             <div className="space-y-0.5">
-              {links.filter(l => allowed(l.perm)).map(({ to, icon: Icon, label, feature }) => {
+              {links.filter(l => allowed(l.perm, l.module)).map((l) => {
+                const { to, icon: Icon, feature } = l;
+                const label = labelOf(l);
                 const locked = feature ? !can(feature) : false;
                 return (
                   <NavLink

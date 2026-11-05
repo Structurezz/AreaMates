@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { authAPI } from '../../api';
-import { Eye, EyeOff, AlertCircle, CheckCircle, KeyRound, Mail, ShieldCheck, X, Lock, ArrowRight, UserCheck, Package, Radio, Vote, Wallet, Megaphone, Building2 } from 'lucide-react';
+import { Eye, EyeOff, AlertCircle, CalendarClock, CheckCircle, KeyRound, Mail, ShieldCheck, X, Lock, ArrowRight, UserCheck, Package, Radio, Vote, Wallet, Megaphone, Building2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Portal from '../../components/ui/Portal';
 
@@ -269,7 +269,7 @@ const MOBILE_CSS = `
   .am-input::placeholder { color: rgba(255,255,255,0.3); }
 `;
 
-function MobileLogin({ form, setForm, showPw, setShowPw, loading, error, handleSubmit, openForgot }) {
+function MobileLogin({ form, setForm, showPw, setShowPw, loading, error, errorTone, handleSubmit, openForgot }) {
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(160deg,#05091A 0%,#08103A 100%)', position: 'relative', overflow: 'hidden' }}>
       <style>{MOBILE_CSS}</style>
@@ -364,7 +364,15 @@ function MobileLogin({ form, setForm, showPw, setShowPw, loading, error, handleS
         <h2 style={{ fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-0.03em', marginBottom: 2 }}>Welcome back</h2>
         <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 22 }}>Sign in to your estate account</p>
 
-        {error && (
+        {error && errorTone === 'stay' && (
+          <div style={{
+            display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 14px', borderRadius: 12, marginBottom: 16,
+            background: 'rgba(129,140,248,0.14)', border: '1px solid rgba(165,180,252,0.35)', color: '#E0E7FF', fontSize: 13, lineHeight: 1.5,
+          }}>
+            <CalendarClock size={16} style={{ flexShrink: 0, marginTop: 1, color: '#A5B4FC' }}/> <span>{error}</span>
+          </div>
+        )}
+        {error && errorTone !== 'stay' && (
           <div style={{
             display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 10, marginBottom: 16,
             background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', color: '#FCA5A5', fontSize: 13,
@@ -517,7 +525,7 @@ function ResidentPreview() {
   );
 }
 
-function DesktopLogin({ form, setForm, showPw, setShowPw, loading, error, handleSubmit, openForgot }) {
+function DesktopLogin({ form, setForm, showPw, setShowPw, loading, error, errorTone, handleSubmit, openForgot }) {
   return (
     <div className="h-screen min-h-[640px] grid grid-cols-[1.1fr_1fr] bg-white overflow-hidden">
       <style>{DESKTOP_CSS}</style>
@@ -564,11 +572,15 @@ function DesktopLogin({ form, setForm, showPw, setShowPw, loading, error, handle
             <p className="mt-1.5 text-[14.5px] text-[#475467]">Sign in to your estate account.</p>
 
             <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-              {error && (
+              {error && (errorTone === 'stay' ? (
+                <div className="flex items-start gap-2.5 rounded-lg px-3.5 py-3 text-[13px] bg-[#EEF2FF] border border-[#C7D2FE] text-[#3730A3]">
+                  <CalendarClock size={16} className="shrink-0 mt-0.5 text-[#6366F1]" /> {error}
+                </div>
+              ) : (
                 <div className="flex items-start gap-2 rounded-lg px-3.5 py-3 text-[13px] bg-[#FEF3F2] border border-[#FECDCA] text-[#B42318]">
                   <AlertCircle size={15} className="shrink-0 mt-0.5" /> {error}
                 </div>
-              )}
+              ))}
               <div>
                 <label className="block text-[13px] font-medium text-[#344054] mb-1.5">Email</label>
                 <input type="email" className="rl-input" placeholder="you@example.com" autoFocus
@@ -627,6 +639,8 @@ export default function Login() {
   const [showPw, setShowPw]   = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState('');
+  // 'stay' = hotel guest's stay hasn't started / has ended (friendly, not an error)
+  const [errorTone, setErrorTone] = useState('error');
   const [forgotOpen, setForgotOpen] = useState(false);
   const { login }  = useAuth();
   const navigate   = useNavigate();
@@ -636,7 +650,12 @@ export default function Login() {
     // Why we were signed out (e.g. removed from their unit)
     try {
       const notice = sessionStorage.getItem('authNotice');
-      if (notice) { setError(notice); sessionStorage.removeItem('authNotice'); }
+      if (notice) {
+        setError(notice);
+        if (sessionStorage.getItem('authNoticeTone') === 'stay') setErrorTone('stay');
+        sessionStorage.removeItem('authNotice');
+      }
+      sessionStorage.removeItem('authNoticeTone');
     } catch {}
     try {
       const q = new URLSearchParams(window.location.search);
@@ -648,6 +667,7 @@ export default function Login() {
     e?.preventDefault();
     setLoading(true);
     setError('');
+    setErrorTone('error');
     try {
       const user = await login(form.email, form.password);
       toast.success(`Welcome back, ${user.name.split(' ')[0]}!`);
@@ -659,7 +679,13 @@ export default function Login() {
         navigate('/dashboard');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Invalid credentials');
+      const code = err.response?.data?.code;
+      if (code === 'STAY_NOT_STARTED' || code === 'STAY_ENDED') {
+        setErrorTone('stay');
+        setError(err.response.data.message || (code === 'STAY_ENDED' ? 'Your stay has ended.' : "Your stay hasn't started yet. You can sign in from check-in."));
+      } else {
+        setError(err.response?.data?.message || 'Invalid credentials');
+      }
     } finally {
       setLoading(false);
     }
@@ -667,7 +693,7 @@ export default function Login() {
 
   const openForgot = () => setForgotOpen(true);
 
-  const shared = { form, setForm, showPw, setShowPw, loading, error, handleSubmit, openForgot };
+  const shared = { form, setForm, showPw, setShowPw, loading, error, errorTone, handleSubmit, openForgot };
 
   return (
     <>

@@ -4,6 +4,8 @@ import { Search, X, Plus, ChevronRight, Calendar, LogIn, Clock, UserCheck, Phone
 import toast from 'react-hot-toast';
 import useCountUp from '../../hooks/useCountUp';
 import { VISITOR_STATUS, STATUS_CHIPS, purposeIcon, VisitorsPager } from './MobileVisitors';
+import { CategoryBadge, DetailsLine } from './PassCategory';
+import { useSite } from '../../context/SiteContext';
 
 // Phone layout for the residents' My visitors page. Desktop keeps its own layout.
 
@@ -89,9 +91,12 @@ function VisitorCard({ v, i, onOpen, onShare, onCopy, onCancel, ShareIcon }) {
               </span>
             </div>
             <p className="mt-0.5 text-[12px] text-slate-500 truncate flex items-center gap-1">
-              <span className="font-semibold capitalize px-1.5 py-px rounded-md" style={{ background: pBg, color: pColor }}>{v.purpose}</span>
+              {v.category && v.category !== 'guest'
+                ? <CategoryBadge visitor={v} />
+                : <span className="font-semibold capitalize px-1.5 py-px rounded-md" style={{ background: pBg, color: pColor }}>{v.purpose}</span>}
               <Clock size={11} className="flex-shrink-0 text-slate-400 ml-0.5" /> {timeLine}
             </p>
+            <DetailsLine visitor={v} className="text-[12px] text-slate-500" />
             {v.visitorPhone && <p className="text-[12px] text-slate-400 truncate">{v.visitorPhone}</p>}
           </div>
         </div>
@@ -121,6 +126,7 @@ export default function VisitorsMobile({
   page, pagination, limit, onPage, onOpen, onCreate, onShare, onCopy, onCancel, ShareIcon,
 }) {
   const [focus, setFocus] = useState(false);
+  const site = useSite();
 
   const groups = useMemo(() => {
     const out = [];
@@ -146,7 +152,7 @@ export default function VisitorsMobile({
       {/* Header */}
       <header className="dash-rise flex items-end justify-between gap-3">
         <div className="min-w-0">
-          <div className="text-[12px] font-medium text-slate-400">Your guests & gate passes</div>
+          <div className="text-[12px] font-medium text-slate-400 truncate">{site.isEstate ? 'Your guests & gate passes' : `Gate passes · ${site.name}`}</div>
           <h1 className="text-[22px] font-semibold text-slate-900 leading-tight" style={{ letterSpacing: '-0.03em' }}>My visitors</h1>
         </div>
         <button onClick={onCreate}

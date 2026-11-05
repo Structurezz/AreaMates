@@ -2,8 +2,11 @@ import { Link } from 'react-router-dom';
 import { format, formatDistanceToNowStrict } from 'date-fns';
 import {
   UserPlus, ShoppingBag, MessageSquare, Music, CreditCard, Phone, Scale, Bell,
-  LogIn, LogOut, CalendarClock, Megaphone, Siren, Home, ArrowUpRight, ShieldCheck,
+  LogIn, LogOut, CalendarClock, Megaphone, Siren, Home, ArrowUpRight, ShieldCheck, Users, Map as MapIcon,
 } from 'lucide-react';
+import MyPlaceCard from '../map/MyPlaceCard';
+import { useSite } from '../../context/SiteContext';
+import { StayCard, ShiftLine } from './StayCard';
 import EstateMap from '../EstateMap';
 import useCountUp from '../../hooks/useCountUp';
 import { CampaignBanner } from '../campaigns/CampaignSlots';
@@ -56,12 +59,15 @@ function Metric({ label, value, delay }) {
 
 const ACTIONS = [
   { to: '/visitors/new', label: 'Invite',     Icon: UserPlus,      color: '#6366F1' },
-  { to: '/marketplace',  label: 'Market',     Icon: ShoppingBag,   color: '#F59E0B' },
+  { to: '/marketplace',  label: 'Market',     Icon: ShoppingBag,   color: '#F59E0B', module: 'marketplace' },
   { to: '/chat',         label: 'Chat',       Icon: MessageSquare, color: '#3B82F6' },
-  { to: '/lounge',       label: 'Lounge',     Icon: Music,         color: '#EC4899' },
-  { to: '/payments',     label: 'Payments',   Icon: CreditCard,    color: '#10B981' },
-  { to: '/neighbours',   label: 'Neighbours', Icon: Phone,         color: '#0EA5E9' },
-  { to: '/courtroom',    label: 'Court',      Icon: Scale,         color: '#B45309' },
+  { to: '/lounge',       label: 'Lounge',     Icon: Music,         color: '#EC4899', module: 'community' },
+  { to: '/payments',     label: 'Payments',   Icon: CreditCard,    color: '#10B981', module: 'payments', siteLabel: (t) => t.dues },
+  { to: '/neighbours',   label: 'Neighbours', Icon: Phone,         color: '#0EA5E9', module: 'neighbours', siteLabel: () => 'Directory' },
+  { to: '/courtroom',    label: 'Court',      Icon: Scale,         color: '#B45309', module: 'community' },
+  // Other site types: family / party / team one tap away (estates keep the classic grid)
+  { to: '/map',          label: 'Map',        Icon: MapIcon,       color: '#14B8A6', nonEstate: true },
+  { to: '/household',    label: 'Household',  Icon: Users,         color: '#8B5CF6', module: 'household', nonEstate: true, siteLabel: (t) => t.household },
   { to: '/alerts',       label: 'Alerts',     Icon: Bell,          color: '#DC2626' },
 ];
 
@@ -72,6 +78,10 @@ const VISIT = {
 };
 
 export default function MobileDashboard({ user, myVisitors, announcements, estate, estateName, firstName, unitLabel, activeVisitors, alerting, onSOS }) {
+  const site = useSite();
+  const { terms } = site;
+  const actions = ACTIONS.filter((a) => site.moduleOn(a.module) && (!a.nonEstate || !site.isEstate))
+    .map((a) => (!site.isEstate && a.siteLabel ? { ...a, label: a.siteLabel(terms) } : a));
   const live = activeVisitors.length;
   const inside = myVisitors.filter(v => v.status === 'checked-in').length;
 
@@ -101,6 +111,7 @@ export default function MobileDashboard({ user, myVisitors, announcements, estat
           <h1 className="text-[22px] font-semibold text-slate-900 leading-tight truncate" style={{ letterSpacing: '-0.03em' }}>
             {greeting()}, {firstName}
           </h1>
+          <ShiftLine user={user} className="text-[12px] mt-0.5 max-w-full" />
         </div>
         <Link to="/settings" className="relative flex-shrink-0">
           <span className="absolute -inset-[3px] rounded-full" style={{ background: 'conic-gradient(from 180deg, #818CF8, #6366F1, #EC4899, #818CF8)' }} />
@@ -109,6 +120,9 @@ export default function MobileDashboard({ user, myVisitors, announcements, estat
             : <span className="relative w-11 h-11 rounded-full flex items-center justify-center font-semibold text-[15px] text-indigo-700 bg-indigo-50 border-2 border-white">{firstName[0]?.toUpperCase()}</span>}
         </Link>
       </header>
+
+      <StayCard user={user} compact />
+      <MyPlaceCard compact />
 
       {/* Home status */}
       <section className="dash-rise relative overflow-hidden rounded-[26px] p-5 text-white"
@@ -151,7 +165,7 @@ export default function MobileDashboard({ user, myVisitors, announcements, estat
           </span>
           <span className="flex-1 min-w-0">
             <span className="block text-[14px] font-semibold text-white">{alerting ? 'Sending alert…' : 'Emergency SOS'}</span>
-            <span className="block text-[11px] text-red-100/75">Alerts security and management with your unit</span>
+            <span className="block text-[11px] text-red-100/75">Alerts security and management with your {terms.unit.toLowerCase()}</span>
           </span>
           <span className="text-[11px] font-bold tracking-wider text-white bg-red-500 px-2.5 py-1 rounded-lg">SOS</span>
         </button>
@@ -162,7 +176,7 @@ export default function MobileDashboard({ user, myVisitors, announcements, estat
       {/* Quick actions */}
       <section>
         <div className="grid grid-cols-4 gap-x-2 gap-y-4">
-          {ACTIONS.map(({ to, label, Icon, color }, i) => (
+          {actions.map(({ to, label, Icon, color }, i) => (
             <Link key={to} to={to} className="dash-rise flex flex-col items-center gap-1.5" style={{ animationDelay: `${300 + i * 45}ms`, textDecoration: 'none' }}>
               <span className="dash-tile w-[58px] h-[58px] rounded-[20px] flex items-center justify-center border transition-transform active:scale-90"
                 style={{ background: `linear-gradient(145deg, ${color}1A, ${color}08)`, borderColor: `${color}2E` }}>
@@ -181,7 +195,7 @@ export default function MobileDashboard({ user, myVisitors, announcements, estat
         <div className="flex items-end justify-between mb-3">
           <div>
             <h2 className="text-[16px] font-semibold text-slate-900" style={{ letterSpacing: '-0.02em' }}>Live activity</h2>
-            <p className="text-[12px] text-slate-400">Your guests and estate notices</p>
+            <p className="text-[12px] text-slate-400">Your guests and {terms.site.toLowerCase()} notices</p>
           </div>
           <Link to="/visitors" className="text-[12px] font-semibold text-indigo-600 flex items-center gap-0.5">My passes <ArrowUpRight size={13} /></Link>
         </div>
@@ -215,7 +229,7 @@ export default function MobileDashboard({ user, myVisitors, announcements, estat
       {/* Map */}
       <section className="dash-rise" style={{ animationDelay: '520ms' }}>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-[16px] font-semibold text-slate-900" style={{ letterSpacing: '-0.02em' }}>Your estate</h2>
+          <h2 className="text-[16px] font-semibold text-slate-900" style={{ letterSpacing: '-0.02em' }}>Your {terms.site.toLowerCase()}</h2>
           {estate?.address && <span className="text-[12px] text-slate-400 truncate max-w-[60%]">{estate.address}</span>}
         </div>
         <div className="rounded-[22px] overflow-hidden">

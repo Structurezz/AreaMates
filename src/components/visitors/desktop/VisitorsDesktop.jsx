@@ -5,6 +5,9 @@ import {
 } from 'lucide-react';
 import useCountUp from '../../../hooks/useCountUp';
 import { VISITOR_STATUS } from '../MobileVisitors';
+import { CategoryBadge, DetailsLine } from '../PassCategory';
+import { useSite } from '../../../context/SiteContext';
+import { visitingLabel } from '../../../utils/siteTypes';
 
 const PURPOSE = {
   family:     [Users, '#EC4899', '#FDF2F8'],
@@ -58,6 +61,7 @@ export default function VisitorsDesktop({
   visitors, loading, counts, search, onSearch, statusFilter, onStatus,
   page, pagination, limit, onPage, onLimit, onInvite, onOpen, onShare, onCopy, onCancel,
 }) {
+  const site = useSite();
   const total = pagination.total || 0;
   const last = Math.max(1, pagination.pages || 1);
   const from = total ? (page - 1) * limit + 1 : 0;
@@ -72,7 +76,7 @@ export default function VisitorsDesktop({
       <div className="dash-rise flex items-end justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-[22px] font-semibold text-slate-900" style={{ letterSpacing: '-0.025em' }}>My visitor passes</h1>
-          <p className="text-[13px] text-slate-500 mt-0.5">Invite guests and share their gate pass</p>
+          <p className="text-[13px] text-slate-500 mt-0.5">{site.isEstate ? 'Invite guests and share their gate pass' : `Invite visitors to ${site.name} and share their gate pass`}{site.modules.visiting ? ` · ${visitingLabel(site.type)} ${site.visitingHours.start}–${site.visitingHours.end}` : ''}</p>
         </div>
         <button onClick={onInvite}
           className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-[13px] font-semibold text-white transition-all hover:-translate-y-0.5"
@@ -175,9 +179,11 @@ export default function VisitorsDesktop({
                       </div>
                     </td>
                     <td className="px-5 py-3.5">
+                      {v.category && v.category !== 'guest' ? <CategoryBadge visitor={v} size="md" /> : (
                       <span className="inline-flex items-center gap-1.5 text-xs font-semibold capitalize px-2.5 py-1 rounded-lg max-w-[150px]" style={{ background: pBg, color: pColor }}>
                         <PIcon size={12} className="flex-shrink-0" /><span className="truncate">{v.purpose}</span>
-                      </span>
+                      </span>)}
+                      <DetailsLine visitor={v} className="text-[11px] text-slate-400 mt-1 max-w-[180px]" />
                     </td>
                     <td className="px-5 py-3.5 whitespace-nowrap">
                       <div className="text-sm font-medium text-slate-700">{dayLabel(when)}</div>

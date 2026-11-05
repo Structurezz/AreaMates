@@ -15,12 +15,13 @@ import LiveNotificationModal from '../LiveNotificationModal';
 import CallAlertsPrompt from '../calls/CallAlertsPrompt';
 import DuesRestrictionBanner from '../payments/DuesRestrictionBanner';
 import { useHousehold } from '../../hooks/useHousehold';
+import { useSite } from '../../context/SiteContext';
 
 
 const BOTTOM_NAV = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Home' },
   { to: '/visitors',  icon: UserCheck,       label: 'Visitors', feature: 'visitorManagement', perm: 'visitors' },
-  { to: '/payments',  icon: CreditCard,      label: 'Payments', feature: 'paymentSystem', perm: 'payments' },
+  { to: '/payments',  icon: CreditCard,      label: 'Payments', feature: 'paymentSystem', perm: 'payments', siteLabel: (t) => t.dues },
   { to: '/chat',      icon: MessageSquare,   label: 'Chat',     feature: 'communityChat', perm: 'chat' },
   { to: '/alerts',    icon: Bell,            label: 'Alerts',   feature: 'securityPortal' },
 ];
@@ -31,6 +32,7 @@ export default function AppLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { can } = usePlan();
   const { allowed } = useHousehold();
+  const site = useSite();
 
 
   return (
@@ -104,7 +106,8 @@ export default function AppLayout({ children }) {
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t"
         style={{ borderTopColor: '#E2E8F0', paddingBottom: 'env(safe-area-inset-bottom)' }}>
         <div className="flex">
-          {BOTTOM_NAV.filter(l => allowed(l.perm)).map(({ to, icon: Icon, label, feature }) => {
+          {BOTTOM_NAV.filter(l => allowed(l.perm, l.module)).map(({ to, icon: Icon, label: baseLabel, feature, siteLabel }) => {
+            const label = !site.isEstate && siteLabel ? siteLabel(site.terms) : baseLabel;
             const locked = feature ? !can(feature) : false;
             return (
               <NavLink

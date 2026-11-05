@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { visitorAPI, announcementAPI, alertAPI, estateAPI } from '../api';
 import { useHousehold } from '../hooks/useHousehold';
 import { useAuth } from '../context/AuthContext';
+import { useSite } from '../context/SiteContext';
+import { blockName } from '../utils/siteTypes';
 import { Link } from 'react-router-dom';
 import { Siren, X } from 'lucide-react';
 import Spinner, { PageLoader } from '../components/ui/Spinner';
@@ -23,6 +25,7 @@ export default function ResidentDashboard() {
   const isDesktop = useIsDesktop();
 
   const estateId = user?.estateId?._id || user?.estateId;
+  const site = useSite();
   const { allowed } = useHousehold();
   const canVisitors = allowed('visitors');
 
@@ -57,11 +60,17 @@ export default function ResidentDashboard() {
 
   if (loading) return <PageLoader />;
 
+  // Estates: "Unit 12 · Block A"; other sites: "Your room 204", "Your class JSS2", "Your ward 3"
   const unitLabel = user?.unitId
-    ? `Unit ${user.unitId.unitNumber}${user.unitId.block ? ` · Block ${user.unitId.block}` : ''}`
+    ? site.isEstate
+      ? `Unit ${user.unitId.unitNumber}${user.unitId.block ? ` · Block ${user.unitId.block}` : ''}`
+      : site.terms.block
+        // Universities: "Room A101 · Moremi Hall"
+        ? `${site.terms.unit} ${user.unitId.unitNumber}${user.unitId.block ? ` · ${blockName(user.unitId.block, site.terms)}` : ''}`
+        : `Your ${site.terms.unit.toLowerCase()} ${user.unitId.unitNumber}${user.unitId.block ? ` · ${user.unitId.block}` : ''}`
     : null;
   const firstName = user?.name?.split(' ')[0] || 'there';
-  const estateName = estate?.name || (typeof user?.estateId === 'object' ? user.estateId.name : null) || 'Your Estate';
+  const estateName = estate?.name || (typeof user?.estateId === 'object' ? user.estateId.name : null) || (site.isEstate ? 'Your Estate' : site.name);
   const activeVisitors = myVisitors.filter((v) => v.status === 'active' || v.status === 'checked-in');
 
   // Confirm step for the SOS button (shared by phone and desktop layouts)
@@ -106,7 +115,7 @@ export default function ResidentDashboard() {
 
             <div style={{ padding: '18px 20px 22px' }}>
               <p style={{ fontSize: 13, color: '#4B5563', lineHeight: 1.6, margin: '0 0 18px', textAlign: 'center' }}>
-                Security and estate management will be alerted immediately with your name, unit and phone number.
+                Security and {site.terms.site.toLowerCase()} management will be alerted immediately with your name, {site.terms.unit.toLowerCase()} and phone number.
               </p>
               <p style={{ fontSize: 12, color: '#94A3B8', margin: '-8px 0 16px', textAlign: 'center' }}>
                 Fire, medical or want to choose who's alerted?{' '}
@@ -143,7 +152,7 @@ export default function ResidentDashboard() {
     <>
       <CampaignModal />
       <DesktopDashboard
-        myVisitors={myVisitors} announcements={announcements} estate={estate}
+        user={user} myVisitors={myVisitors} announcements={announcements} estate={estate}
         estateName={estateName} firstName={firstName} unitLabel={unitLabel}
         activeVisitors={activeVisitors} alerting={alerting} onSOS={() => setShowAlertConfirm(true)}
       />
