@@ -126,11 +126,6 @@ export default function MobileDashboard({ user, myVisitors, announcements, estat
         </Link>
       </header>
 
-      {site.isStaff && <StaffHome />}
-      <StayCard user={user} compact />
-      <MyTeamCard compact />
-      <MyPlaceCard compact />
-
       {/* Home status */}
       <section className="dash-rise relative overflow-hidden rounded-[26px] p-5 text-white"
         style={{ animationDelay: '60ms', background: 'linear-gradient(150deg, #1E1B4B 0%, #312E81 50%, #4F46E5 115%)', boxShadow: '0 24px 44px -24px rgba(30,27,75,0.95)' }}>
@@ -198,6 +193,12 @@ export default function MobileDashboard({ user, myVisitors, announcements, estat
           ))}
         </div>
       </section>
+
+      {/* Site cards — stay / admission, care team, my hall, staff home */}
+      <StayCard user={user} compact />
+      <MyTeamCard compact />
+      <MyPlaceCard compact />
+      {site.isStaff && <StaffHome />}
 
       {/* Live activity */}
       <section className="dash-rise" style={{ animationDelay: '420ms' }}>
