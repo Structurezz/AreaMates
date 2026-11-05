@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSite } from '../context/SiteContext';
 import { shiftLine, blockName } from '../utils/siteTypes';
 import { authAPI } from '../api';
+import { RoleBadge } from '../components/roles/shared';
 import { Camera, Save, Eye, EyeOff, User as UserIcon, Phone, Mail, Home, X, Lock, KeyRound, ShieldCheck, BadgeCheck, Briefcase, GraduationCap, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -138,10 +139,12 @@ export default function Settings() {
   // Staff ID / job title / class (schools, industry, hospitals) and shift hours
   const mp = user?.memberProfile || {};
   const shift = site.modules.shifts ? shiftLine(user?.shift) : null;
+  // Non-estate sites: the role's own labels ("Patient / hospital no.", "Matric number")
+  const roleForm = !site.isEstate ? site.myRole?.form : null;
   const profileFacts = [
-    mp.idNumber && { Icon: BadgeCheck, label: site.terms.idLabel || 'ID number', value: mp.idNumber, showLabel: true },
+    mp.idNumber && { Icon: BadgeCheck, label: roleForm?.id || site.terms.idLabel || 'ID number', value: mp.idNumber, showLabel: true },
     mp.title && { Icon: Briefcase, label: 'Title', value: mp.title },
-    mp.className && { Icon: GraduationCap, label: site.terms.classLabel || 'Class', value: mp.className, showLabel: true },
+    mp.className && { Icon: GraduationCap, label: roleForm?.group || site.terms.classLabel || 'Class', value: mp.className, showLabel: true },
     shift && { Icon: Clock, label: 'Your shift', value: shift },
   ].filter(Boolean);
 
@@ -204,6 +207,9 @@ export default function Settings() {
               {form.name || 'Your name'}
             </div>
             <div className="text-xs mt-0.5 truncate" style={{ color: '#94A3B8' }}>{user?.email}</div>
+            {!site.isEstate && site.myRole && (
+              <div className="mt-1.5"><RoleBadge myRole={site.myRole} user={user} terms={site.terms} /></div>
+            )}
             <div className="flex items-center gap-1.5 text-xs mt-1.5" style={{ color: '#6366F1' }}>
               <Home size={11} /> {unitLabel}
             </div>
@@ -322,8 +328,8 @@ export default function Settings() {
             </div>
             <div className="text-xs mt-0.5" style={{ color: '#64748B' }}>
               {form.isDiscoverable
-                ? 'Other residents can find you when they search to start a chat.'
-                : 'Your name won\'t appear when residents search. Existing chats keep working.'}
+                ? (site.isEstate ? 'Other residents can find you when they search to start a chat.' : `Other ${site.w.membersLc} can find you when they search to start a chat.`)
+                : (site.isEstate ? 'Your name won\'t appear when residents search. Existing chats keep working.' : `Your name won't appear when ${site.w.membersLc} search. Existing chats keep working.`)}
             </div>
           </div>
           <div
@@ -343,7 +349,7 @@ export default function Settings() {
         </button>
 
         <p className="text-[11px] mt-3 leading-relaxed" style={{ color: '#94A3B8' }}>
-          Group chat and {site.terms.site.toLowerCase()} broadcasts are unaffected — only the resident search for direct messages.
+          Group chat and {site.terms.site.toLowerCase()} broadcasts are unaffected — only the {site.isEstate ? 'resident' : site.w.memberLc} search for direct messages.
         </p>
       </div>
 

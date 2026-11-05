@@ -3,6 +3,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { BarChart2, Check, RefreshCw, Clock, Lock, TrendingUp, Vote, CheckCircle2 } from 'lucide-react';
 import { pollAPI } from '../../api';
 import toast from 'react-hot-toast';
+import { useSite } from '../../context/SiteContext';
 
 export const COLORS = ['#6366F1', '#10B981', '#F59E0B', '#EC4899', '#8B5CF6', '#0EA5E9'];
 export const total = (p) => p.options.reduce((s, o) => s + o.votes.length, 0);
@@ -10,6 +11,7 @@ export const ended = (p) => !p.isActive || (p.endsAt && new Date() > new Date(p.
 export const myPicks = (p, uid) => p.options.reduce((acc, o, i) => (o.votes.some((v) => v === uid || v?.toString() === uid) ? [...acc, i] : acc), []);
 
 function PollCard({ poll, userId, onVote, i }) {
+  const { isEstate, w } = useSite();
   const [voting, setVoting] = useState(null);
   const sum = total(poll);
   const mine = myPicks(poll, userId);
@@ -85,13 +87,14 @@ function PollCard({ poll, userId, onVote, i }) {
       </div>
       <div className="px-5 py-3 border-t border-slate-100 flex items-center justify-between text-[12px] text-slate-400">
         <span>{sum} vote{sum === 1 ? '' : 's'}</span>
-        <span>by {poll.createdBy?.name || 'Estate management'}</span>
+        <span>by {poll.createdBy?.name || (isEstate ? 'Estate management' : w.siteMgmt)}</span>
       </div>
     </div>
   );
 }
 
 export default function PollsDesktop({ polls, loading, userId, onVote }) {
+  const { isEstate, w } = useSite();
   const [tab, setTab] = useState('active');
   const active = polls.filter((p) => !ended(p));
   const closed = polls.filter(ended);
@@ -112,7 +115,7 @@ export default function PollsDesktop({ polls, loading, userId, onVote }) {
             <div className="min-w-0">
               <h1 className="text-[22px] font-semibold text-white" style={{ letterSpacing: '-0.025em' }}>Polls & Voting</h1>
               <p className="text-[13px] text-indigo-100/75">
-                {needVote.length > 0 ? <><span className="font-semibold text-white">{needVote.length} poll{needVote.length === 1 ? '' : 's'}</span> waiting for your vote</> : 'Vote on community decisions and see what your neighbours think'}
+                {needVote.length > 0 ? <><span className="font-semibold text-white">{needVote.length} poll{needVote.length === 1 ? '' : 's'}</span> waiting for your vote</> : (isEstate ? 'Vote on community decisions and see what your neighbours think' : `Vote on community decisions and see what ${w.neighboursLc} think`)}
               </p>
             </div>
           </div>

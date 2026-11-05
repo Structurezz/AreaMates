@@ -1,3 +1,5 @@
+import { useSite } from '../../context/SiteContext';
+
 // Shared bits for the Lounge feed (Instagram-style social hub).
 
 const SERVER_URL = (import.meta.env.VITE_API_URL || 'https://areaconnectapi-production.up.railway.app/api').replace('/api', '');
@@ -46,8 +48,9 @@ export const isManagerRole = (role) => role === 'estate_manager' || role === 'su
 
 /** Blue "verified" tick for estate management posts. */
 export function VerifiedTick({ size = 14 }) {
+  const { w } = useSite();
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" aria-label="Estate management" className="shrink-0">
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-label={w.siteMgmt} className="shrink-0">
       <path fill="#3897F0" d="M12 1l2.6 2.1 3.3-.4.9 3.2 3 1.5-1.1 3.1 1.1 3.1-3 1.5-.9 3.2-3.3-.4L12 23l-2.6-2.1-3.3.4-.9-3.2-3-1.5L3.3 13.5 2.2 10.4l3-1.5.9-3.2 3.3.4z" />
       <path fill="#fff" d="M10.4 15.6l-3-3 1.4-1.4 1.6 1.6 4.8-4.8 1.4 1.4z" />
     </svg>

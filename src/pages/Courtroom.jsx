@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
+import { useSite } from '../context/SiteContext';
 import { courtAPI, estateAPI } from '../api';
 import toast from 'react-hot-toast';
 import useIsDesktop from '../hooks/useIsDesktop';
@@ -103,6 +104,25 @@ const PUNISHMENT_LABELS = {
   estate_ban:           'Estate Ban',
 };
 
+// ── site words ───────────────────────────────────────────────────────────────
+// Fixed court copy says "neighbours"; other site types get their own people
+// word (estate text is returned untouched).
+const siteCopy = (s, isEstate, w) => (isEstate || typeof s !== 'string' ? s : s
+  .replace(/\bNeighbours\b/g, w.neighbours).replace(/\bneighbours\b/g, w.neighboursLc)
+  .replace(/\ba neighbour\b/g, w.aMember).replace(/\bNeighbour\b/g, w.neighbour).replace(/\bneighbour\b/g, w.neighbourLc));
+
+function useCourtWords() {
+  const { isEstate, w } = useSite();
+  return {
+    estateSite: isEstate, w,
+    copy: (s) => siteCopy(s, isEstate, w),
+    // "Estate Management" as the other side of a case
+    mgmt: isEstate ? 'Estate Management' : `${w.site} Management`,
+    mgmtLc: isEstate ? 'Estate management' : w.siteMgmt,
+    punishment: (k) => (k === 'estate_ban' && !isEstate ? `${w.site} Ban` : PUNISHMENT_LABELS[k]),
+  };
+}
+
 // ── tiny helpers ─────────────────────────────────────────────────────────────
 
 function Spinner({ size = 28, color = PRIMARY }) {
@@ -140,9 +160,10 @@ function StatusBadge({ status }) {
 // ── Hero ─────────────────────────────────────────────────────────────────────
 
 function CourtroomBanner({ stats, onStart }) {
+  const { copy } = useCourtWords();
   const steps = [
     { n: 1, icon: FileText,     title: 'Tell us what happened',  desc: 'Describe the problem in your own words.' },
-    { n: 2, icon: Users,        title: 'Both sides are heard',   desc: 'An AI lawyer helps you. Neighbours vote as jurors.' },
+    { n: 2, icon: Users,        title: 'Both sides are heard',   desc: copy('An AI lawyer helps you. Neighbours vote as jurors.') },
     { n: 3, icon: Gavel,        title: 'A fair decision',        desc: "Judge Orizu rules — or you both settle." },
   ];
 
@@ -176,7 +197,7 @@ function CourtroomBanner({ stats, onStart }) {
           Got a problem? Get it resolved fairly.
         </h1>
         <p style={{ color: '#475569', fontSize: 13, lineHeight: 1.55, margin: 0, maxWidth: 520 }}>
-          Issues with a neighbour, management, or marketplace? Start a case — an AI lawyer takes your side, your neighbours vote, and Judge Orizu makes a fair decision.
+          {copy('Issues with a neighbour, management, or marketplace? Start a case — an AI lawyer takes your side, your neighbours vote, and Judge Orizu makes a fair decision.')}
         </p>
 
         <button onClick={onStart}
@@ -244,6 +265,7 @@ function CourtroomBanner({ stats, onStart }) {
 // ── Case card ─────────────────────────────────────────────────────────────────
 
 function CaseCard({ c, onClick, userId }) {
+  const { copy, mgmt } = useCourtWords();
   const sev = SEVERITY_COLORS[c.severity] || SEVERITY_COLORS.minor;
   const isMine = c.plaintiff?.userId === userId || c.plaintiff?.userId?._id === userId ||
                  c.defendant?.userId === userId || c.defendant?.userId?._id === userId;
@@ -269,7 +291,7 @@ function CaseCard({ c, onClick, userId }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#64748B', flexWrap: 'wrap' }}>
             <span>{c.plaintiff?.name || 'Unknown'}</span>
             <span style={{ color: '#94A3B8', fontWeight: 700 }}>vs</span>
-            <span>{c.defendant?.isEstate ? 'Estate Management' : (c.defendant?.name || 'Unknown')}</span>
+            <span>{c.defendant?.isEstate ? mgmt : (c.defendant?.name || 'Unknown')}</span>
             <span style={{ color: '#CBD5E1' }}>·</span>
             <span style={{ color: '#94A3B8' }}>{TYPE_LABELS[c.type] || c.type}</span>
           </div>
@@ -284,7 +306,7 @@ function CaseCard({ c, onClick, userId }) {
       {statusMeta.hint && (
         <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
           <div style={{ width: 6, height: 6, borderRadius: '50%', background: statusMeta.color }} />
-          <span style={{ fontSize: 11.5, color: '#475569' }}>{statusMeta.hint}</span>
+          <span style={{ fontSize: 11.5, color: '#475569' }}>{copy(statusMeta.hint)}</span>
           {c.fine?.status === 'pending' && <><span style={{ color: '#CBD5E1' }}>·</span><Banknote size={11} color="#DC2626" /><span style={{ fontSize: 11, color: '#DC2626', fontWeight: 600 }}>Fine owed</span></>}
           <ChevronRight size={14} color="#94A3B8" style={{ marginLeft: 'auto' }} />
         </div>
@@ -296,6 +318,7 @@ function CaseCard({ c, onClick, userId }) {
 // ── Start a case form ────────────────────────────────────────────────────────
 
 function FileDisputeForm({ onFiled, residents }) {
+  const { estateSite, w, mgmt } = useCourtWords();
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [files, setFiles] = useState([]);  // proof attachments to upload after filing
@@ -403,15 +426,15 @@ function FileDisputeForm({ onFiled, residents }) {
               border: form.isDefendantEstate ? '1.5px solid #DC2626' : '1px solid #E2E8F0',
               background: form.isDefendantEstate ? '#FEF2F2' : '#FAFAFA', cursor: 'pointer' }}>
             <div style={{ fontWeight: 700, fontSize: 13, color: form.isDefendantEstate ? '#DC2626' : '#0F172A', marginBottom: 3 }}>
-              {form.isDefendantEstate ? '✓ ' : ''}It's about Estate Management
+              {form.isDefendantEstate ? '✓ ' : ''}It's about {mgmt}
             </div>
             <div style={{ fontSize: 12, color: '#64748B' }}>Something management did — a fine, decision, or action you disagree with.</div>
           </button>
           {!form.isDefendantEstate && (
             <div>
-              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>Which neighbour?</label>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>{estateSite ? 'Which neighbour?' : `Which ${w.memberLc}?`}</label>
               <select className="input-field" value={form.defendantUserId} onChange={e => set('defendantUserId', e.target.value)}>
-                <option value="">— Pick a resident —</option>
+                <option value="">{estateSite ? '— Pick a resident —' : `— Pick ${w.aMember} —`}</option>
                 {residents.map(r => <option key={r._id} value={r._id}>{r.name}{r.unit ? ` — ${r.unit}` : ''}</option>)}
               </select>
             </div>
@@ -491,7 +514,7 @@ function FileDisputeForm({ onFiled, residents }) {
 
           <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 12, padding: '12px 14px', display: 'flex', gap: 10 }}>
             <AlertTriangle size={16} color="#D97706" style={{ flexShrink: 0, marginTop: 1 }} />
-            <div style={{ fontSize: 12, color: '#92400E' }}>Only share what's true. Making up a story can get you in trouble under the estate's community rules.</div>
+            <div style={{ fontSize: 12, color: '#92400E' }}>Only share what's true. Making up a story can get you in trouble under the {estateSite ? "estate's" : `${w.siteLc}'s`} community rules.</div>
           </div>
           <div style={{ background: '#EEF2FF', border: '1px solid #C7D2FE', borderRadius: 12, padding: '12px 14px', display: 'flex', gap: 10 }}>
             <Briefcase size={16} color={PRIMARY} style={{ flexShrink: 0, marginTop: 1 }} />
@@ -557,6 +580,7 @@ function ProceedingEntry({ p }) {
 // ── Verdict display ───────────────────────────────────────────────────────────
 
 function VerdictDisplay({ verdict, fine, caseObj, onPayFine, payingFine, userId }) {
+  const { punishment } = useCourtWords();
   if (!verdict?.decision) return null;
   const isGuilty    = verdict.decision === 'guilty';
   const isNotGuilty = verdict.decision === 'not_guilty';
@@ -610,7 +634,7 @@ function VerdictDisplay({ verdict, fine, caseObj, onPayFine, payingFine, userId 
           {verdict.punishment !== 'none' && (
             <div style={{ flex: 1, background: '#7C2D1218', border: '1px solid #7C2D1240', borderRadius: 12, padding: '12px 14px', minWidth: 140 }}>
               <div style={{ color: '#FCA5A5', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', marginBottom: 4 }}>Punishment</div>
-              <div style={{ color: '#FBBF24', fontSize: 13, fontWeight: 700 }}>{PUNISHMENT_LABELS[verdict.punishment]}</div>
+              <div style={{ color: '#FBBF24', fontSize: 13, fontWeight: 700 }}>{punishment(verdict.punishment)}</div>
               {verdict.punishmentDurationDays > 0 && <div style={{ color: '#F87171', fontSize: 11, marginTop: 2 }}>{verdict.punishmentDurationDays} days</div>}
             </div>
           )}
@@ -814,6 +838,7 @@ function StageDots({ status }) {
 }
 
 function CaseProgress({ status }) {
+  const { copy } = useCourtWords();
   const idx = STAGE_INDEX[status] ?? 0;
   const done = ['settled', 'closed'].includes(status);
   return (
@@ -847,7 +872,7 @@ function CaseProgress({ status }) {
       </div>
       <div className="mt-4 flex items-start gap-2.5 px-3.5 py-2.5 rounded-xl bg-indigo-50/70 border border-indigo-100">
         <Clock size={14} className="text-indigo-600 mt-0.5 flex-shrink-0" />
-        <p className="text-[13px] text-slate-700"><span className="font-semibold text-slate-900">What's happening now: </span>{STAGE_NOW[status] || STAGE_NOW.filed}</p>
+        <p className="text-[13px] text-slate-700"><span className="font-semibold text-slate-900">What's happening now: </span>{copy(STAGE_NOW[status] || STAGE_NOW.filed)}</p>
       </div>
     </div>
   );
@@ -857,6 +882,7 @@ function CaseProgress({ status }) {
 
 // Phone version: same five stages, smaller, with the plain-English "now" line
 function MobileCaseProgress({ status }) {
+  const { copy } = useCourtWords();
   const idx = STAGE_INDEX[status] ?? 0;
   const done = ['settled', 'closed'].includes(status);
   return (
@@ -889,7 +915,7 @@ function MobileCaseProgress({ status }) {
       </div>
       <div className="mt-3.5 flex items-start gap-2 px-3 py-2.5 rounded-xl bg-amber-50/80 border border-amber-100">
         <Clock size={13} className="text-amber-600 mt-0.5 flex-shrink-0" />
-        <p className="text-[12px] text-slate-700 leading-relaxed"><span className="font-semibold text-slate-900">Now: </span>{STAGE_NOW[status] || STAGE_NOW.filed}</p>
+        <p className="text-[12px] text-slate-700 leading-relaxed"><span className="font-semibold text-slate-900">Now: </span>{copy(STAGE_NOW[status] || STAGE_NOW.filed)}</p>
       </div>
     </div>
   );
@@ -969,6 +995,7 @@ const GUIDE_STEPS = [
 ];
 
 function CourtGuide({ onHide }) {
+  const { copy } = useCourtWords();
   return (
     <div className="dash-rise rounded-2xl bg-white border border-slate-200/70 p-5" style={{ animationDelay: '60ms' }}>
       <div className="flex items-center justify-between mb-4">
@@ -986,7 +1013,7 @@ function CourtGuide({ onHide }) {
               <s.icon size={14} className="text-indigo-600" />
             </div>
             <div className="mt-2 text-[13px] font-semibold text-slate-900">{s.title}</div>
-            <div className="mt-0.5 text-[12px] text-slate-500 leading-snug">{s.desc}</div>
+            <div className="mt-0.5 text-[12px] text-slate-500 leading-snug">{copy(s.desc)}</div>
             {i < GUIDE_STEPS.length - 1 && <ChevronRight size={14} className="absolute -right-[11px] top-1/2 -translate-y-1/2 text-slate-300 z-10" />}
           </div>
         ))}
@@ -996,6 +1023,7 @@ function CourtGuide({ onHide }) {
 }
 
 function CaseRow({ c, onClick, i }) {
+  const { mgmt } = useCourtWords();
   const sev = SEVERITY_COLORS[c.severity] || SEVERITY_COLORS.minor;
   const st = STATUS_META[c.status] || STATUS_META.filed;
   return (
@@ -1008,7 +1036,7 @@ function CaseRow({ c, onClick, i }) {
         <span className="block text-[12px] text-slate-400 truncate">{TYPE_LABELS[c.type] || c.type}</span>
       </span>
       <span className="min-w-0 text-[13px] text-slate-600 truncate">
-        {c.plaintiff?.name || 'Unknown'} <span className="font-bold text-red-500 mx-1">vs</span> {c.defendant?.isEstate ? 'Estate Management' : (c.defendant?.name || 'Unknown')}
+        {c.plaintiff?.name || 'Unknown'} <span className="font-bold text-red-500 mx-1">vs</span> {c.defendant?.isEstate ? mgmt : (c.defendant?.name || 'Unknown')}
       </span>
       <span className="space-y-1.5">
         <StageDots status={c.status} />
@@ -1040,6 +1068,7 @@ function CourtStat({ label, value, color, delay }) {
 }
 
 function CaseCardMobile({ c, onClick, i, userId }) {
+  const { copy, mgmtLc } = useCourtWords();
   const sev = SEVERITY_COLORS[c.severity] || SEVERITY_COLORS.minor;
   const st = STATUS_META[c.status] || STATUS_META.filed;
   const same = (x) => x && (x === userId || x?._id === userId || x?.toString?.() === userId);
@@ -1058,13 +1087,13 @@ function CaseCardMobile({ c, onClick, i, userId }) {
       </div>
       <div className="mt-1.5 text-[15px] font-semibold text-slate-900 leading-snug" style={{ letterSpacing: '-0.01em' }}>{c.title}</div>
       <div className="mt-1 text-[12px] text-slate-500 truncate">
-        {c.plaintiff?.name || 'Unknown'} <span className="font-bold text-red-500 mx-0.5">vs</span> {c.defendant?.isEstate ? 'Estate management' : (c.defendant?.name || 'Unknown')}
+        {c.plaintiff?.name || 'Unknown'} <span className="font-bold text-red-500 mx-0.5">vs</span> {c.defendant?.isEstate ? mgmtLc : (c.defendant?.name || 'Unknown')}
         <span className="text-slate-300 mx-1">·</span>{TYPE_LABELS[c.type] || c.type}
       </div>
       <div className="mt-3 flex items-center gap-2.5">
         <StageDots status={c.status} />
         <span className="text-[11px] font-semibold" style={{ color: st.color }}>{st.label}</span>
-        {st.hint && <span className="text-[11px] text-slate-400 truncate">· {st.hint}</span>}
+        {st.hint && <span className="text-[11px] text-slate-400 truncate">· {copy(st.hint)}</span>}
         <ChevronRight size={15} className="ml-auto text-slate-300 flex-shrink-0" />
       </div>
       {c.fine?.status === 'pending' && (
@@ -1075,6 +1104,7 @@ function CaseCardMobile({ c, onClick, i, userId }) {
 }
 
 function CaseDetail({ caseId, onBack, user }) {
+  const { copy, mgmt } = useCourtWords();
   const { subscribe } = useSocket() || {};
   const [commentary, setCommentary]           = useState([]);  // live play-by-play ticker
   const [c, setC]                             = useState(null);
@@ -1784,7 +1814,7 @@ function CaseDetail({ caseId, onBack, user }) {
                 <Avatar initials={c.defendant?.isEstate ? 'ES' : (c.defendant?.name || 'D')[0].toUpperCase()} color="#DC2626" size={26} />
                 <div>
                   <div style={{ color: '#64748B', fontSize: 9, fontWeight: 700, textTransform: 'uppercase' }}>Named</div>
-                  <div style={{ color: '#0F172A', fontSize: 12, fontWeight: 600 }}>{c.defendant?.isEstate ? 'Estate Management' : (c.defendant?.name || 'Unknown')}</div>
+                  <div style={{ color: '#0F172A', fontSize: 12, fontWeight: 600 }}>{c.defendant?.isEstate ? mgmt : (c.defendant?.name || 'Unknown')}</div>
                 </div>
               </div>
             </div>
@@ -1912,7 +1942,7 @@ function CaseDetail({ caseId, onBack, user }) {
             </div>
           )}
           {!c.jury?.members?.length
-            ? <div style={{ textAlign: 'center', color: '#94A3B8', padding: '40px 0', fontSize: 13 }}>No jury picked yet. Neighbours will be randomly chosen once the hearing starts.</div>
+            ? <div style={{ textAlign: 'center', color: '#94A3B8', padding: '40px 0', fontSize: 13 }}>{copy('No jury picked yet. Neighbours will be randomly chosen once the hearing starts.')}</div>
             : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 10 }}>
                 {c.jury.members.map((m, i) => {
@@ -1972,6 +2002,7 @@ function CaseDetail({ caseId, onBack, user }) {
 
 export default function Courtroom() {
   const { user } = useAuth();
+  const { estateSite, w, copy } = useCourtWords();
   const [tab, setTab]                 = useState('active');
   const [cases, setCases]             = useState([]);
   const [stats, setStats]             = useState(null);
@@ -2067,8 +2098,8 @@ export default function Courtroom() {
                 <Scale size={22} color="#F59E0B" />
               </div>
               <div className="min-w-0">
-                <h1 className="text-[22px] font-semibold text-white" style={{ letterSpacing: '-0.025em' }}>Estate Court</h1>
-                <p className="text-[13px] text-indigo-100/75">Sort out problems with neighbours fairly. Free AI lawyers, a neighbour jury and Judge Orizu.
+                <h1 className="text-[22px] font-semibold text-white" style={{ letterSpacing: '-0.025em' }}>{estateSite ? 'Estate Court' : `${w.site} Court`}</h1>
+                <p className="text-[13px] text-indigo-100/75">{copy('Sort out problems with neighbours fairly. Free AI lawyers, a neighbour jury and Judge Orizu.')}
                   {guideHidden && <button onClick={() => hideGuide(false)} className="ml-2 text-amber-300 hover:text-amber-200 font-medium">How it works</button>}
                 </p>
               </div>
@@ -2125,7 +2156,7 @@ export default function Courtroom() {
               {constitution?.hasConstitution && (
                 <button type="button" onClick={() => openConstitution(estateId, constitution.fileName)}
                   className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-slate-200 text-[12px] font-medium text-slate-600 hover:border-indigo-300 hover:text-indigo-700 transition-colors">
-                  <FileText size={14} className="text-indigo-500" /> Estate constitution{constitution.pageCount ? ` · ${constitution.pageCount} pages` : ''}
+                  <FileText size={14} className="text-indigo-500" /> {estateSite ? 'Estate constitution' : `${w.site} constitution`}{constitution.pageCount ? ` · ${constitution.pageCount} pages` : ''}
                 </button>
               )}
               <div className="relative flex-1 max-w-sm ml-auto">
@@ -2147,7 +2178,7 @@ export default function Courtroom() {
                     {term ? `No cases match “${q}”` : tab === 'active' ? 'All quiet right now' : tab === 'mine' ? "You haven't started a case" : 'Nothing in the archive'}
                   </p>
                   <p className="mt-1 text-[13px] text-slate-400">
-                    {term ? 'Try a different search.' : tab === 'mine' ? "If something's bothering you, start a case. It's free and takes a minute." : tab === 'active' ? 'No one in your estate has an open case. Peaceful times!' : 'No past cases to show here yet.'}
+                    {term ? 'Try a different search.' : tab === 'mine' ? "If something's bothering you, start a case. It's free and takes a minute." : tab === 'active' ? (estateSite ? 'No one in your estate has an open case. Peaceful times!' : `No one in your ${w.siteLc} has an open case. Peaceful times!`) : 'No past cases to show here yet.'}
                   </p>
                   {!term && (
                     <button onClick={() => setTab('file')} className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-[13px] font-semibold text-white bg-indigo-600 hover:bg-indigo-700">
@@ -2180,7 +2211,7 @@ export default function Courtroom() {
     <div className="space-y-5 pb-2">
       <header className="dash-rise flex items-end justify-between gap-3">
         <div className="min-w-0">
-          <div className="text-[12px] font-medium text-slate-400">Estate court · Judge Orizu presiding</div>
+          <div className="text-[12px] font-medium text-slate-400">{estateSite ? 'Estate court' : `${w.site} court`} · Judge Orizu presiding</div>
           <h1 className="text-[22px] font-semibold text-slate-900 leading-tight" style={{ letterSpacing: '-0.03em' }}>Courtroom</h1>
         </div>
         {tab !== 'file' && (
@@ -2210,7 +2241,7 @@ export default function Courtroom() {
               <span className="w-11 h-11 rounded-2xl flex items-center justify-center bg-white/10 border border-white/15 flex-shrink-0"><Gavel size={19} className="text-indigo-200" /></span>
               <div className="min-w-0">
                 <div className="text-[16px] font-semibold leading-tight">{counts.active ? `${counts.active} case${counts.active !== 1 ? 's' : ''} in progress` : 'All quiet in the court'}</div>
-                <div className="text-[12px] text-white/60">Free, fair help settling disputes with neighbours</div>
+                <div className="text-[12px] text-white/60">{copy('Free, fair help settling disputes with neighbours')}</div>
               </div>
             </div>
             <div className="relative mt-4 grid grid-cols-4 gap-2">
@@ -2229,7 +2260,7 @@ export default function Courtroom() {
               style={{ animationDelay: '100ms', background: 'linear-gradient(135deg, rgba(236,72,153,0.07), rgba(139,92,246,0.05))', borderColor: 'rgba(236,72,153,0.22)' }}>
               <span className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(236,72,153,0.14)' }}><FileText size={16} color="#EC4899" /></span>
               <span className="flex-1 min-w-0">
-                <span className="block text-[13px] font-semibold text-slate-900">Estate constitution</span>
+                <span className="block text-[13px] font-semibold text-slate-900">{estateSite ? 'Estate constitution' : `${w.site} constitution`}</span>
                 <span className="block text-[11px] text-slate-500">{constitution.pageCount ? `${constitution.pageCount} pages · ` : ''}The rules every case is judged by</span>
               </span>
               <ChevronRight size={16} color="#EC4899" />
@@ -2254,7 +2285,7 @@ export default function Courtroom() {
                     <span className="relative z-10 w-7 h-7 rounded-full bg-slate-900 text-white text-[12px] font-semibold flex items-center justify-center flex-shrink-0 ring-4 ring-white">{i + 1}</span>
                     <span className="min-w-0 pt-0.5">
                       <span className="flex items-center gap-1.5 text-[13px] font-semibold text-slate-900"><g.icon size={13} style={{ color: PRIMARY }} /> {g.title}</span>
-                      <span className="block text-[12px] text-slate-500 leading-snug mt-0.5">{g.desc}</span>
+                      <span className="block text-[12px] text-slate-500 leading-snug mt-0.5">{copy(g.desc)}</span>
                     </span>
                   </li>
                 ))}
@@ -2286,7 +2317,7 @@ export default function Courtroom() {
             <div className="dash-rise rounded-[22px] bg-white border border-slate-200/70 px-6 py-10 text-center">
               <span className="mx-auto w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center"><Scale size={24} color={PRIMARY} /></span>
               <div className="mt-3 text-[15px] font-semibold text-slate-900">{tab === 'active' ? 'All quiet right now' : tab === 'mine' ? "You haven't started a case" : 'Nothing in the archive'}</div>
-              <div className="text-[13px] text-slate-500 mt-1">{tab === 'mine' ? "If something's bothering you, start a case. It's free and takes a minute." : tab === 'active' ? 'No one in your estate has an open case.' : 'No past cases to show yet.'}</div>
+              <div className="text-[13px] text-slate-500 mt-1">{tab === 'mine' ? "If something's bothering you, start a case. It's free and takes a minute." : tab === 'active' ? (estateSite ? 'No one in your estate has an open case.' : `No one in your ${w.siteLc} has an open case.`) : 'No past cases to show yet.'}</div>
               <button onClick={() => setTab('file')} className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-[13px] font-semibold text-white" style={{ background: `linear-gradient(135deg, ${PRIMARY}, ${PRIMARY_DARK})` }}><Plus size={14} /> Start a case</button>
             </div>
           ) : (
@@ -2305,7 +2336,7 @@ export default function Courtroom() {
               {[
                 { icon: Scale,      title: 'Does it cost anything?',    desc: 'No. Starting a case and getting an AI lawyer is 100% free.' },
                 { icon: Briefcase,  title: "I'm not a lawyer — ok?",    desc: 'Totally fine. An AI lawyer is assigned to you and does the legal talking.' },
-                { icon: Star,       title: "Who decides who's right?",  desc: '5 random neighbours vote, then Judge Orizu makes the final call.' },
+                { icon: Star,       title: "Who decides who's right?",  desc: copy('5 random neighbours vote, then Judge Orizu makes the final call.') },
                 { icon: TrendingUp, title: 'What if we agree?',         desc: 'Offer a settlement any time. If both sides accept, the case closes right there.' },
                 { icon: RotateCcw,  title: 'Can the decision change?',  desc: "Yes — if you think it's unfair, ask the judge to review it." },
                 { icon: Shield,     title: 'Is my case private?',       desc: 'Only your name and the facts of the case are shared. Chats with your lawyer stay private.' },

@@ -5,6 +5,7 @@ import { authAPI } from '../../api';
 import { Eye, EyeOff, AlertCircle, CalendarClock, CheckCircle, KeyRound, Mail, ShieldCheck, X, Lock, ArrowRight, UserCheck, Package, Radio, Vote, Wallet, Megaphone, Building2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Portal from '../../components/ui/Portal';
+import { TERMS, preAuthSiteType } from '../../utils/siteTypes';
 
 /**
  * Forgot-password modal. Residents (and security) submit their email →
@@ -13,6 +14,7 @@ import Portal from '../../components/ui/Portal';
  * confirm whether the email actually exists — same message either way.
  */
 function ForgotPasswordModal({ initialEmail = '', onClose }) {
+  const W = authWords();
   const [email, setEmail] = useState(initialEmail);
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent] = useState(false);
@@ -46,7 +48,7 @@ function ForgotPasswordModal({ initialEmail = '', onClose }) {
             </div>
             <h2 style={{ fontSize: 20, fontWeight: 900, color: '#0F172A', margin: '0 0 6px' }}>Request sent</h2>
             <p style={{ fontSize: 14, color: '#475569', lineHeight: 1.6, margin: '0 0 20px' }}>
-              If an account exists for <strong>{email}</strong>, your estate manager has been notified and will approve the reset. You'll receive a temporary password by email once approved.
+              If an account exists for <strong>{email}</strong>, your {W.manager} has been notified and will approve the reset. You'll receive a temporary password by email once approved.
             </p>
             <button onClick={onClose}
               style={{ background: 'linear-gradient(135deg,#6366F1,#4F46E5)', color: '#fff', border: 'none', borderRadius: 12, padding: '12px 32px', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>
@@ -62,9 +64,9 @@ function ForgotPasswordModal({ initialEmail = '', onClose }) {
               <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.16em', textTransform: 'uppercase', opacity: 0.75, marginBottom: 2 }}>
                 Password help
               </div>
-              <h2 style={{ fontSize: 22, fontWeight: 900, letterSpacing: '-0.02em', margin: 0, lineHeight: 1.2 }}>Ask your estate manager to reset it</h2>
+              <h2 style={{ fontSize: 22, fontWeight: 900, letterSpacing: '-0.02em', margin: 0, lineHeight: 1.2 }}>Ask your {W.manager} to reset it</h2>
               <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', margin: '8px 0 0', lineHeight: 1.5 }}>
-                Enter your account email — your estate manager will approve a reset and we'll email you a temporary password.
+                Enter your account email — your {W.manager} will approve a reset and we'll email you a temporary password.
               </p>
             </div>
             <form onSubmit={submit} style={{ padding: '20px 28px 28px' }}>
@@ -85,7 +87,7 @@ function ForgotPasswordModal({ initialEmail = '', onClose }) {
                 {submitting ? 'Sending request…' : 'Request password reset'}
               </button>
               <p style={{ fontSize: 11, color: '#94A3B8', margin: '12px 0 0', textAlign: 'center', lineHeight: 1.55 }}>
-                Your estate manager must approve the reset — this prevents stranger-driven password resets.
+                Your {W.manager} must approve the reset — this prevents stranger-driven password resets.
               </p>
             </form>
           </>
@@ -94,6 +96,21 @@ function ForgotPasswordModal({ initialEmail = '', onClose }) {
     </div>
     </Portal>
   );
+}
+
+/* ── Words before sign-in: the device's last site type (or ?site=) ── */
+function authWords() {
+  const type = preAuthSiteType();
+  const T = TERMS[type] || TERMS.estate;
+  const E = type === 'estate';
+  const low = (x) => x.charAt(0).toLowerCase() + x.slice(1);
+  return {
+    E,
+    manager: E ? 'estate manager' : low(T.manager),
+    site: E ? 'estate' : low(T.site),
+    member: E ? 'resident' : low(T.member),
+    unit: T.unit,
+  };
 }
 
 /* ── Ad sidebar slides (desktop only) ── */
@@ -270,6 +287,7 @@ const MOBILE_CSS = `
 `;
 
 function MobileLogin({ form, setForm, showPw, setShowPw, loading, error, errorTone, handleSubmit, openForgot }) {
+  const W = authWords();
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(160deg,#05091A 0%,#08103A 100%)', position: 'relative', overflow: 'hidden' }}>
       <style>{MOBILE_CSS}</style>
@@ -362,7 +380,7 @@ function MobileLogin({ form, setForm, showPw, setShowPw, loading, error, errorTo
         position: 'relative', zIndex: 1,
       }}>
         <h2 style={{ fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-0.03em', marginBottom: 2 }}>Welcome back</h2>
-        <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 22 }}>Sign in to your estate account</p>
+        <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 22 }}>Sign in to your {W.site} account</p>
 
         {error && errorTone === 'stay' && (
           <div style={{
@@ -433,8 +451,8 @@ function MobileLogin({ form, setForm, showPw, setShowPw, loading, error, errorTo
           </button>
 
           <p style={{ textAlign: 'center', marginTop: 18, fontSize: 13, color: 'rgba(255,255,255,0.35)' }}>
-            New resident?{' '}
-            <Link to="/register" style={{ color: '#818CF8', fontWeight: 600 }}>Join with estate code</Link>
+            New {W.member}?{' '}
+            <Link to="/register" style={{ color: '#818CF8', fontWeight: 600 }}>Join with {W.site} code</Link>
           </p>
         </form>
         <p style={{ textAlign: 'center', marginTop: 20, fontSize: 11, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.04em' }}>
@@ -473,6 +491,7 @@ function useTicker(n, ms) {
 }
 
 function ResidentPreview() {
+  const W = authWords();
   const tick = useTicker(FEED.length, 2600);
   const rows = [0, 1, 2].map((k) => FEED[(tick - k + FEED.length * 4) % FEED.length]);
   const hour = new Date().getHours();
@@ -490,7 +509,7 @@ function ResidentPreview() {
             <span className="w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-semibold text-white" style={{ background: 'linear-gradient(135deg,#818CF8,#4F46E5)' }}>F4</span>
             <div>
               <p className="text-[11px] text-white/45">{greet}</p>
-              <p className="text-[14.5px] font-semibold" style={{ color: '#fff' }}>Flat 4B · Greenfield Estate</p>
+              <p className="text-[14.5px] font-semibold" style={{ color: '#fff' }}>{W.E ? 'Flat 4B · Greenfield Estate' : `${W.unit} 4B`}</p>
             </div>
           </div>
           <span className="flex items-center gap-1.5 text-[11px] text-indigo-200">
@@ -526,6 +545,7 @@ function ResidentPreview() {
 }
 
 function DesktopLogin({ form, setForm, showPw, setShowPw, loading, error, errorTone, handleSubmit, openForgot }) {
+  const W = authWords();
   return (
     <div className="h-screen min-h-[640px] grid grid-cols-[1.1fr_1fr] bg-white overflow-hidden">
       <style>{DESKTOP_CSS}</style>
@@ -548,7 +568,7 @@ function DesktopLogin({ form, setForm, showPw, setShowPw, loading, error, errorT
             Home, <span style={{ color: '#A5B4FC' }}>a little closer.</span>
           </h2>
           <p className="mt-3 text-[14.5px] leading-relaxed text-white/60 max-w-[430px]">
-            Let visitors in, pay dues, hear from your estate and meet your neighbours — all from one place.
+            {W.E ? 'Let visitors in, pay dues, hear from your estate and meet your neighbours — all from one place.' : `Let visitors in, get alerts and hear from your ${W.site} — all from one place.`}
           </p>
           <div className="mt-7"><ResidentPreview /></div>
         </div>
@@ -562,14 +582,14 @@ function DesktopLogin({ form, setForm, showPw, setShowPw, loading, error, errorT
 
       <main className="flex flex-col px-10 py-8 h-full overflow-y-auto">
         <div className="flex justify-end text-[13px] text-[#475467]">
-          New resident?&nbsp;<Link to="/register" className="font-semibold text-[#4F46E5] hover:text-[#4338CA]">Join with estate code</Link>
+          New {W.member}?&nbsp;<Link to="/register" className="font-semibold text-[#4F46E5] hover:text-[#4338CA]">Join with {W.site} code</Link>
         </div>
 
         <div className="flex-1 flex items-center justify-center">
           <div className="w-full max-w-[380px]" style={{ animation: 'rlRise .6s .1s cubic-bezier(.22,1,.36,1) both' }}>
             <span className="w-12 h-12 rounded-xl bg-[#EEF2FF] border border-[#C7D2FE] flex items-center justify-center text-[#4F46E5]"><Building2 size={22} /></span>
             <h1 className="mt-6 text-[28px] font-semibold tracking-tight" style={{ color: '#101828' }}>Welcome home</h1>
-            <p className="mt-1.5 text-[14.5px] text-[#475467]">Sign in to your estate account.</p>
+            <p className="mt-1.5 text-[14.5px] text-[#475467]">Sign in to your {W.site} account.</p>
 
             <form onSubmit={handleSubmit} className="mt-8 space-y-5">
               {error && (errorTone === 'stay' ? (
@@ -618,8 +638,8 @@ function DesktopLogin({ form, setForm, showPw, setShowPw, loading, error, errorT
             <div className="mt-8 rounded-xl border border-[#EAECF0] bg-[#F9FAFB] px-4 py-3.5 flex items-center gap-3">
               <span className="w-9 h-9 rounded-lg bg-white border border-[#EAECF0] flex items-center justify-center text-[#475467]"><ShieldCheck size={16} /></span>
               <div className="text-[12.5px] leading-snug">
-                <p className="font-medium text-[#101828]">Manage an estate?</p>
-                <p className="text-[#667085]">Use the <a href="https://area-connector.areaconnect.pro/login" className="font-medium text-[#4F46E5] hover:underline">estate manager portal</a>.</p>
+                <p className="font-medium text-[#101828]">Manage {W.E ? 'an estate' : `a ${W.site}`}?</p>
+                <p className="text-[#667085]">Use the <a href="https://area-connector.areaconnect.pro/login" className="font-medium text-[#4F46E5] hover:underline">{W.E ? 'estate manager' : 'manager'} portal</a>.</p>
               </div>
             </div>
           </div>

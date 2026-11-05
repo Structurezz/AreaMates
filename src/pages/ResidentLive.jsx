@@ -21,14 +21,15 @@ import { useRoomEngagement, ReactionLayer, ChatPanel, Soundboard, useMicLevel, N
 import AddTracks from '../components/live/AddTracks';
 import MobileHostStudio from '../components/studio/MobileHostStudio';
 import SetupSteps, { OptionCard, MicCheck } from '../components/studio/SetupSteps';
+import { useSite } from '../context/SiteContext';
 
 const INDIGO = '#6366F1';
 const INDIGO_DARK = '#4F46E5';
 
-const MODES = [
+const modesFor = (neighboursLc) => [
   { key: 'dj',      Icon: Radio,          label: 'DJ set',      desc: 'Spin tracks + talk over them.',    color: INDIGO },
   { key: 'prayer',  Icon: Heart,          label: 'Prayer room', desc: 'Lead a prayer or devotional.',     color: '#EC4899' },
-  { key: 'chat',    Icon: MessageSquare,  label: 'Chat room',   desc: 'Just talk — hangout with neighbours.', color: '#0EA5E9' },
+  { key: 'chat',    Icon: MessageSquare,  label: 'Chat room',   desc: `Just talk — hangout with ${neighboursLc}.`, color: '#0EA5E9' },
   { key: 'podcast', Icon: HeadphonesIcon, label: 'Podcast',     desc: 'Record a show — saved to the archive.', color: '#F59E0B' },
 ];
 
@@ -59,6 +60,11 @@ function createVoiceRecorder() {
 
 export default function ResidentLive() {
   const { user } = useAuth();
+  const { isEstate, w } = useSite();
+  const nbrs = isEstate ? 'neighbours' : w.membersLc;
+  const Nbrs = isEstate ? 'Neighbours' : w.members;
+  const memberWord = isEstate ? 'Resident' : w.member;
+  const MODES = modesFor(nbrs);
   const { emit } = useSocket() || {};
   const navigate = useNavigate();
 
@@ -371,7 +377,7 @@ export default function ResidentLive() {
               <div className="relative max-w-lg">
                 <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-white/15 border border-white/20"><picked.Icon size={11} /> {picked.label}</span>
                 <h1 className="mt-3 text-[24px] font-semibold text-white" style={{ letterSpacing: '-0.025em' }}>Go live, {user?.name?.split(' ')[0] || 'there'}</h1>
-                <p className="mt-1 text-[13px] text-white/75">{picked.desc} Your neighbours get a notification the moment you start.</p>
+                <p className="mt-1 text-[13px] text-white/75">{picked.desc} Your {nbrs} get a notification the moment you start.</p>
                 <label className="block mt-5 text-[11px] font-semibold uppercase tracking-wider text-white/70">Room name</label>
                 <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={80}
                   placeholder={`Give your ${picked.label.toLowerCase()} a name…`}
@@ -381,7 +387,7 @@ export default function ResidentLive() {
                   style={{ color: '#312E81', boxShadow: '0 10px 22px -10px rgba(0,0,0,0.4)' }}>
                   {starting ? <><Loader2 size={16} className="animate-spin" /> Starting…</> : <><Mic size={16} /> Go live now</>}
                 </button>
-                <p className="mt-2.5 text-[11px] text-white/60 text-center">Needs microphone access. Only one live room per estate; if someone is already live you'll be asked to join theirs.</p>
+                <p className="mt-2.5 text-[11px] text-white/60 text-center">Needs microphone access. Only one live room per {isEstate ? 'estate' : w.siteLc}; if someone is already live you'll be asked to join theirs.</p>
               </div>
             </div>
 
@@ -426,7 +432,7 @@ export default function ResidentLive() {
                         <img src={`https://i.ytimg.com/vi/${t.videoId}/default.jpg`} alt="" className="w-11 h-8 rounded-md object-cover flex-shrink-0" loading="lazy" />
                         <span className="flex-1 min-w-0">
                           <span className="block text-[12px] font-medium text-slate-800 truncate">{t.title}</span>
-                          <span className="block text-[11px] text-slate-400 truncate">{t.artist || 'Resident'}</span>
+                          <span className="block text-[11px] text-slate-400 truncate">{t.artist || memberWord}</span>
                         </span>
                         <span className="text-[11px] text-slate-400 tabular-nums flex items-center gap-0.5"><ThumbsUp size={11} /> {t.votes?.length || 0}</span>
                       </div>
@@ -470,7 +476,7 @@ export default function ResidentLive() {
   if (!session) {
     const picked = MODES.find(m => m.key === mode) || MODES[0];
     const steps = [
-      { key: 'style', title: 'What kind of room?', hint: 'Pick how you want to go live to your neighbours.',
+      { key: 'style', title: 'What kind of room?', hint: `Pick how you want to go live to your ${nbrs}.`,
         content: (
           <div className="space-y-2.5">
             {MODES.map(({ key, Icon, label, desc, color }) => (
@@ -478,7 +484,7 @@ export default function ResidentLive() {
             ))}
           </div>
         ) },
-      { key: 'name', title: 'Name your room', hint: 'Neighbours see this in their notification.',
+      { key: 'name', title: 'Name your room', hint: `${Nbrs} see this in their notification.`,
         content: (
           <div>
             <input value={title} onChange={e => setTitle(e.target.value)} maxLength={80} autoFocus
@@ -498,7 +504,7 @@ export default function ResidentLive() {
                   <img src={`https://i.ytimg.com/vi/${t.videoId}/default.jpg`} alt="" className="w-11 h-8 rounded-md object-cover flex-shrink-0" loading="lazy" />
                   <span className="flex-1 min-w-0">
                     <span className="block text-[13px] font-medium text-slate-800 truncate">{t.title}</span>
-                    <span className="block text-[11px] text-slate-400 truncate">{t.artist || 'Resident'} · {t.votes?.length || 0} votes</span>
+                    <span className="block text-[11px] text-slate-400 truncate">{t.artist || memberWord} · {t.votes?.length || 0} votes</span>
                   </span>
                 </div>
               ))}
@@ -514,13 +520,13 @@ export default function ResidentLive() {
             <AddTracks onAddYouTube={addYouTubeTrack} onAddFiles={addLocalFiles} />
           </div>
         ) }] : []),
-      { key: 'mic', title: 'Check your mic', hint: 'Make sure your neighbours can hear you clearly.',
+      { key: 'mic', title: 'Check your mic', hint: `Make sure your ${nbrs} can hear you clearly.`,
         content: (
           <div className="space-y-3">
             <MicCheck accent={picked.color} />
             <div className="rounded-2xl bg-slate-50 border border-slate-100 p-4 space-y-2 text-[13px] text-slate-600">
               <div>🎧 Use headphones so {needsMusic ? 'the music' : 'your speaker'} doesn't echo into your mic.</div>
-              <div>🔔 Neighbours get a notification the moment you go live.</div>
+              <div>🔔 {Nbrs} get a notification the moment you go live.</div>
               <div>👥 Only one live room runs at a time — if someone is already live you'll be asked to join theirs.</div>
               {needsMusic && <div>💾 When you end, you can save it to the archive.</div>}
             </div>
@@ -764,7 +770,7 @@ export default function ResidentLive() {
                           </span>
                           <span className="flex-1 min-w-0">
                             <span className={`block text-[12px] truncate ${on ? 'font-semibold text-indigo-700' : done ? 'text-slate-400' : 'font-medium text-slate-800'}`}>{t.title}</span>
-                            <span className="block text-[11px] text-slate-400 truncate">{t.artist || 'Resident'}</span>
+                            <span className="block text-[11px] text-slate-400 truncate">{t.artist || memberWord}</span>
                           </span>
                           {done && <CheckCircle2 size={13} className="text-slate-300 flex-shrink-0" />}
                           <span className="text-[11px] text-slate-400 tabular-nums flex-shrink-0 flex items-center gap-0.5"><ThumbsUp size={11} /> {t.votes?.length || 0}</span>
@@ -824,7 +830,7 @@ export default function ResidentLive() {
               <img src={`https://i.ytimg.com/vi/${t.videoId}/default.jpg`} alt="" className="w-11 h-8 rounded-md object-cover flex-shrink-0" loading="lazy" />
               <span className="flex-1 min-w-0">
                 <span className="block text-[13px] truncate" style={{ fontWeight: on ? 700 : 500, color: on ? accent : '#1E293B' }}>{t.title}</span>
-                <span className="block text-[11px] text-slate-400 truncate">{on ? 'Playing now' : (t.artist || 'Resident')}</span>
+                <span className="block text-[11px] text-slate-400 truncate">{on ? 'Playing now' : (t.artist || memberWord)}</span>
               </span>
               {!on && <SkipForward size={14} className="text-slate-300" />}
             </button>

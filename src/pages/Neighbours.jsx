@@ -53,6 +53,7 @@ export default function Neighbours() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('people');
   const site = useSite();
+  const { isEstate, w } = site;
   const [q, setQ] = useState('');
   const [buzzFor, setBuzzFor] = useState(null);
   const [buzzKind, setBuzzKind] = useState('checkin');
@@ -70,7 +71,7 @@ export default function Neighbours() {
       setHistory(h.data.data);
       setBuzzes(b.data.data);
     } catch {
-      toast.error('Could not load neighbours');
+      toast.error(isEstate ? 'Could not load neighbours' : `Could not load ${w.neighboursLc}`);
     } finally { setLoading(false); }
   }, []);
 
@@ -114,7 +115,7 @@ export default function Neighbours() {
   const callPerson = async (person) => {
     const r = await startCall(person);
     if (r?.needCredits) {
-      toast('You need call credits to call a neighbour', { icon: '🪙' });
+      toast(isEstate ? 'You need call credits to call a neighbour' : `You need call credits to call ${w.aMember}`, { icon: '🪙' });
       setShowTopup(true);
     }
   };
@@ -158,7 +159,7 @@ export default function Neighbours() {
   };
 
   const staffIcon = (role) => (role === 'security' ? ShieldCheck : Briefcase);
-  const staffLabel = (role) => (role === 'security' ? 'Security' : 'Estate Manager');
+  const staffLabel = (role) => (role === 'security' ? 'Security' : (isEstate ? 'Estate Manager' : w.manager));
 
   // Buzz + top-up sheets — shared by the phone and desktop layouts
   const sheets = (
@@ -175,7 +176,7 @@ export default function Neighbours() {
               <PersonAvatar person={buzzFor} size={48} />
               <div className="min-w-0">
                 <div className="font-semibold text-slate-900 truncate">{buzzFor.name}</div>
-                <div className="text-xs text-slate-400">{buzzFor.unit || 'Resident'}</div>
+                <div className="text-xs text-slate-400">{buzzFor.unit || w.member}</div>
               </div>
             </div>
             <div className="grid grid-cols-3 gap-2">
@@ -189,7 +190,7 @@ export default function Neighbours() {
             </div>
             <textarea value={buzzNote} onChange={(e) => setBuzzNote(e.target.value.slice(0, 200))} rows={2}
               placeholder="Add a short note (optional)" className="input-field resize-none" />
-            <p className="text-[11px] text-slate-400">Sent as {user?.name}. You can buzz each neighbour once every 2 hours.</p>
+            <p className="text-[11px] text-slate-400">Sent as {user?.name}. {isEstate ? 'You can buzz each neighbour once every 2 hours.' : `You can buzz each ${w.memberLc} once every 2 hours.`}</p>
           </div>
         )}
       </BottomSheet>
@@ -211,7 +212,7 @@ export default function Neighbours() {
             </button>
           ))}
           <p className="text-[11px] text-slate-400 flex items-start gap-1.5 pt-1">
-            <Lock size={12} className="shrink-0 mt-0.5" /> Paid securely with Paystack. Credits don't expire and are only used for calls to neighbours — calls to security and management are free.
+            <Lock size={12} className="shrink-0 mt-0.5" /> Paid securely with Paystack. Credits don't expire and are only used for calls to {isEstate ? 'neighbours' : w.neighboursLc} — calls to security and management are free.
           </p>
         </div>
       </BottomSheet>
@@ -248,7 +249,7 @@ export default function Neighbours() {
                 {credits ? credits.balance : <span className="inline-block w-20 h-10 rounded-lg bg-white/15 animate-pulse" />}
               </div>
               <p className="text-xs text-indigo-50/80 mt-2">
-                {credits ? `≈ ${minutes} min of neighbour calls · ${credits.ratePerMinute} credit/min` : ' '}
+                {credits ? `≈ ${minutes} min of ${isEstate ? 'neighbour' : w.memberLc} calls · ${credits.ratePerMinute} credit/min` : ' '}
               </p>
               <button onClick={() => setShowTopup(true)}
                 className="mt-4 w-full flex items-center justify-center gap-2 rounded-2xl bg-white text-indigo-700 font-bold py-3 hover:bg-indigo-50 transition-colors">
@@ -303,14 +304,14 @@ export default function Neighbours() {
             <>
               <div className="relative">
                 <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by name or unit"
+                <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={isEstate ? 'Search by name or unit' : `Search by name or ${w.unitLc}`}
                   className="input-field pl-10 py-3" />
               </div>
               {loading ? (
                 <PageLoader variant="section" />
               ) : filtered.length === 0 ? (
                 <div className="glass-card py-12 text-center text-sm text-slate-400">
-                  {q ? `No neighbour matches “${q}”` : 'No neighbours to show yet'}
+                  {isEstate ? (q ? `No neighbour matches “${q}”` : 'No neighbours to show yet') : (q ? `No ${w.memberLc} matches “${q}”` : `No ${w.neighboursLc} to show yet`)}
                 </div>
               ) : (
                 <div className="grid md:grid-cols-2 2xl:grid-cols-3 gap-3">
@@ -319,7 +320,7 @@ export default function Neighbours() {
                       <Avatar person={n} />
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-semibold text-slate-900 truncate">{n.name}</div>
-                        <div className="text-xs text-slate-400 truncate">{n.unit || 'Resident'}{n.online ? ' · online' : ''}</div>
+                        <div className="text-xs text-slate-400 truncate">{n.unit || w.member}{n.online ? ' · online' : ''}</div>
                       </div>
                       <button onClick={() => openBuzz(n)} aria-label={`Buzz ${n.name}`}
                         className="w-10 h-10 rounded-full flex items-center justify-center bg-amber-50 text-amber-600 hover:bg-amber-100">
@@ -353,7 +354,7 @@ export default function Neighbours() {
                           <Avatar person={{ ...from, online: n?.online }} size={40} />
                           <div className="flex-1 min-w-0">
                             <div className="text-sm text-slate-900 truncate">
-                              <strong>{from.name}</strong>{staff ? <span className="text-xs text-slate-400"> · Estate Manager</span> : null} {meta.emoji} {meta.label.toLowerCase()}
+                              <strong>{from.name}</strong>{staff ? <span className="text-xs text-slate-400"> · {isEstate ? 'Estate Manager' : w.manager}</span> : null} {meta.emoji} {meta.label.toLowerCase()}
                             </div>
                             <div className="text-xs text-slate-400 truncate">{b.message ? `“${b.message}” · ` : ''}{dayLabel(new Date(b.createdAt))} {format(new Date(b.createdAt), 'h:mm a')}</div>
                           </div>

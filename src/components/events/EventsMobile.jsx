@@ -3,6 +3,7 @@ import { Calendar, MapPin, Users, Check, RefreshCw, Clock, X } from 'lucide-reac
 import toast from 'react-hot-toast';
 import { eventAPI } from '../../api';
 import { catOf, isMine, daysAway } from './EventsDesktop';
+import { useSite } from '../../context/SiteContext';
 
 // Phone layout for the Event Board.
 
@@ -89,6 +90,7 @@ function EventRow({ ev, i, userId, onRsvp, past }) {
 }
 
 export default function EventsMobile({ events, loading, userId, onRsvp }) {
+  const { isEstate, w } = useSite();
   const [tab, setTab] = useState('upcoming');
   const [day, setDay] = useState(null);
   const fri = useFridayCountdown();
@@ -114,7 +116,7 @@ export default function EventsMobile({ events, loading, userId, onRsvp }) {
         <div className="dash-blob absolute -top-16 -right-12 w-48 h-48 rounded-full blur-2xl pointer-events-none" style={{ background: 'rgba(129,140,248,0.35)' }} />
         <div className="relative">
           <h1 className="text-[20px] font-bold text-white flex items-center gap-2"><Calendar size={19} /> Event Board</h1>
-          <p className="text-[13px] text-indigo-100/80 mt-0.5">What's on in your estate</p>
+          <p className="text-[13px] text-indigo-100/80 mt-0.5">{isEstate ? "What's on in your estate" : `What's on in your ${w.siteLc}`}</p>
           <div className="mt-4 grid grid-cols-3 gap-2">
             {[['Upcoming', upcoming.length], ['This week', thisWeek.length], ["You're going", mine.length]].map(([k, v]) => (
               <div key={k} className="rounded-xl bg-white/10 border border-white/15 px-3 py-2">
@@ -169,7 +171,7 @@ export default function EventsMobile({ events, loading, userId, onRsvp }) {
               <div className="text-[11px] font-semibold"><span className="px-1.5 py-0.5 rounded-full bg-white/20">Next up · {daysAway(next.date)}</span></div>
               <h2 className="mt-1.5 text-[17px] font-bold text-white leading-snug line-clamp-2">{next.title}</h2>
               <p className="mt-1 text-[12px] text-white/85 flex items-center gap-1 min-w-0">
-                <MapPin size={11} className="flex-shrink-0" /><span className="truncate">{next.time ? `${next.time} · ` : ''}{next.location || 'Estate grounds'}</span>
+                <MapPin size={11} className="flex-shrink-0" /><span className="truncate">{next.time ? `${next.time} · ` : ''}{next.location || (isEstate ? 'Estate grounds' : `${w.site} grounds`)}</span>
               </p>
             </div>
           </div>

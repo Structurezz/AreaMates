@@ -1,6 +1,8 @@
 // Nkechi — the estate's AI neighbour — drawn as a small illustrated mascot
 // (gele headwrap, gold earrings, a 🌸 on the wrap) plus the chat sticker packs.
 
+import { useSite } from '../../context/SiteContext';
+
 let uid = 0;
 
 export function NkechiMascot({ size = 40, wave = false, bob = false, ring = true }) {
@@ -111,12 +113,22 @@ export const STICKER_PACKS = [
 const ALL = Object.fromEntries(STICKER_PACKS.flatMap((p) => p.stickers.map((s) => [s.id, s])));
 export const stickerById = (id) => ALL[id] || null;
 
+/** A sticker's caption in the site's words (estate keeps the original). */
+export function stickerLabel(s, isEstate, w) {
+  if (!s || isEstate || !w) return s?.label;
+  if (s.id === 'good-morning') return `Good morning ${w.siteLc}`;
+  if (s.id === 'welcome') return 'Welcome!';
+  if (s.id === 'nkechi-love') return `I love this ${w.siteLc}`;
+  return s.label;
+}
+
 export function Sticker({ id, size = 132, animate = true }) {
   const s = stickerById(id);
+  const { isEstate, w } = useSite();
   if (!s) return <span className="text-[13px] italic text-slate-400">[sticker]</span>;
   return (
     <div className={`relative select-none sticker-float ${animate ? 'sticker-pop' : ''}`}
-      style={{ width: size, '--tilt': `${s.tilt || 0}deg`, transform: `rotate(${s.tilt || 0}deg)` }} title={s.label}>
+      style={{ width: size, '--tilt': `${s.tilt || 0}deg`, transform: `rotate(${s.tilt || 0}deg)` }} title={stickerLabel(s, isEstate, w)}>
       <div className="relative mx-auto flex items-center justify-center rounded-[28%]"
         style={{
           width: size * 0.82, height: size * 0.82,
@@ -135,7 +147,7 @@ export function Sticker({ id, size = 132, animate = true }) {
       <div className="relative -mt-3 text-center">
         <span className="inline-block px-2.5 py-1 rounded-full bg-white font-extrabold leading-tight"
           style={{ fontSize: Math.max(10, size * 0.1), color: s.to, boxShadow: '0 4px 10px -4px rgba(15,23,42,0.35)', letterSpacing: '-0.01em' }}>
-          {s.label}
+          {stickerLabel(s, isEstate, w)}
         </span>
       </div>
     </div>

@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { Heart, TrendingDown } from 'lucide-react';
 import { imgUrl } from '../lounge/shared';
 import { naira, priceDrop, sellerOf, NoPhoto, RatingPill } from './shared';
+import { useSite } from '../../context/SiteContext';
 
 // Grid tile: square photo, price first (that's what people scan for).
 export default function ListingCard({ listing, me, onOpen, onToggleSave }) {
+  const { isEstate, w } = useSite();
   const [broken, setBroken] = useState(false);
   const saved = (listing.savedBy || []).some((id) => String(id) === String(me?._id));
   const drop = priceDrop(listing);
@@ -45,7 +47,7 @@ export default function ListingCard({ listing, me, onOpen, onToggleSave }) {
         </div>
         <p className="text-[13px] text-slate-700 leading-snug line-clamp-2 mt-0.5">{listing.title}</p>
         <div className="flex items-center justify-between gap-1 mt-1">
-          <span className="text-[11px] text-slate-400 truncate">{seller.name?.split(' ')[0] || 'Neighbour'}</span>
+          <span className="text-[11px] text-slate-400 truncate">{seller.name?.split(' ')[0] || (isEstate ? 'Neighbour' : w.neighbour)}</span>
           <RatingPill rating={listing.sellerRating} />
         </div>
       </div>

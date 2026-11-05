@@ -1,5 +1,6 @@
 import { Radio, Mic, Play, Clock, Calendar, Headphones, Trash2, ListMusic, Repeat } from 'lucide-react';
 import DJLive from '../DJLive';
+import { useSite } from '../../context/SiteContext';
 
 const VIOLET = '#6366F1';
 const INDIGO = '#6366F1';
@@ -40,6 +41,7 @@ function SectionHead({ Icon, color, title, count, right }) {
 }
 
 export default function PodcastsDesktop({ upcoming, episodes, mixtapes, activeDJ, liveFM, deleting, onPlay, onDeleteMixtape, onStart }) {
+  const { isEstate, w } = useSite();
   const isEmpty = !activeDJ && !liveFM && upcoming.length === 0 && episodes.length === 0 && mixtapes.length === 0;
 
   return (
@@ -56,7 +58,7 @@ export default function PodcastsDesktop({ upcoming, episodes, mixtapes, activeDJ
               <Radio size={11} /> Podcast
             </span>
             <h1 className="mt-2 text-[22px] font-semibold text-white" style={{ letterSpacing: '-0.025em' }}>Live rooms, mixtapes & FM shows</h1>
-            <p className="mt-0.5 text-[13px] text-white/75">Catch neighbours going live, replay past sets, or start your own room.</p>
+            <p className="mt-0.5 text-[13px] text-white/75">Catch {isEstate ? 'neighbours' : w.neighboursLc} going live, replay past sets, or start your own room.</p>
           </div>
           <div className="flex items-center gap-3 flex-shrink-0">
             {[
@@ -87,7 +89,7 @@ export default function PodcastsDesktop({ upcoming, episodes, mixtapes, activeDJ
             </div>
           </div>
           <div className="text-[15px] font-semibold text-slate-900 mt-4">Nothing on air yet</div>
-          <p className="text-[13px] text-slate-500 mt-1 max-w-sm mx-auto">Start the first live room: a prayer, a chat or a DJ set. Your neighbours will get notified.</p>
+          <p className="text-[13px] text-slate-500 mt-1 max-w-sm mx-auto">Start the first live room: a prayer, a chat or a DJ set. Your {isEstate ? 'neighbours' : w.neighboursLc} will get notified.</p>
           <button onClick={onStart} className="btn-primary !text-[13px] !px-4 !py-2 mt-4" style={{ background: `linear-gradient(135deg, ${VIOLET}, #4F46E5)` }}>
             <Mic size={14} /> Start a live room
           </button>
@@ -118,7 +120,7 @@ export default function PodcastsDesktop({ upcoming, episodes, mixtapes, activeDJ
 
             {mixtapes.length > 0 && (
               <section className="dash-rise" style={{ animationDelay: '120ms' }}>
-                <SectionHead Icon={Headphones} color={INDIGO} title="Your estate's archive" count={mixtapes.length} />
+                <SectionHead Icon={Headphones} color={INDIGO} title={isEstate ? "Your estate's archive" : `Your ${w.siteLc}'s archive`} count={mixtapes.length} />
                 <div className="grid grid-cols-3 2xl:grid-cols-4 gap-4">
                   {mixtapes.map((m, i) => {
                     const [c1, c2] = coverFor(m.title);

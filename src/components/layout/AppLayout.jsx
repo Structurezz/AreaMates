@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { NavLink, useNavigate, Link } from 'react-router-dom';
 import {
   Menu, PhoneCall,
@@ -10,6 +11,7 @@ import { usePlan } from '../../hooks/usePlan';
 import NotificationBell from '../ui/NotificationBell';
 import useFocusItem from '../../hooks/useFocusItem';
 import SafetyShareBanner from '../SafetyShareBanner';
+import { RollcallBanner } from '../roles/RollcallTakeover';
 import PodcastLivePill from '../PodcastLivePill';
 import LiveNotificationModal from '../LiveNotificationModal';
 import CallAlertsPrompt from '../calls/CallAlertsPrompt';
@@ -33,6 +35,11 @@ export default function AppLayout({ children }) {
   const { can } = usePlan();
   const { allowed } = useHousehold();
   const site = useSite();
+  const { pathname } = useLocation();
+  // Tab title: SeoTracker sets the estate one ("Resident App"); other sites get a neutral one
+  useEffect(() => {
+    if (!site.isEstate) document.title = 'AreaMates by AreaConnect';
+  }, [pathname, site.isEstate]);
 
 
   return (
@@ -69,7 +76,7 @@ export default function AppLayout({ children }) {
             </span>
           </Link>
           {/* Calls & neighbours — always one tap away */}
-          {allowed('neighbours') && <NavLink to="/neighbours" aria-label="Call or buzz a neighbour"
+          {allowed('neighbours') && <NavLink to="/neighbours" aria-label={site.isEstate ? 'Call or buzz a neighbour' : `Call or buzz ${site.w.aMember}`}
             className="p-2 rounded-xl transition-all"
             style={({ isActive }) => ({ color: isActive ? '#4F46E5' : '#64748B', background: isActive ? '#EEF2FF' : 'transparent' })}>
             <PhoneCall size={20} />
@@ -89,6 +96,8 @@ export default function AppLayout({ children }) {
         {/* Page content — pb-20 on mobile to clear bottom nav */}
         {/* Live-location reminder (only while sharing with security) */}
         <SafetyShareBanner />
+        {/* Emergency roll-call running (non-estate sites) */}
+        <RollcallBanner />
         <main className="flex-1 overflow-y-auto p-4 pb-24 md:p-6 lg:p-8 lg:pb-8">
           <CallAlertsPrompt appName="AreaMates" />
           <DuesRestrictionBanner />

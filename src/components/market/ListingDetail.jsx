@@ -9,6 +9,7 @@ import { marketplaceAPI } from '../../api';
 import { useCall } from '../../context/CallContext';
 import { Avatar, imgUrl, timeAgo } from '../lounge/shared';
 import { CAT, CONDITION, STATUS, naira, priceDrop, sellerOf, isMine, NoPhoto, Stars } from './shared';
+import { useSite } from '../../context/SiteContext';
 
 function Gallery({ listing }) {
   const [i, setI] = useState(0);
@@ -46,6 +47,7 @@ const TIPS = [
 ];
 
 export default function ListingDetail({ listing: initial, me, onClose, onChat, onChanged, onEdit, onReport, onRate, onBuy }) {
+  const { isEstate, w } = useSite();
   useScrollLock(true);
   const [l, setL] = useState(initial);
   const [loading, setLoading] = useState(true);
@@ -87,7 +89,7 @@ export default function ListingDetail({ listing: initial, me, onClose, onChat, o
 
   const call = async () => {
     const r = await startCall?.(seller);
-    if (r?.needCredits) toast('Top up call credits on the Neighbours page to call', { icon: '🪙' });
+    if (r?.needCredits) toast(isEstate ? 'Top up call credits on the Neighbours page to call' : 'Top up call credits on the Directory page to call', { icon: '🪙' });
   };
 
   const setStatus = async (status) => {
@@ -96,7 +98,7 @@ export default function ListingDetail({ listing: initial, me, onClose, onChat, o
       const { data } = await marketplaceAPI.update(l._id, { status });
       setL((x) => ({ ...x, ...data.data }));
       onChanged?.(data.data);
-      toast.success(status === 'sold' ? 'Marked as sold 🎉' : data.held ? 'Sent to estate management for review' : 'Back on the market');
+      toast.success(status === 'sold' ? 'Marked as sold 🎉' : data.held ? (isEstate ? 'Sent to estate management for review' : `Sent to ${w.siteMgmtLc} for review`) : 'Back on the market');
     } catch (e) { toast.error(e.response?.data?.message || 'Couldn\'t update'); }
     finally { setBusy(false); }
   };
@@ -158,7 +160,7 @@ export default function ListingDetail({ listing: initial, me, onClose, onChat, o
                   <AlertTriangle size={17} className="shrink-0 mt-0.5" />
                   <div>
                     <p className="font-semibold">
-                      {l.status === 'pending_approval' ? 'Estate management is reviewing this listing' : l.status === 'rejected' ? 'Not approved' : 'Removed by estate management'}
+                      {l.status === 'pending_approval' ? (isEstate ? 'Estate management is reviewing this listing' : `${w.siteMgmt} is reviewing this listing`) : l.status === 'rejected' ? 'Not approved' : (isEstate ? 'Removed by estate management' : `Removed by ${w.siteMgmtLc}`)}
                     </p>
                     {l.moderation?.reason && <p className="mt-0.5">{l.moderation.reason}</p>}
                     {l.status === 'pending_approval' && l.flags?.length > 0 && <p className="mt-0.5 opacity-80">{l.flags.map((f) => f.detail).join(' · ')}</p>}
@@ -182,7 +184,7 @@ export default function ListingDetail({ listing: initial, me, onClose, onChat, o
                 <div className="flex items-center gap-3">
                   <Avatar person={seller} size={46} />
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-slate-900 truncate">{seller.name || 'Neighbour'}{mine && <span className="text-slate-400 font-normal"> · you</span>}</p>
+                    <p className="font-semibold text-slate-900 truncate">{seller.name || (isEstate ? 'Neighbour' : w.neighbour)}{mine && <span className="text-slate-400 font-normal"> · you</span>}</p>
                     <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-0.5">
                       {l.sellerRating?.count ? <><Stars value={l.sellerRating.avg} /> <span className="font-semibold text-slate-700">{l.sellerRating.avg.toFixed(1)}</span> ({l.sellerRating.count})</> : 'No ratings yet'}
                       {l.sellerSold > 0 && <span>· {l.sellerSold} sold</span>}
@@ -196,7 +198,7 @@ export default function ListingDetail({ listing: initial, me, onClose, onChat, o
                     {l.reviews.map((r) => (
                       <li key={r._id} className="text-sm">
                         <div className="flex items-center gap-2">
-                          <span className="font-semibold text-slate-800">{r.reviewerId?.name?.split(' ')[0] || 'Neighbour'}</span>
+                          <span className="font-semibold text-slate-800">{r.reviewerId?.name?.split(' ')[0] || (isEstate ? 'Neighbour' : w.neighbour)}</span>
                           <Stars value={r.rating} size={11} />
                           <span className="text-[11px] text-slate-400 ml-auto">{timeAgo(r.createdAt)}</span>
                         </div>
@@ -235,7 +237,7 @@ export default function ListingDetail({ listing: initial, me, onClose, onChat, o
                         </ol>
                         <div className="mt-3 rounded-xl bg-white/80 border border-indigo-100 px-3 py-2.5 text-[12px] text-indigo-950 leading-relaxed">
                           <b>Good to know:</b> after the seller marks it delivered you have <b>48 hours</b> to confirm or raise a problem — then the money is released automatically.
-                          If it’s never delivered, report it within <b>7 days</b> of paying. Disputes are reviewed by estate management and refunds go back to your card or account.
+                          If it’s never delivered, report it within <b>7 days</b> of paying. Disputes are reviewed by {isEstate ? 'estate management' : w.siteMgmtLc} and refunds go back to your card or account.
                         </div>
                       </>
                     )}

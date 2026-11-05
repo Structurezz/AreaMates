@@ -8,6 +8,7 @@ import useFillHeight from '../../hooks/useFillHeight';
 import { useAuth } from '../../context/AuthContext';
 import { estateAPI } from '../../api';
 import EstateMap from '../EstateMap';
+import { useSite } from '../../context/SiteContext';
 
 const TYPE_META = {
   security: { label: 'Security threat',   Icon: Shield,        color: '#EF4444' },
@@ -73,6 +74,7 @@ function AlertDetail({ a, estate, targetLabel }) {
   const t = typeOf(a);
   const st = STATUS_META[a.status] || STATUS_META.open;
   const broadcast = a.isEmergencyBroadcast;
+  const { isEstate, w } = useSite();
   return (
     <div key={a._id} className="animate-fade-in">
       <div className="relative overflow-hidden px-6 py-5 text-white"
@@ -88,7 +90,7 @@ function AlertDetail({ a, estate, targetLabel }) {
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap text-[11px] font-semibold">
               {broadcast
-                ? <span className="px-2 py-0.5 rounded-full bg-white/15 inline-flex items-center gap-1"><Radio size={11} /> Estate broadcast</span>
+                ? <span className="px-2 py-0.5 rounded-full bg-white/15 inline-flex items-center gap-1"><Radio size={11} /> {isEstate ? 'Estate broadcast' : `${w.site} broadcast`}</span>
                 : <span className="px-2 py-0.5 rounded-full" style={{ background: st.bg, color: st.color }}>{st.label}</span>}
               <span className="px-2 py-0.5 rounded-full bg-white/10">{t.label}</span>
               {a.severity && broadcast && <span className={`px-2 py-0.5 rounded-full ${SEVERITY[a.severity] || ''}`}>{a.severity.toUpperCase()}</span>}
@@ -108,7 +110,7 @@ function AlertDetail({ a, estate, targetLabel }) {
             <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
               <div className="text-[11px] font-medium text-slate-400 flex items-center gap-1.5"><MapPin size={12} /> Location</div>
               <div className="mt-1 text-[14px] font-medium text-slate-900">
-                {a.location || (a.unitId?.unitNumber ? `Unit ${a.unitId.unitNumber}` : 'Not specified')}
+                {a.location || (a.unitId?.unitNumber ? `${isEstate ? 'Unit' : w.unit} ${a.unitId.unitNumber}` : 'Not specified')}
               </div>
             </div>
             {a.contactNumber && (
@@ -133,14 +135,14 @@ function AlertDetail({ a, estate, targetLabel }) {
               </div>
             )}
             {!broadcast && a.status === 'open' && (
-              <p className="text-[12px] text-slate-500">Security and management have your name, unit and phone number. In immediate danger, call <b>112</b>.</p>
+              <p className="text-[12px] text-slate-500">Security and management have your name, {isEstate ? 'unit' : w.unitLc} and phone number. In immediate danger, call <b>112</b>.</p>
             )}
           </div>
           <div className="rounded-2xl border border-slate-200/70 overflow-hidden">
             <div className="p-1.5">
-              <EstateMap name={a.location || estate?.name || 'Estate'} address={estate?.address} location={estate?.location} height={200} variant="plain" />
+              <EstateMap name={a.location || estate?.name || (isEstate ? 'Estate' : w.site)} address={estate?.address} location={estate?.location} height={200} variant="plain" />
             </div>
-            <div className="px-3 py-2 border-t border-slate-100 text-[11px] text-slate-400 truncate">Pin marks {estate?.name || 'the estate'}</div>
+            <div className="px-3 py-2 border-t border-slate-100 text-[11px] text-slate-400 truncate">Pin marks {estate?.name || (isEstate ? 'the estate' : `the ${w.siteLc}`)}</div>
           </div>
         </div>
       </div>
@@ -155,6 +157,7 @@ export default function AlertsDesktop({
   const shellRef = useRef(null);
   const height = useFillHeight(shellRef, true, { min: 600 });
   const estate = useEstate();
+  const { isEstate, w } = useSite();
   const [selectedId, setSelectedId] = useState(null);
 
   useEffect(() => {
@@ -258,7 +261,7 @@ export default function AlertsDesktop({
             {sending ? 'Sending alert…' : targetCfg.button}
           </button>
           <p className="text-[11px] text-slate-400 text-center">
-            {targetLabel[target]} will be alerted immediately with your name, unit and phone number.
+            {targetLabel[target]} will be alerted immediately with your name, {isEstate ? 'unit' : w.unitLc} and phone number.
             {['security', 'fire', 'medical'].includes(selectedType) && ' They also get an email.'} In immediate danger, call 112.
           </p>
         </div>
@@ -276,7 +279,7 @@ export default function AlertsDesktop({
               <div className="py-16 text-center px-6">
                 <div className="w-12 h-12 mx-auto rounded-2xl bg-indigo-50 flex items-center justify-center"><ShieldCheck size={22} className="text-indigo-500" /></div>
                 <p className="mt-3 text-[14px] font-semibold text-slate-800">No alerts yet</p>
-                <p className="mt-0.5 text-[12px] text-slate-400">Your alerts and estate broadcasts appear here.</p>
+                <p className="mt-0.5 text-[12px] text-slate-400">{isEstate ? 'Your alerts and estate broadcasts appear here.' : `Your alerts and ${w.siteLc} broadcasts appear here.`}</p>
               </div>
             ) : alerts.map((a, i) => {
               const t = typeOf(a);
@@ -293,7 +296,7 @@ export default function AlertsDesktop({
                     {!bc && a.status === 'open' && <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-white animate-pulse" />}
                   </span>
                   <span className="flex-1 min-w-0">
-                    <span className="block text-[13px] font-medium text-slate-900 truncate">{a.title || (bc ? 'Estate broadcast' : t.label)}</span>
+                    <span className="block text-[13px] font-medium text-slate-900 truncate">{a.title || (bc ? (isEstate ? 'Estate broadcast' : `${w.site} broadcast`) : t.label)}</span>
                     {a.note && <span className="block text-[12px] text-slate-500 truncate">{a.note}</span>}
                     <span className="mt-1 flex items-center gap-2 text-[11px]">
                       <span className="font-semibold" style={{ color: bc ? '#D97706' : st.color }}>{bc ? 'Broadcast' : st.label}</span>

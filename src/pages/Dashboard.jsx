@@ -13,6 +13,7 @@ import Portal from '../components/ui/Portal';
 import DesktopDashboard from '../components/dashboard/DesktopDashboard';
 import MobileDashboard from '../components/dashboard/MobileDashboard';
 import useIsDesktop from '../hooks/useIsDesktop';
+import { useRoles } from '../context/RolesContext';
 
 export default function ResidentDashboard() {
   const { user } = useAuth();
@@ -28,6 +29,9 @@ export default function ResidentDashboard() {
   const site = useSite();
   const { allowed } = useHousehold();
   const canVisitors = allowed('visitors');
+  const { trackAlert } = useRoles();
+  // Hospitals: the button raises a medical emergency, routed to the care team
+  const medical = site.type === 'hospital';
 
   useEffect(() => {
     const calls = [
@@ -49,8 +53,10 @@ export default function ResidentDashboard() {
     setShowAlertConfirm(false);
     try {
       // One-tap panic: goes to everyone on duty (security + management).
-      const { data } = await alertAPI.create({ type: 'security', audience: 'staff', note: 'Panic button pressed from the AreaMates dashboard' });
+      const { data } = await alertAPI.create({ type: medical ? 'medical' : 'security', audience: 'staff', note: medical ? 'Medical emergency button pressed in AreaMates' : 'Panic button pressed from the AreaMates dashboard' });
       toast.success(data?.message || 'Help is on the way.', { duration: 5000 });
+      // Other site types: live "who's coming" sheet
+      if (!site.isEstate) trackAlert(data?.data);
     } catch {
       toast.error('Failed to send alert. Try again.');
     } finally {
@@ -110,12 +116,14 @@ export default function ResidentDashboard() {
               }}>
                 <Siren size={26} color="#fff" />
               </div>
-              <h2 style={{ color: '#fff', fontSize: 17, fontWeight: 800, margin: 0 }}>Send Emergency Alert?</h2>
+              <h2 style={{ color: '#fff', fontSize: 17, fontWeight: 800, margin: 0 }}>{medical ? 'Send a medical emergency?' : 'Send Emergency Alert?'}</h2>
             </div>
 
             <div style={{ padding: '18px 20px 22px' }}>
               <p style={{ fontSize: 13, color: '#4B5563', lineHeight: 1.6, margin: '0 0 18px', textAlign: 'center' }}>
-                Security and {site.terms.site.toLowerCase()} management will be alerted immediately with your name, {site.terms.unit.toLowerCase()} and phone number.
+                {site.isEstate || !site.assignLabel
+                  ? <>Security and {site.terms.site.toLowerCase()} management will be alerted immediately with your name, {site.terms.unit.toLowerCase()} and phone number.</>
+                  : <>Your {site.assignLabel.toLowerCase()}, the staff covering your {site.terms.unit.toLowerCase()} and security will be alerted immediately with your name, {site.terms.unit.toLowerCase()} and phone number.</>}
               </p>
               <p style={{ fontSize: 12, color: '#94A3B8', margin: '-8px 0 16px', textAlign: 'center' }}>
                 Fire, medical or want to choose who's alerted?{' '}
@@ -154,7 +162,7 @@ export default function ResidentDashboard() {
       <DesktopDashboard
         user={user} myVisitors={myVisitors} announcements={announcements} estate={estate}
         estateName={estateName} firstName={firstName} unitLabel={unitLabel}
-        activeVisitors={activeVisitors} alerting={alerting} onSOS={() => setShowAlertConfirm(true)}
+        activeVisitors={activeVisitors} alerting={alerting} onSOS={() => setShowAlertConfirm(true)} sosLabel={medical ? 'Medical emergency' : null}
       />
       {alertConfirm}
     </>
@@ -166,7 +174,7 @@ export default function ResidentDashboard() {
       <MobileDashboard
         user={user} myVisitors={myVisitors} announcements={announcements} estate={estate}
         estateName={estateName} firstName={firstName} unitLabel={unitLabel}
-        activeVisitors={activeVisitors} alerting={alerting} onSOS={() => setShowAlertConfirm(true)}
+        activeVisitors={activeVisitors} alerting={alerting} onSOS={() => setShowAlertConfirm(true)} sosLabel={medical ? 'Medical emergency' : null}
       />
       {alertConfirm}
     </>

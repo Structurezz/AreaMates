@@ -80,6 +80,7 @@ export default function PaymentsDesktop({
   hideBalance, toggleHide, shown, naira, onRefresh, tab, setTab, onPay, onInvoice, onDetail, onHelp,
   TYPE_META, STATUS, METHOD_LABEL, dueDateOf,
 }) {
+  const site = useSite();
   const months = useMemo(() => {
     const groups = [];
     history.forEach((p) => {
@@ -96,7 +97,7 @@ export default function PaymentsDesktop({
       {/* Header */}
       <div className="dash-rise flex items-end justify-between gap-4">
         <div>
-          <div className="text-[12px] font-medium text-slate-400">Dues, levies & receipts</div>
+          <div className="text-[12px] font-medium text-slate-400">{site.isEstate ? 'Dues, levies & receipts' : `${site.w.dues} & receipts`}</div>
           <h1 className="text-[22px] font-semibold text-slate-900" style={{ letterSpacing: '-0.025em' }}>{site.isEstate ? 'Payments' : site.terms.dues}</h1>
         </div>
         <div className="flex items-center gap-2">
@@ -186,7 +187,7 @@ export default function PaymentsDesktop({
               <div className="py-16 text-center">
                 <div className="w-14 h-14 rounded-2xl bg-emerald-50 mx-auto flex items-center justify-center"><CheckCircle2 size={26} className="text-emerald-500" /></div>
                 <p className="mt-3 text-[15px] font-semibold text-slate-900">You're all caught up!</p>
-                <p className="text-[13px] text-slate-400 mt-1">New dues from your estate will show up here.</p>
+                <p className="text-[13px] text-slate-400 mt-1">{site.isEstate ? 'New dues from your estate will show up here.' : `New ${site.w.duesLc} from your ${site.w.siteLc} will show up here.`}</p>
               </div>
             ) : (
               <div>
@@ -250,7 +251,7 @@ export default function PaymentsDesktop({
                           </span>
                           <span className="text-[13px] font-semibold text-slate-900 truncate">{p.scheduleId?.title || 'Payment'}</span>
                         </span>
-                        <span className="text-[12px] text-slate-500 truncate">{waived ? 'Waived by estate' : (METHOD_LABEL[p.method] || p.method || '—')}</span>
+                        <span className="text-[12px] text-slate-500 truncate">{waived ? (site.isEstate ? 'Waived by estate' : `Waived by ${site.w.siteLc}`) : (METHOD_LABEL[p.method] || p.method || '—')}</span>
                         <span className="min-w-0">
                           {p.paystackReference ? (
                             <span role="button" tabIndex={0}
@@ -281,7 +282,7 @@ export default function PaymentsDesktop({
             <ol className="mt-3 relative space-y-3">
               <span className="absolute left-[15px] top-4 bottom-4 w-px bg-slate-200" />
               {[
-                [FileText, 'Your estate creates a bill', 'Dues and levies appear under My bills with their due date.'],
+                [FileText, site.isEstate ? 'Your estate creates a bill' : `Your ${site.w.siteLc} creates a bill`, site.isEstate ? 'Dues and levies appear under My bills with their due date.' : `${site.w.dues} appear under My bills with their due date.`],
                 [Lock, 'Pay securely with Paystack', 'Card, bank transfer or USSD — on Paystack’s secure page.'],
                 [Receipt, 'Get your receipt', 'Confirmed payments move to History with a receipt.'],
               ].map(([I, t, d]) => (
@@ -299,7 +300,7 @@ export default function PaymentsDesktop({
           <div className="dash-rise rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4 flex gap-3" style={{ animationDelay: '280ms' }}>
             <ShieldCheck size={18} className="text-emerald-600 shrink-0 mt-0.5" />
             <p className="text-[12px] text-emerald-900/80 leading-relaxed">
-              Your card details never touch AreaMates. Paid but it still shows as due? Give it a minute and refresh, or send your Paystack reference to your estate manager.
+              Your card details never touch AreaMates. Paid but it still shows as due? Give it a minute and refresh, or send your Paystack reference to your {site.isEstate ? 'estate manager' : site.w.managerLc}.
             </p>
           </div>
         </aside>

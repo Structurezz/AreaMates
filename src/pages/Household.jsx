@@ -333,7 +333,7 @@ export default function Household() {
   const everyone = useMemo(() => data?.head ? [data.head, ...(data.members || [])] : [], [data]);
 
   if (!data || !rawOptions) return <PageLoader />;
-  if (data.error) return <p className="text-center text-sm text-slate-500 py-20">Couldn't load your household. Try again shortly.</p>;
+  if (data.error) return <p className="text-center text-sm text-slate-500 py-20">{isEstate ? "Couldn't load your household. Try again shortly." : `Couldn't load your ${hh}. Try again shortly.`}</p>;
 
   const { isHead, head, members, unit, myPermissions } = data;
   const activeCount = members.filter(m => m.isActive && m.status !== 'pending').length;

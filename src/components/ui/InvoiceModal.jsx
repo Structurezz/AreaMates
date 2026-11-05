@@ -4,6 +4,7 @@ import { X, Printer, Download, CheckCircle2, Clock, XCircle, MinusCircle } from 
 import { paymentAPI } from '../../api';
 import toast from 'react-hot-toast';
 import { Z_INDEX } from './Portal';
+import { useSite } from '../../context/SiteContext';
 
 const fmt = (n) => `₦${Number(n || 0).toLocaleString('en-NG', { minimumFractionDigits: 2 })}`;
 
@@ -27,6 +28,7 @@ const FREQ_LABELS = {
 };
 
 function InvoiceDocument({ inv }) {
+  const { isEstate, w } = useSite();
   const statusMeta = STATUS_META[inv.status] || STATUS_META.pending;
   const StatusIcon = statusMeta.icon;
   const isReceipt = inv.status === 'paid';
@@ -69,7 +71,7 @@ function InvoiceDocument({ inv }) {
                 {inv.estate.name}
               </div>
               <div style={{ fontSize: 10, color: '#94A3B8', marginTop: 2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                Estate Management
+                {isEstate ? 'Estate Management' : w.siteMgmt}
               </div>
             </div>
           </div>
@@ -129,7 +131,7 @@ function InvoiceDocument({ inv }) {
           </div>
           <div style={{ fontSize: 15, fontWeight: 700, color: '#0F172A' }}>{inv.resident.name}</div>
           {inv.resident.unit !== 'N/A' && (
-            <div style={{ fontSize: 12, color: '#64748B', marginTop: 3 }}>Unit: {inv.resident.unit}</div>
+            <div style={{ fontSize: 12, color: '#64748B', marginTop: 3 }}>{isEstate ? 'Unit' : w.unit}: {inv.resident.unit}</div>
           )}
           <div style={{ fontSize: 12, color: '#64748B' }}>{inv.estate.name}</div>
           {inv.resident.email && (

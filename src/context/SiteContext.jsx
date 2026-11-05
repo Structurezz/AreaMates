@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { siteAPI } from '../api';
 import { useAuth } from './AuthContext';
 import { useSocket } from './SocketContext';
-import { siteConfigFrom } from '../utils/siteTypes';
+import { siteConfigFrom, siteWords, rememberSiteType, roleOfUser, preAuthSiteType } from '../utils/siteTypes';
 
 // The member's site (estate / school / hotel / industrial / hospital): the words
 // the app uses, which modules are on and the visitor pass categories. Renders
@@ -17,7 +17,9 @@ export function SiteProvider({ children }) {
   const socketCtx = useSocket();
   const subscribe = socketCtx?.subscribe;
   const estate = user?.estateId && typeof user.estateId === 'object' ? user.estateId : null;
-  const fallback = useMemo(() => siteConfigFrom(estate?.site), [estate?.site]);
+  // Before the user (and their estate) has loaded, render with the type this
+  // device last signed in to (or ?site=), so loaders don't say "estate" at a hospital.
+  const fallback = useMemo(() => siteConfigFrom(estate?.site?.type ? estate.site : { ...(estate?.site || {}), type: preAuthSiteType() }), [estate?.site]);
   const [remote, setRemote] = useState(null);
   const userId = user?._id || null;
   const lastFetch = useRef(0);
@@ -28,7 +30,7 @@ export function SiteProvider({ children }) {
     lastFetch.current = Date.now();
     try {
       const { data } = await siteAPI.get();
-      if (data?.data) setRemote(data.data);
+      if (data?.data) { setRemote(data.data); rememberSiteType(data.data.type); }
     } catch { /* keep what we have */ }
   }, []);
 
@@ -56,24 +58,39 @@ export function SiteProvider({ children }) {
     const cfg = remote ? { ...fallback, ...remote } : fallback;
     const modules = { ...fallback.modules, ...(remote?.modules || {}) };
     const terms = { ...fallback.terms, ...(remote?.terms || {}) };
+    const isEstate = cfg.type === 'estate';
+    // Site roles (patient / doctor / nurse / guest / housekeeping…). Estates have none.
+    const roles = Array.isArray(remote?.roles) && remote.roles.length ? remote.roles : fallback.roles;
+    const requestKinds = Array.isArray(remote?.requestKinds) ? remote.requestKinds : fallback.requestKinds;
+    const myRole = roleOfUser(roles, user);
+    const defaultRoleDef = roles?.find((r) => r.key === (remote?.defaultRole || fallback.defaultRole)) || roles?.[0] || null;
     return {
       ...cfg,
       terms,
+      w: siteWords(terms),
       modules,
       name: remote?.name || estate?.name || terms.site,
-      isEstate: cfg.type === 'estate',
+      isEstate,
+      roles,
+      requestKinds,
+      assignLabel: remote?.assignLabel ?? fallback.assignLabel,
+      defaultRole: defaultRoleDef?.key || '',
+      defaultRoleDef,
+      myRole,
+      // Staff (doctor, nurse, warden, housekeeping…) vs members — never for estates
+      isStaff: !isEstate && !!myRole?.staff,
       loaded: !!remote,
       refresh,
       moduleOn: (key) => !key || modules[key] !== false,
     };
-  }, [remote, fallback, estate?.name, refresh]);
+  }, [remote, fallback, estate?.name, refresh, user]);
 
   return <SiteContext.Provider value={value}>{children}</SiteContext.Provider>;
 }
 
 const ESTATE_FALLBACK = (() => {
-  const cfg = siteConfigFrom(null);
-  return { ...cfg, name: cfg.terms.site, isEstate: true, loaded: false, refresh: () => {}, moduleOn: (k) => !k || cfg.modules[k] !== false };
+  const cfg = siteConfigFrom({ type: preAuthSiteType() });
+  return { ...cfg, w: siteWords(cfg.terms), name: cfg.terms.site, isEstate: cfg.type === 'estate', myRole: cfg.roles[0], defaultRoleDef: cfg.roles[0], isStaff: false, loaded: false, refresh: () => {}, moduleOn: (k) => !k || cfg.modules[k] !== false };
 })();
 
 export const useSite = () => useContext(SiteContext) || ESTATE_FALLBACK;

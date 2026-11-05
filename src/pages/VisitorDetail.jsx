@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import QRCode from 'qrcode';
 import { visitorAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
-import { passKindLabel, passPurposeLine, passShareLines } from '../utils/passText';
+import { passKindLabel, passPurposeLine, passShareLines, passSiteName } from '../utils/passText';
 import Badge, { visitorStatusBadge } from '../components/ui/Badge';
 import Spinner, { PageLoader } from '../components/ui/Spinner';
 import {
@@ -81,7 +81,7 @@ const drawShieldLogo = (ctx, x, y, size, text, opts = {}) => {
 
 const generatePassCanvas = async (v, estate) => {
   const W = 580, H = 820;
-  const estateName    = truncate(estate?.name || 'Your Estate', 36);
+  const estateName    = truncate(passSiteName(estate), 36);
   const estateAddress = truncate(estate?.address || '', 60);
 
   const canvas = document.createElement('canvas');
@@ -380,11 +380,11 @@ export default function VisitorDetailPage() {
       if (incoming.status === 'checked-in') {
         toast.success(`${incoming.visitorName || 'Visitor'} has arrived — checked in`, { icon: '🎉', duration: 5000 });
       } else if (incoming.status === 'checked-out') {
-        toast(`${incoming.visitorName || 'Visitor'} has left the estate.`, { icon: '👋' });
+        toast(`${incoming.visitorName || 'Visitor'} has left the ${site.isEstate ? 'estate' : site.w.siteLc}.`, { icon: '👋' });
       }
     });
     return unsub;
-  }, [subscribe, id]);
+  }, [subscribe, id, site.isEstate, site.w]);
 
   const copyCode = () => {
     navigator.clipboard?.writeText(visitor.visitorCode);
@@ -491,7 +491,7 @@ export default function VisitorDetailPage() {
             {canShare ? <QRCanvas value={visitor.visitorCode} size={176} /> : (
               <div className="w-44 h-44 rounded-xl bg-slate-50 border border-slate-200 flex flex-col items-center justify-center text-center px-4">
                 {isHeld ? <Clock size={30} className="text-indigo-400" /> : <XCircle size={30} className={visitor.status === 'cancelled' ? 'text-slate-400' : 'text-red-400'} />}
-                <p className="text-xs text-slate-500 mt-2">{isHeld ? 'Waiting for estate management to approve' : visitor.status === 'cancelled' ? 'This pass was cancelled' : isDone ? 'Pass already used' : `Pass ${visitor.status}`}</p>
+                <p className="text-xs text-slate-500 mt-2">{isHeld ? (site.isEstate ? 'Waiting for estate management to approve' : `Waiting for ${site.w.siteMgmtLc} to approve`) : visitor.status === 'cancelled' ? 'This pass was cancelled' : isDone ? 'Pass already used' : `Pass ${visitor.status}`}</p>
               </div>
             )}
             <p className="text-[11px] text-slate-400 mt-2">{canShare ? 'Guards scan the QR or type the code' : isHeld ? 'Your visitor gets the code once it is approved' : 'The gate will refuse this code'}</p>

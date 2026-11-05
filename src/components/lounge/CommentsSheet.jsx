@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Send, RefreshCw, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { postAPI } from '../../api';
+import { useSite } from '../../context/SiteContext';
 import BottomSheet from '../payments/BottomSheet';
 import { Avatar, timeAgo, isManagerRole, VerifiedTick } from './shared';
 
@@ -10,6 +11,7 @@ const QUICK = ['❤️', '🔥', '👏', '😂', '😍', '🙌'];
 // Comments for one post. The parent keeps the post in sync with live socket
 // events, so new comments from neighbours appear here as they're written.
 export default function CommentsSheet({ post, me, onClose, onCommentAdded, onCommentDeleted }) {
+  const { isEstate, w } = useSite();
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const listRef = useRef(null);
@@ -83,7 +85,7 @@ export default function CommentsSheet({ post, me, onClose, onCommentAdded, onCom
                 <Avatar person={c.author} size={32} />
                 <div className="flex-1 min-w-0">
                   <p className="text-[14px] leading-snug text-slate-900">
-                    <span className="font-semibold mr-1.5 inline-flex items-center gap-1">{c.author?.name || 'Resident'}{isManagerRole(c.author?.role) && <VerifiedTick size={12} />}</span>
+                    <span className="font-semibold mr-1.5 inline-flex items-center gap-1">{c.author?.name || (isEstate ? 'Resident' : w.member)}{isManagerRole(c.author?.role) && <VerifiedTick size={12} />}</span>
                     {c.text}
                   </p>
                   <span className="text-xs text-slate-400">{timeAgo(c.createdAt)}</span>

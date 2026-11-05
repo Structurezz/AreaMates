@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { eventAPI, pollAPI, loungeAPI, postAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
+import { useSite } from '../context/SiteContext';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import DJLive from '../components/DJLive';
@@ -70,6 +71,7 @@ const EVENT_CATEGORIES = [
 const catMap = Object.fromEntries(EVENT_CATEGORIES.map(c => [c.id, c]));
 
 function EventsTab({ userId }) {
+  const { isEstate, w } = useSite();
   const [events, setEvents]   = useState([]);
   const [loading, setLoading] = useState(true);
   const [rsvping, setRsvping] = useState(null);
@@ -131,7 +133,7 @@ function EventsTab({ userId }) {
               </div>
               <p className="text-sm font-bold" style={{ color: '#0F172A' }}>{ev.title}</p>
               <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>
-                {ev.time && `${ev.time} · `}{ev.location || 'Estate Grounds'}
+                {ev.time && `${ev.time} · `}{ev.location || (isEstate ? 'Estate Grounds' : `${w.site} Grounds`)}
               </p>
               {ev.description && (
                 <p className="text-xs mt-1 leading-relaxed" style={{ color: '#64748B' }}>{ev.description}</p>
@@ -188,27 +190,31 @@ const ACTIVITY_TYPES = [
 ];
 const typeMap = Object.fromEntries(ACTIVITY_TYPES.map(t => [t.id, t]));
 
-const DEFAULT_ACTIVITIES = [
-  { id:'da_1',  type:'fitness',     pinned:true,  visible:true, day:'Daily',   title:'Morning Walk Club',        desc:'7:00 AM at the estate gate. All fitness levels welcome — let\'s get those steps in together!' },
-  { id:'da_2',  type:'icebreaker',  pinned:true,  visible:true, day:'Daily',   title:'Icebreaker of the Day',    desc:'What\'s one skill you have that most of your neighbours probably don\'t know about?' },
+// Starter activities; worded for the site type (estate wording kept verbatim)
+const defaultActivities = (isEstate, w) => [
+  { id:'da_1',  type:'fitness',     pinned:true,  visible:true, day:'Daily',   title:'Morning Walk Club',        desc:`7:00 AM at the ${isEstate ? 'estate' : w.siteLc} gate. All fitness levels welcome — let's get those steps in together!` },
+  { id:'da_2',  type:'icebreaker',  pinned:true,  visible:true, day:'Daily',   title:'Icebreaker of the Day',    desc:`What's one skill you have that most of your ${isEstate ? 'neighbours' : w.neighboursLc} probably don't know about?` },
   { id:'da_3',  type:'challenge',   pinned:false, visible:true, day:'Daily',   title:'10,000 Steps Challenge',   desc:'Can you hit 10,000 steps today? Share your progress with the community!' },
-  { id:'da_4',  type:'networking',  pinned:false, visible:true, day:'Weekly',  title:'Neighbour Spotlight',      desc:'Say hello to a neighbour you haven\'t met yet this week.' },
-  { id:'da_5',  type:'tip',         pinned:false, visible:true, day:'Daily',   title:'Estate Tip of the Day',    desc:'Keep shared corridors clear at all times for emergency access and neighbour courtesy.' },
-  { id:'da_6',  type:'social',      pinned:false, visible:true, day:'Weekly',  title:'Friday Night FunTimes',    desc:'Community bonding every Friday evening at the Estate Clubhouse, 7 PM.' },
-  { id:'da_7',  type:'marketplace', pinned:false, visible:true, day:'Weekly',  title:'Marketplace Monday',       desc:'New week, new listings! Check out what your neighbours are offering.' },
-  { id:'da_8',  type:'news',        pinned:false, visible:true, day:'Daily',   title:'Estate Update Board',      desc:'Check Announcements for this week\'s maintenance schedule and community updates.' },
-  { id:'da_9',  type:'fitness',     pinned:false, visible:true, day:'Weekly',  title:'Weekend Yoga Session',     desc:'Outdoor yoga every Saturday at 8 AM by the estate pool area. Bring your own mat!' },
-  { id:'da_10', type:'networking',  pinned:false, visible:true, day:'Monthly', title:'Residents\' Mixer',        desc:'Monthly get-together for new and old residents to meet, mingle and build community bonds.' },
-  { id:'da_11', type:'challenge',   pinned:false, visible:true, day:'Weekly',  title:'Community Clean-Up Drive', desc:'Join residents this weekend for a 30-minute shared-space tidy-up. Gloves provided!' },
+  { id:'da_4',  type:'networking',  pinned:false, visible:true, day:'Weekly',  title:isEstate ? 'Neighbour Spotlight' : `${w.neighbour} Spotlight`,      desc:`Say hello to ${isEstate ? 'a neighbour' : w.aMember} you haven't met yet this week.` },
+  { id:'da_5',  type:'tip',         pinned:false, visible:true, day:'Daily',   title:isEstate ? 'Estate Tip of the Day' : `${w.site} Tip of the Day`,    desc:isEstate ? 'Keep shared corridors clear at all times for emergency access and neighbour courtesy.' : 'Keep shared corridors clear at all times for emergency access and common courtesy.' },
+  { id:'da_6',  type:'social',      pinned:false, visible:true, day:'Weekly',  title:'Friday Night FunTimes',    desc:isEstate ? 'Community bonding every Friday evening at the Estate Clubhouse, 7 PM.' : `Community bonding every Friday evening at the ${w.site} Clubhouse, 7 PM.` },
+  { id:'da_7',  type:'marketplace', pinned:false, visible:true, day:'Weekly',  title:'Marketplace Monday',       desc:`New week, new listings! Check out what your ${isEstate ? 'neighbours' : w.neighboursLc} are offering.` },
+  { id:'da_8',  type:'news',        pinned:false, visible:true, day:'Daily',   title:isEstate ? 'Estate Update Board' : `${w.site} Update Board`,      desc:'Check Announcements for this week\'s maintenance schedule and community updates.' },
+  { id:'da_9',  type:'fitness',     pinned:false, visible:true, day:'Weekly',  title:'Weekend Yoga Session',     desc:`Outdoor yoga every Saturday at 8 AM by the ${isEstate ? 'estate' : w.siteLc} pool area. Bring your own mat!` },
+  { id:'da_10', type:'networking',  pinned:false, visible:true, day:'Monthly', title:isEstate ? 'Residents\' Mixer' : `${w.members}' Mixer`,        desc:`Monthly get-together for new and old ${isEstate ? 'residents' : w.membersLc} to meet, mingle and build community bonds.` },
+  { id:'da_11', type:'challenge',   pinned:false, visible:true, day:'Weekly',  title:'Community Clean-Up Drive', desc:`Join ${isEstate ? 'residents' : w.membersLc} this weekend for a 30-minute shared-space tidy-up. Gloves provided!` },
   { id:'da_12', type:'social',      pinned:false, visible:true, day:'Daily',   title:'Good Morning Wall',        desc:'Drop a good morning in the community chat. Positivity is contagious!' },
 ];
 
 const ACTS_KEY = 'ac_res_lounge_activities';
-function loadActivities() { try { return JSON.parse(localStorage.getItem(ACTS_KEY)) || DEFAULT_ACTIVITIES; } catch { return DEFAULT_ACTIVITIES; } }
+function loadActivities(defaults) { try { return JSON.parse(localStorage.getItem(ACTS_KEY)) || defaults; } catch { return defaults; } }
 function saveActivities(a) { localStorage.setItem(ACTS_KEY, JSON.stringify(a)); }
 
 function ActivitiesTab() {
-  const [activities, setActivities] = useState(loadActivities);
+  const { isEstate, w } = useSite();
+  const DEFAULT_ACTIVITIES = defaultActivities(isEstate, w);
+  const typeLabel = (t) => (t.id === 'news' && !isEstate ? `${w.site} News` : t.label);
+  const [activities, setActivities] = useState(() => loadActivities(DEFAULT_ACTIVITIES));
   const [filter, setFilter]         = useState('all');
   const [showForm, setShowForm]     = useState(false);
   const [form, setForm]             = useState({ type:'fitness', title:'', desc:'', day:'Daily' });
@@ -256,7 +262,7 @@ function ActivitiesTab() {
               style={filter === id
                 ? { background: t ? t.color : '#0F172A', color:'#fff', borderColor: t ? t.color : '#0F172A' }
                 : { color:'#64748B', borderColor:'#E2E8F0', background:'#fff' }}>
-              {t ? `${t.emoji} ${t.label}` : 'All'}
+              {t ? `${t.emoji} ${typeLabel(t)}` : 'All'}
             </button>
           );
         })}
@@ -272,7 +278,7 @@ function ActivitiesTab() {
                 <span className="text-xl flex-shrink-0 mt-0.5">{t.emoji}</span>
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-1 mb-1">
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: t.color+'20', color: t.color }}>{t.label}</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: t.color+'20', color: t.color }}>{typeLabel(t)}</span>
                     <span className="text-[10px] px-1.5 py-0.5 rounded-full border" style={{ color:'#94A3B8', borderColor:'#E2E8F0', background:'#fff' }}>{act.day}</span>
                     {act.pinned && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold" style={{ background:'#FFFBEB', color:'#D97706' }}>📌 Pinned</span>}
                     {act.isCustom && <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background:'#EEF2FF', color:'#6366F1' }}>Mine</span>}
@@ -318,7 +324,7 @@ function ActivitiesTab() {
                     <button key={t.id} type="button" onClick={() => setForm(p=>({...p,type:t.id}))}
                       className="px-2.5 py-1 rounded-full text-xs font-semibold border transition-all"
                       style={form.type===t.id ? { background:t.color, color:'#fff', borderColor:t.color } : { color:'#64748B', borderColor:'#E2E8F0', background:'#fff' }}>
-                      {t.emoji} {t.label}
+                      {t.emoji} {typeLabel(t)}
                     </button>
                   ))}
                 </div>
@@ -502,6 +508,8 @@ function extractVideoId(raw) {
 }
 
 function MusicTab({ userId }) {
+  const { isEstate, w } = useSite();
+  const djMix = isEstate ? 'Estate DJ Mix' : `${w.site} DJ Mix`;
   const audioRef = useRef(null);
   const [playing, setPlaying]         = useState(false);
   const [radioLoading, setRadioLoading] = useState(false);
@@ -645,7 +653,7 @@ function MusicTab({ userId }) {
               <p className="text-xs uppercase tracking-wider font-semibold" style={{ color: '#94A3B8' }}>Now Playing</p>
               <p className="font-semibold truncate mt-0.5" style={{ color: '#0F172A' }}>{track.title}</p>
               <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>
-                {track.artist || (track.suggestedBy?.name ? `Added by ${track.suggestedBy.name}` : 'Estate DJ Mix')}
+                {track.artist || (track.suggestedBy?.name ? `Added by ${track.suggestedBy.name}` : djMix)}
               </p>
             </div>
           </div>
@@ -680,7 +688,7 @@ function MusicTab({ userId }) {
           <div>
             <h2 className="font-semibold text-sm" style={{ color: '#0F172A' }}>Your Tracks</h2>
             <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>
-              {communityTracks.length ? `${communityTracks.length} resident track${communityTracks.length !== 1 ? 's' : ''} · upvote to promote` : 'Add a track to jump the queue'}
+              {communityTracks.length ? `${communityTracks.length} ${isEstate ? 'resident' : w.memberLc} track${communityTracks.length !== 1 ? 's' : ''} · upvote to promote` : 'Add a track to jump the queue'}
             </p>
           </div>
           <button onClick={() => setShowAdd(v => !v)}
@@ -735,7 +743,7 @@ function MusicTab({ userId }) {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate" style={{ color: active ? '#6366F1' : '#0F172A' }}>{t.title}</p>
                     <p className="text-xs truncate mt-0.5" style={{ color: '#94A3B8' }}>
-                      {t.suggestedBy?.name ? `Added by ${t.suggestedBy.name}` : 'Resident'}
+                      {t.suggestedBy?.name ? `Added by ${t.suggestedBy.name}` : (isEstate ? 'Resident' : w.member)}
                     </p>
                   </div>
                   <button onClick={e => { e.stopPropagation(); handleVote(t._id); }}
@@ -791,7 +799,7 @@ function MusicTab({ userId }) {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate" style={{ color: active ? '#6366F1' : '#0F172A' }}>{t.title}</p>
-                    <p className="text-xs truncate mt-0.5" style={{ color: '#94A3B8' }}>{t.artist || 'Estate DJ Mix'}</p>
+                    <p className="text-xs truncate mt-0.5" style={{ color: '#94A3B8' }}>{t.artist || djMix}</p>
                   </div>
                   <button onClick={e => { e.stopPropagation(); handleVote(t._id); }}
                     className="flex items-center gap-1 px-2 py-1 rounded-full text-xs transition-all flex-shrink-0"

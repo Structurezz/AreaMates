@@ -9,7 +9,9 @@ export default function HouseholdGate({ perm, children }) {
   const { householdAllows, head } = useHousehold();
   const { terms, isEstate } = useSite();
   if (householdAllows(perm)) return children;
-  const feature = (perm === 'payments' && !isEstate ? terms.dues : PERMISSION_LABELS[perm]) || 'This feature';
+  const feature = (perm === 'payments' && !isEstate ? terms.dues
+    : perm === 'neighbours' && !isEstate ? `Call ${terms.members.toLowerCase()}`
+    : PERMISSION_LABELS[perm]) || 'This feature';
   const hh = terms.household.toLowerCase();
   const headName = head?.name?.split(' ')[0] || `the head of your ${hh}`;
 

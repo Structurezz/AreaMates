@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, BarChart2, ArrowRight, Mic, Sparkles, Music, Zap, Radio, Heart, MessageSquare, Headphones } from 'lucide-react';
 import { eventAPI, pollAPI, djAPI } from '../../api';
+import { useSite } from '../../context/SiteContext';
 import { useSocket } from '../../context/SocketContext';
 
 const pad = (n) => String(n).padStart(2, '0');
 
 /* ── Slim gradient banner with the Friday countdown ─────────────────── */
 export function LoungeBanner({ isFridayNight, countdown, name }) {
+  const { isEstate, w } = useSite();
   return (
     <div className="dash-rise relative overflow-hidden rounded-2xl px-6 py-5"
       style={{ background: 'linear-gradient(120deg, #1E1B4B 0%, #312E81 50%, #4F46E5 100%)', boxShadow: '0 16px 32px -18px rgba(49,46,129,0.8)' }}>
@@ -24,7 +26,7 @@ export function LoungeBanner({ isFridayNight, countdown, name }) {
             <Sparkles size={11} /> Community
           </span>
           <h1 className="mt-2 text-[22px] font-semibold text-white" style={{ letterSpacing: '-0.025em' }}>Lounge</h1>
-          <p className="mt-0.5 text-[13px] text-white/75">Hang out with your neighbours{name ? `, ${name}` : ''}: posts, events, polls and music.</p>
+          <p className="mt-0.5 text-[13px] text-white/75">Hang out with your {isEstate ? 'neighbours' : w.neighboursLc}{name ? `, ${name}` : ''}: posts, events, polls and music.</p>
         </div>
 
         {isFridayNight ? (

@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import toast from 'react-hot-toast';
 import { safetyAPI } from '../api';
 import { useSocket } from './SocketContext';
+import { useSite } from './SiteContext';
 
 // Live location sharing with estate security + management. Lives app-wide so
 // the share keeps running while the resident moves around the app; a banner
@@ -16,6 +17,10 @@ const MIN_SEND_GAP_MS = 4000;
 
 export function SafetyProvider({ children }) {
   const { emit } = useSocket() || {};
+  const { isEstate, w } = useSite();
+  const mgmtLc = isEstate ? 'estate management' : w.siteMgmtLc;
+  const mgmtRef = useRef(mgmtLc);
+  mgmtRef.current = mgmtLc;
   const [sharing, setSharing] = useState(null); // { startedAt, lastFix }
   const watchRef = useRef(null);
   const lastSentRef = useRef(0);
@@ -56,7 +61,7 @@ export function SafetyProvider({ children }) {
     send(first);
     watchRef.current = navigator.geolocation.watchPosition(send, () => {}, { enableHighAccuracy: true, maximumAge: 5000 });
     stopTimer.current = setTimeout(() => stopSharing(), MAX_MS);
-    toast.success('Security and estate management can now see your live location');
+    toast.success(`Security and ${mgmtRef.current} can now see your live location`);
     return true;
   }, [emit, stopSharing]);
 

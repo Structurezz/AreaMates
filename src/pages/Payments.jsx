@@ -3,6 +3,8 @@ import { PageLoader, LogoLoader } from '../components/ui/Spinner';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { paymentAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
+import { billTypeLabel } from '../utils/siteTypes';
+import { useSite } from '../context/SiteContext';
 import toast from 'react-hot-toast';
 import BottomSheet from '../components/payments/BottomSheet';
 import InvoiceModal from '../components/ui/InvoiceModal';
@@ -22,7 +24,7 @@ const STATUS = {
   waived:  { label: 'Waived',  pill: 'bg-slate-100 text-slate-500' },
 };
 
-const TYPE_META = {
+const TYPE_META_BASE = {
   security_dues: { label: 'Security Dues', icon: ShieldCheck, tint: 'bg-blue-50 text-blue-600' },
   maintenance:   { label: 'Maintenance',   icon: Wrench,      tint: 'bg-amber-50 text-amber-600' },
   levy:          { label: 'Levy',          icon: FileText,    tint: 'bg-purple-50 text-purple-600' },
@@ -30,7 +32,7 @@ const TYPE_META = {
   other:         { label: 'Other',         icon: CreditCard,  tint: 'bg-slate-100 text-slate-500' },
 };
 
-const METHOD_LABEL = {
+const METHOD_LABEL_BASE = {
   paystack: 'Paystack (card / transfer)',
   cash: 'Cash',
   bank_transfer: 'Bank transfer',
@@ -113,6 +115,10 @@ export default function Payments() {
   const navigate = useNavigate();
   const { user, estate } = useAuth();
   const estateName = estate?.name || (typeof user?.estateId === 'object' ? user.estateId?.name : null);
+  const { isEstate, w, type: siteType } = useSite();
+  // Bill labels in the site's words (estate keeps its own)
+  const TYPE_META = isEstate ? TYPE_META_BASE : Object.fromEntries(Object.entries(TYPE_META_BASE).map(([k, m]) => [k, { ...m, label: billTypeLabel(k, siteType, m.label) }]));
+  const METHOD_LABEL = isEstate ? METHOD_LABEL_BASE : { ...METHOD_LABEL_BASE, manual: `Recorded by ${w.siteLc}` };
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
@@ -163,7 +169,7 @@ export default function Payments() {
           toast.error('Payment could not be verified.');
         }
       } catch {
-        toast.error('Verification failed. Contact the estate manager.');
+        toast.error(isEstate ? 'Verification failed. Contact the estate manager.' : `Verification failed. Contact the ${w.managerLc}.`);
       } finally {
         setVerifying(false);
         navigate('/payments', { replace: true });
@@ -264,7 +270,7 @@ export default function Payments() {
                 <div className="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0"><Building2 size={20} /></div>
                 <div className="min-w-0">
                   <div className="text-[11px] uppercase tracking-wider font-semibold text-slate-400">Paid to</div>
-                  <div className="text-sm font-semibold text-slate-900 truncate">{estateName || 'Your estate'}</div>
+                  <div className="text-sm font-semibold text-slate-900 truncate">{estateName || (isEstate ? 'Your estate' : `Your ${w.siteLc}`)}</div>
                   <div className="text-xs text-slate-400 truncate">Card, bank transfer or USSD via Paystack</div>
                 </div>
               </div>
@@ -321,7 +327,7 @@ export default function Payments() {
         footer={<button onClick={() => setShowHelp(false)} className="btn-primary w-full py-3">Got it</button>}>
         <ol className="space-y-4 text-sm">
           {[
-            [FileText, 'Your estate creates a bill', 'Dues, levies and contributions show up under My bills with their due date.'],
+            [FileText, isEstate ? 'Your estate creates a bill' : `Your ${w.siteLc} creates a bill`, isEstate ? 'Dues, levies and contributions show up under My bills with their due date.' : `${w.dues} and contributions show up under My bills with their due date.`],
             [Lock, 'Pay securely with Paystack', 'Tap Pay, check the details, then pay by card, bank transfer or USSD on Paystack.'],
             [Receipt, 'Get your receipt', 'Once confirmed, the payment moves to History. Tap it any time to view or download the receipt.'],
           ].map(([Icon, title, body]) => (
@@ -333,7 +339,7 @@ export default function Payments() {
         </ol>
         <div className="mt-5 p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800 flex gap-2">
           <ChevronRight size={14} className="shrink-0 mt-0.5" />
-          Paid but it still shows as due? Give it a minute and tap refresh. If it doesn't update, send your Paystack reference to your estate manager.
+          Paid but it still shows as due? Give it a minute and tap refresh. If it doesn't update, send your Paystack reference to your {isEstate ? 'estate manager' : w.managerLc}.
         </div>
       </BottomSheet>
 
@@ -459,7 +465,7 @@ export default function Payments() {
           ) : tab === 'bills' ? (
             outstanding.length === 0 ? (
               <EmptyState icon={CheckCircle2} tone="bg-emerald-50 text-emerald-500" title="You're all caught up!"
-                body="No bills to pay right now. New dues from your estate will show up here." />
+                body={isEstate ? 'No bills to pay right now. New dues from your estate will show up here.' : `No bills to pay right now. New ${w.duesLc} from your ${w.siteLc} will show up here.`} />
             ) : (
               <div className="grid md:grid-cols-2 2xl:grid-cols-3 gap-3">
                 {outstanding.map((p) => {
@@ -520,7 +526,7 @@ export default function Payments() {
                           <span className="flex-1 min-w-0">
                             <span className="block text-sm font-semibold text-slate-900 truncate">{p.scheduleId?.title || 'Payment'}</span>
                             <span className="block text-xs text-slate-400 truncate">
-                              {waived ? 'Waived by estate' : (METHOD_LABEL[p.method] || p.method || 'Payment')}
+                              {waived ? (isEstate ? 'Waived by estate' : `Waived by ${w.siteLc}`) : (METHOD_LABEL[p.method] || p.method || 'Payment')}
                               {p.paidAt ? ` · ${format(new Date(p.paidAt), 'h:mm a')}` : ''}
                             </span>
                           </span>

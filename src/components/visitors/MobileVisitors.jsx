@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { format, isToday, isTomorrow, isYesterday } from 'date-fns';
 import { Search, X, Plus, ChevronRight, ChevronLeft, Users, Package, Wrench, Heart, UserCheck, MoreHorizontal, Clock } from 'lucide-react';
+import { useSite } from '../../context/SiteContext';
 
 // Phone layout for the Visitors pages (residents + estate manager share it;
 // each app passes its own colours and card actions). Desktop keeps the table.
@@ -94,6 +95,7 @@ export function VisitorsFilters({ search, onSearch, statusFilter, onStatus, coun
 
 /** Visitors grouped by expected day, as tappable cards. */
 export function VisitorCards({ visitors, loading, onOpen, renderActions, showHost, accent, emptyText, onEmptyCta, emptyCta }) {
+  const { terms: siteTerms } = useSite();
   const groups = useMemo(() => {
     const out = [];
     for (const v of visitors) {
@@ -149,7 +151,7 @@ export function VisitorCards({ visitors, loading, onOpen, renderActions, showHos
               const [Icon, pColor] = purposeIcon(v.purpose);
               const when = new Date(v.expectedDate);
               const actions = renderActions?.(v);
-              const host = showHost && (v.hostResidentId?.name || 'Estate manager');
+              const host = showHost && (v.hostResidentId?.name || siteTerms.manager);
               const unit = showHost && v.hostUnitId ? `${v.hostUnitId.block ? `${v.hostUnitId.block} · ` : ''}${v.hostUnitId.unitNumber}` : '';
               return (
                 <div key={v._id} className="rounded-2xl bg-white border border-slate-200 overflow-hidden">
@@ -236,11 +238,12 @@ export function VisitorsPager({ page, pages, total, limit, onPage, accent }) {
 
 /** Compact visitor row for home screens — same look as the Visitors page. */
 export function VisitorRow({ v, accent, showHost, to, LinkComp }) {
+  const { terms: siteTerms } = useSite();
   const st = VISITOR_STATUS[v.status] || VISITOR_STATUS['checked-out'];
   const [Icon, pColor] = purposeIcon(v.purpose);
   const when = new Date(v.expectedDate);
   const day = isToday(when) ? 'Today' : isTomorrow(when) ? 'Tomorrow' : isYesterday(when) ? 'Yesterday' : format(when, 'EEE d MMM');
-  const host = showHost && (v.hostResidentId?.name || 'Estate manager');
+  const host = showHost && (v.hostResidentId?.name || siteTerms.manager);
   return (
     <LinkComp to={to} className="flex items-center gap-3 px-4 py-3 active:bg-slate-50 hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0" style={{ textDecoration: 'none' }}>
       <div className="relative shrink-0">

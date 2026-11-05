@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { format, formatDistanceToNow, isThisWeek } from 'date-fns';
 import { Megaphone, Pin, Search, AlertTriangle, Zap, Hammer, Info, Eye, Radio, Headphones } from 'lucide-react';
 import DJLive from '../DJLive';
+import { useSite } from '../../context/SiteContext';
 
 const CATS = {
   general:     { label: 'General',     Icon: Info,          color: '#4F46E5' },
@@ -19,6 +20,7 @@ function Author({ a }) {
 }
 
 function NoticeCard({ a, i }) {
+  const { isEstate, w } = useSite();
   const c = cat(a.category);
   const [open, setOpen] = useState(false);
   const long = (a.body || '').length > 280;
@@ -44,7 +46,7 @@ function NoticeCard({ a, i }) {
             </button>
           )}
           <div className="mt-3 flex items-center gap-3 text-[12px] text-slate-400">
-            <span className="flex items-center gap-1.5"><Author a={a} /> {a.authorId?.name || 'Estate management'}</span>
+            <span className="flex items-center gap-1.5"><Author a={a} /> {a.authorId?.name || (isEstate ? 'Estate management' : w.siteMgmt)}</span>
             <span>{format(new Date(a.createdAt), 'MMM d, yyyy · HH:mm')}</span>
             {typeof a.readBy?.length === 'number' && <span className="flex items-center gap-1"><Eye size={12} /> {a.readBy.length} read</span>}
           </div>
@@ -55,6 +57,7 @@ function NoticeCard({ a, i }) {
 }
 
 export default function AnnouncementsDesktop({ items }) {
+  const { isEstate, w } = useSite();
   const [filter, setFilter] = useState('all');
   const [q, setQ] = useState('');
 
@@ -79,7 +82,7 @@ export default function AnnouncementsDesktop({ items }) {
             </div>
             <div className="min-w-0">
               <h1 className="text-[22px] font-semibold text-white" style={{ letterSpacing: '-0.025em' }}>Announcements</h1>
-              <p className="text-[13px] text-indigo-100/75">Notices, events and updates from your estate manager.</p>
+              <p className="text-[13px] text-indigo-100/75">{isEstate ? 'Notices, events and updates from your estate manager.' : `Notices, events and updates from your ${w.managerLc}.`}</p>
             </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">

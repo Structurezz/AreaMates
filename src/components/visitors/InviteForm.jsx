@@ -118,7 +118,8 @@ export default function InviteForm({ onCreated, onCancel, sticky = false }) {
         expectedDuration: form.duration,
         notes: form.notes.trim() || undefined,
       });
-      if (data.held) toast(data.message, { icon: '⏳', duration: 7000 });
+      if (data.held && data.approvalBy === 'care_team') toast(`Sent to the ${(site.assignLabel || 'care team').toLowerCase()} for approval. Your visitor gets their code once it's approved.`, { icon: '⏳', duration: 8000 });
+      else if (data.held) toast(data.message, { icon: '⏳', duration: 7000 });
       else toast.success(instant ? 'Instant pass ready — share it with your visitor' : 'Visitor pass created');
       onCreated(data.data);
     } catch (err) {

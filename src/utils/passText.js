@@ -16,6 +16,9 @@ export function passPurposeLine(v) {
   return d ? `${categoryLabel(v.category)} · ${d}` : categoryLabel(v.category);
 }
 
+/** Name for the top of the pass image: the site's name, else "Your Estate" / "Your Hospital"… */
+export const passSiteName = (estate) => estate?.name || `Your ${TERMS[normType(estate?.site?.type)].site}`;
+
 /** Site word for the "*Estate:*" line and the extra WhatsApp lines for category passes. */
 export function passShareLines(v, estate) {
   const siteWord = TERMS[normType(estate?.site?.type)].site;

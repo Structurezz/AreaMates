@@ -13,6 +13,7 @@ import toast from 'react-hot-toast';
 import { Hand, Coins } from 'lucide-react';
 import { playSiren, stopSiren } from '../utils/siren';
 import { isStatusUpdate, isOwnAlert, isIncomingAlert, unitLabelOf } from '../utils/alertEvents';
+import { useSite } from './SiteContext';
 
 const NotificationContext = createContext(null);
 
@@ -63,6 +64,9 @@ export function NotificationProvider({ children }) {
   const { subscribe } = useSocket() || {};
   const { user }      = useAuth() || {};
   const currentUserId = user?._id ? String(user._id) : null;
+  const { isEstate, w, terms } = useSite();
+  const siteRef = useRef({ isEstate, w, terms });
+  siteRef.current = { isEstate, w, terms };
   const [notifications, setNotifications] = useState(loadStored);
   const navigateRef = useRef(null);
   const markReadRef = useRef(null);
@@ -187,7 +191,8 @@ export function NotificationProvider({ children }) {
         if (isStatusUpdate(alert)) {
           // Staff responding to an alert this resident raised.
           if (isOwnAlert(alert, currentUserId)) {
-            const who = alert.actedBy?.name || (alert.actedBy?.role === 'security' ? 'Security' : 'Estate management');
+            const { isEstate: est, w: sw } = siteRef.current;
+            const who = alert.actedBy?.name || (alert.actedBy?.role === 'security' ? 'Security' : (est ? 'Estate management' : sw.siteMgmt));
             if (alert.action === 'acknowledged') toast.success(`${who} is responding to your alert`, { duration: 6000 });
             else if (alert.action === 'resolved') toast.success(`${who} marked your alert as resolved`, { duration: 6000 });
           }
@@ -195,16 +200,31 @@ export function NotificationProvider({ children }) {
         }
         if (!isIncomingAlert(alert, currentUserId)) return; // our own alert echoing back
         const isBroadcast = !!alert.isEmergencyBroadcast;
+        const { isEstate: est, w: sw } = siteRef.current;
+        // Non-estate sites: alerts routed to me as staff get their own urgent
+        // screen (RolesContext → RoutedAlertModal); here they only go in the bell.
+        const routedToMe = !est && !isBroadcast && (alert.routed || (alert.routedTo || []).some((x) => String(x?._id || x) === currentUserId));
+        if (routedToMe) {
+          addNotification({
+            id: `alert-${alert._id}${alert.escalatedAt ? '-e' : ''}`, silent: true, type: 'new_alert',
+            title: `${alert.escalatedAt ? 'No response yet: ' : ''}${alert.title || 'Emergency'}`,
+            body: `${alert.residentId?.name || 'Someone'} needs help${alert.note ? ` · ${alert.note}` : ''}`,
+            meta: { alertId: alert._id, alertType: alert.type, raisedByRole: 'resident', raisedByName: alert.residentId?.name, raisedByPhone: alert.residentId?.phone, raisedByUnit: unitLabelOf(alert, siteRef.current.terms), location: alert.location },
+          });
+          return;
+        }
         addNotification({
           type: isBroadcast ? 'alert_broadcast' : 'new_alert',
-          title: alert.title || (isBroadcast ? 'Estate Broadcast' : 'Security Alert'),
-          body: alert.note || alert.message || (isBroadcast ? 'Emergency broadcast from estate management' : 'A security alert was raised in your estate'),
+          title: alert.title || (isBroadcast ? (est ? 'Estate Broadcast' : `${sw.site} Broadcast`) : 'Security Alert'),
+          body: alert.note || alert.message || (isBroadcast
+            ? (est ? 'Emergency broadcast from estate management' : `Emergency broadcast from ${sw.siteMgmtLc}`)
+            : (est ? 'A security alert was raised in your estate' : `A security alert was raised in your ${sw.siteLc}`)),
           meta: {
             alertId: alert._id, alertType: alert.type, severity: alert.severity,
             location: alert.location, actionRequired: alert.actionRequired, contactNumber: alert.contactNumber,
             raisedByRole: alert.raisedByRole || alert.residentId?.role || 'resident',
             raisedByName: alert.residentId?.name, raisedByPhone: alert.residentId?.phone,
-            raisedByUnit: unitLabelOf(alert),
+            raisedByUnit: unitLabelOf(alert, est ? undefined : siteRef.current.terms),
           },
         });
       }),

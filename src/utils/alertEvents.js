@@ -1,3 +1,4 @@
+import { blockName, blockTerm } from './siteTypes';
 // Helpers for the `new_alert` socket event. The server sends the same event
 // for a brand-new alert AND for status changes (payload has `action:
 // 'acknowledged' | 'resolved'`), and it also echoes alerts back to whoever
@@ -22,6 +23,10 @@ export function upsertAlert(list, alert) {
   return next;
 }
 
-export const unitLabelOf = (alert) => (alert?.unitId
-  ? `${alert.unitId.block ? `Block ${alert.unitId.block} · ` : ''}Unit ${alert.unitId.unitNumber}`
-  : null);
+// Pass the site's terms for non-estate sites ("Ward 3", "Moremi Hall · Room 12").
+export const unitLabelOf = (alert, terms) => {
+  if (!alert?.unitId) return null;
+  const { block, unitNumber } = alert.unitId;
+  const blockPart = !block ? '' : terms?.block ? `${blockName(block, terms)} · ` : `${blockTerm(terms)} ${block} · `;
+  return `${blockPart}${terms?.unit || 'Unit'} ${unitNumber}`;
+};

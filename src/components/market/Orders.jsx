@@ -5,11 +5,13 @@ import BottomSheet from '../payments/BottomSheet';
 import { marketplaceAPI } from '../../api';
 import { imgUrl, timeAgo } from '../lounge/shared';
 import { CAT, naira } from './shared';
+import { useSite } from '../../context/SiteContext';
 
 const MULTI_QTY = ['food', 'services', 'skills'];
 
 // Checkout: quantity, note for the seller, then off to Paystack.
 export function BuySheet({ listing, onClose }) {
+  const { isEstate, w } = useSite();
   const [qty, setQty] = useState(1);
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
@@ -30,7 +32,7 @@ export function BuySheet({ listing, onClose }) {
   };
 
   return (
-    <BottomSheet open onClose={onClose} title="Checkout" subtitle={`From ${listing.sellerId?.name || 'your neighbour'}`}
+    <BottomSheet open onClose={onClose} title="Checkout" subtitle={`From ${listing.sellerId?.name || (isEstate ? 'your neighbour' : w.aMember)}`}
       footer={(
         <button onClick={pay} disabled={busy} className="mk-btn w-full text-white disabled:opacity-60" style={{ background: 'linear-gradient(135deg,#6366F1,#4F46E5)' }}>
           {busy ? <><RefreshCw size={16} className="animate-spin" /> Opening Paystack…</> : <><Lock size={15} /> Pay {naira(total)}</>}
@@ -54,7 +56,7 @@ export function BuySheet({ listing, onClose }) {
       </div>
 
       <label className="mk-label mt-4">Note for the seller (optional)</label>
-      <input value={note} onChange={(e) => setNote(e.target.value.slice(0, 300))} placeholder="e.g. Deliver to Block B4 after 6pm" className="mk-input" />
+      <input value={note} onChange={(e) => setNote(e.target.value.slice(0, 300))} placeholder={isEstate ? 'e.g. Deliver to Block B4 after 6pm' : `e.g. Deliver to ${w.unit} B4 after 6pm`} className="mk-input" />
 
       <div className="mt-4 rounded-2xl bg-slate-50 p-4 space-y-1.5 text-sm">
         <div className="flex justify-between text-slate-600"><span>{listing.title}{qty > 1 ? ` × ${qty}` : ''}</span><span>{naira(total)}</span></div>
@@ -63,7 +65,7 @@ export function BuySheet({ listing, onClose }) {
 
       <div className="mt-3 flex gap-2.5 rounded-2xl bg-indigo-50 p-3.5 text-[13px] text-indigo-900">
         <ShieldCheck size={18} className="text-indigo-600 shrink-0" />
-        <p><b>Buyer protection.</b> Your money is held safely and only released to the seller when you confirm you got it. Something wrong? Report it and estate management steps in.</p>
+        <p><b>Buyer protection.</b> Your money is held safely and only released to the seller when you confirm you got it. Something wrong? Report it and {isEstate ? 'estate management' : w.siteMgmtLc} steps in.</p>
       </div>
     </BottomSheet>
   );
@@ -101,6 +103,7 @@ const until = (d) => {
 
 /** One order, seen by the buyer or the seller. */
 export function OrderCard({ order: o, as, onChanged, onChat, onCall, onDispute, onCancel }) {
+  const { isEstate, w } = useSite();
   const [busy, setBusy] = useState(false);
   const other = as === 'buyer' ? o.sellerId : o.buyerId;
   const st = STATUS_TEXT[o.status] || STATUS_TEXT.cancelled;
@@ -120,7 +123,7 @@ export function OrderCard({ order: o, as, onChanged, onChat, onCall, onDispute, 
         <div className="flex-1 min-w-0">
           <span className={`inline-block text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${st.cls}`}>{st[as]}</span>
           <p className="font-semibold text-slate-900 truncate mt-1">{o.title}{o.quantity > 1 ? ` × ${o.quantity}` : ''}</p>
-          <p className="text-xs text-slate-500">{as === 'buyer' ? 'From' : 'To'} {other?.name || 'a neighbour'} · {timeAgo(o.paidAt || o.createdAt)}</p>
+          <p className="text-xs text-slate-500">{as === 'buyer' ? 'From' : 'To'} {other?.name || (isEstate ? 'a neighbour' : w.aMember)} · {timeAgo(o.paidAt || o.createdAt)}</p>
         </div>
         <div className="text-right shrink-0">
           <p className="font-bold text-slate-900">{naira(as === 'seller' ? o.sellerAmount : o.amount)}</p>
@@ -139,7 +142,7 @@ export function OrderCard({ order: o, as, onChanged, onChat, onCall, onDispute, 
             : `You'll be paid ${naira(o.sellerAmount)} when they confirm, or automatically in ${until(o.autoReleaseAt)}.`}
         </p>
       )}
-      {o.status === 'disputed' && <p className="mt-2 text-[12px] text-red-700 rounded-xl bg-red-50 px-3 py-2">{o.dispute?.reason}{o.dispute?.note ? ` — ${o.dispute.note}` : ''}. Estate management will decide.</p>}
+      {o.status === 'disputed' && <p className="mt-2 text-[12px] text-red-700 rounded-xl bg-red-50 px-3 py-2">{o.dispute?.reason}{o.dispute?.note ? ` — ${o.dispute.note}` : ''}. {isEstate ? 'Estate management' : w.siteMgmt} will decide.</p>}
       {o.status === 'refunded' && <p className="mt-2 text-[12px] text-slate-600 rounded-xl bg-slate-50 px-3 py-2">{o.refund?.reason}{as === 'buyer' ? ' · Refunds take 5–10 working days to reach your card/bank.' : ''}</p>}
       {as === 'seller' && o.status === 'completed' && <p className="mt-2 text-[11px] text-slate-400">{naira(o.amount)} − {Math.round(o.commissionRate * 100)}% AreaConnect fee ({naira(o.commission)}) = {naira(o.sellerAmount)}</p>}
 
@@ -170,6 +173,7 @@ export function OrderCard({ order: o, as, onChanged, onChat, onCall, onDispute, 
 const DISPUTES = ['Not delivered', 'Not as described', 'Damaged or faulty', 'Wrong quantity', 'Seller unresponsive', 'Other'];
 
 export function DisputeSheet({ order, onClose, onDone }) {
+  const { isEstate, w } = useSite();
   const [reason, setReason] = useState('');
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
@@ -181,7 +185,7 @@ export function DisputeSheet({ order, onClose, onDone }) {
     finally { setBusy(false); }
   };
   return (
-    <BottomSheet open={!!order} onClose={onClose} title="Report a problem" subtitle="The seller won't be paid while estate management reviews it"
+    <BottomSheet open={!!order} onClose={onClose} title="Report a problem" subtitle={isEstate ? "The seller won't be paid while estate management reviews it" : `The seller won't be paid while ${w.siteMgmtLc} reviews it`}
       footer={<button onClick={send} disabled={!reason || busy} className="mk-btn w-full bg-red-600 text-white disabled:opacity-40">{busy ? <RefreshCw size={16} className="animate-spin" /> : 'Report problem'}</button>}>
       <div className="grid grid-cols-2 gap-2">
         {DISPUTES.map((d) => <button key={d} onClick={() => setReason(d)} className={`rounded-xl border p-3 text-sm font-semibold text-left ${reason === d ? 'border-red-400 bg-red-50 text-red-700' : 'border-slate-200 text-slate-700'}`}>{d}</button>)}

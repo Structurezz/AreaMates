@@ -2,8 +2,11 @@ import { Link } from 'react-router-dom';
 import { format, formatDistanceToNowStrict } from 'date-fns';
 import {
   UserPlus, ShoppingBag, MessageSquare, Music, CreditCard, Phone, Scale, Bell,
-  LogIn, LogOut, CalendarClock, Megaphone, Siren, Home, ArrowUpRight, ShieldCheck, Users, Map as MapIcon,
+  LogIn, LogOut, CalendarClock, Megaphone, Siren, Home, ArrowUpRight, ShieldCheck, Users, Map as MapIcon, ClipboardList,
 } from 'lucide-react';
+import MyTeamCard from '../roles/MyTeamCard';
+import StaffHome from '../roles/StaffHome';
+import { RoleBadge } from '../roles/shared';
 import MyPlaceCard from '../map/MyPlaceCard';
 import { useSite } from '../../context/SiteContext';
 import { StayCard, ShiftLine } from './StayCard';
@@ -66,6 +69,7 @@ const ACTIONS = [
   { to: '/neighbours',   label: 'Neighbours', Icon: Phone,         color: '#0EA5E9', module: 'neighbours', siteLabel: () => 'Directory' },
   { to: '/courtroom',    label: 'Court',      Icon: Scale,         color: '#B45309', module: 'community' },
   // Other site types: family / party / team one tap away (estates keep the classic grid)
+  { to: '/requests',     label: 'Requests',   Icon: ClipboardList, color: '#F97316', module: 'requests', nonEstate: true },
   { to: '/map',          label: 'Map',        Icon: MapIcon,       color: '#14B8A6', nonEstate: true },
   { to: '/household',    label: 'Household',  Icon: Users,         color: '#8B5CF6', module: 'household', nonEstate: true, siteLabel: (t) => t.household },
   { to: '/alerts',       label: 'Alerts',     Icon: Bell,          color: '#DC2626' },
@@ -77,7 +81,7 @@ const VISIT = {
   active:        { Icon: CalendarClock, color: '#6366F1', verb: 'is expected' },
 };
 
-export default function MobileDashboard({ user, myVisitors, announcements, estate, estateName, firstName, unitLabel, activeVisitors, alerting, onSOS }) {
+export default function MobileDashboard({ user, myVisitors, announcements, estate, estateName, firstName, unitLabel, activeVisitors, alerting, onSOS, sosLabel }) {
   const site = useSite();
   const { terms } = site;
   const actions = ACTIONS.filter((a) => site.moduleOn(a.module) && (!a.nonEstate || !site.isEstate))
@@ -112,6 +116,7 @@ export default function MobileDashboard({ user, myVisitors, announcements, estat
             {greeting()}, {firstName}
           </h1>
           <ShiftLine user={user} className="text-[12px] mt-0.5 max-w-full" />
+          {site.isStaff && <div className="mt-1"><RoleBadge myRole={site.myRole} user={user} terms={terms} /></div>}
         </div>
         <Link to="/settings" className="relative flex-shrink-0">
           <span className="absolute -inset-[3px] rounded-full" style={{ background: 'conic-gradient(from 180deg, #818CF8, #6366F1, #EC4899, #818CF8)' }} />
@@ -121,7 +126,9 @@ export default function MobileDashboard({ user, myVisitors, announcements, estat
         </Link>
       </header>
 
+      {site.isStaff && <StaffHome />}
       <StayCard user={user} compact />
+      <MyTeamCard compact />
       <MyPlaceCard compact />
 
       {/* Home status */}
@@ -164,8 +171,10 @@ export default function MobileDashboard({ user, myVisitors, announcements, estat
             <Siren size={16} className="relative text-white" />
           </span>
           <span className="flex-1 min-w-0">
-            <span className="block text-[14px] font-semibold text-white">{alerting ? 'Sending alert…' : 'Emergency SOS'}</span>
-            <span className="block text-[11px] text-red-100/75">Alerts security and management with your {terms.unit.toLowerCase()}</span>
+            <span className="block text-[14px] font-semibold text-white">{alerting ? 'Sending alert…' : sosLabel || 'Emergency SOS'}</span>
+            <span className="block text-[11px] text-red-100/75">{!site.isEstate && site.assignLabel
+              ? `Alerts your ${site.assignLabel.toLowerCase()} and security with your ${terms.unit.toLowerCase()}`
+              : `Alerts security and management with your ${terms.unit.toLowerCase()}`}</span>
           </span>
           <span className="text-[11px] font-bold tracking-wider text-white bg-red-500 px-2.5 py-1 rounded-lg">SOS</span>
         </button>

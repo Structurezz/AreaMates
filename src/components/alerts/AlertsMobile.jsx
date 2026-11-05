@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import useCountUp from '../../hooks/useCountUp';
 import Pagination from '../ui/Pagination';
+import { useSite } from '../../context/SiteContext';
 
 // Phone layout for the residents' alerts page: status card, raise-an-alert
 // composer, then the resident's alerts + estate broadcasts as cards.
@@ -32,6 +33,7 @@ function Count({ value, label, color, delay }) {
 
 function StatusCard({ open, acknowledged, resolved, onRaise }) {
   const alarm = open > 0;
+  const { isEstate, w } = useSite();
   return (
     <section className="dash-rise relative overflow-hidden rounded-[26px] p-5 text-white"
       style={{
@@ -83,7 +85,7 @@ function StatusCard({ open, acknowledged, resolved, onRaise }) {
           <Bell size={16} /> Raise an alert
         </button>
         <a href="/safety" className="mt-2.5 block text-center text-[11px] font-medium text-white/70 underline-offset-2 underline">
-          Being followed or harassed by a resident? Personal safety →
+          Being followed or harassed by {isEstate ? 'a resident' : w.aMember}? Personal safety →
         </a>
       </div>
     </section>
@@ -116,6 +118,8 @@ function Progress({ status, color }) {
 
 function AlertCard({ a, i, alertTypes, targetLabel }) {
   const broadcast = a.isEmergencyBroadcast;
+  const { isEstate, w } = useSite();
+  const bcLabel = isEstate ? 'Estate broadcast' : `${w.site} broadcast`;
   const live = !broadcast && a.status === 'open';
   const [open, setOpen] = useState(live);
   const t = alertTypes.find((x) => x.type === a.type) || alertTypes[alertTypes.length - 1];
@@ -123,7 +127,7 @@ function AlertCard({ a, i, alertTypes, targetLabel }) {
   const TIcon = broadcast ? Megaphone : t.icon;
   const sev = SEVERITY[a.severity] || (broadcast ? SEVERITY.high : null);
   const accent = a.status === 'open' ? '#EF4444' : a.status === 'acknowledged' ? '#F59E0B' : '#10B981';
-  const title = broadcast ? (a.title || 'Estate broadcast') : (a.title || t.label);
+  const title = broadcast ? (a.title || bcLabel) : (a.title || t.label);
 
   return (
     <article className="dash-rise relative overflow-hidden rounded-[22px] bg-white border"
@@ -137,14 +141,14 @@ function AlertCard({ a, i, alertTypes, targetLabel }) {
           </span>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: tColor }}>{broadcast ? 'Estate broadcast' : 'Your alert'}</span>
+              <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: tColor }}>{broadcast ? bcLabel : 'Your alert'}</span>
               {sev && <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md" style={{ background: `${sev.color}18`, color: sev.color }}>{sev.label}</span>}
               <span className="ml-auto text-[11px] text-slate-400 flex-shrink-0">{ago(a.createdAt)}</span>
             </div>
             <div className="mt-1 text-[15px] font-semibold text-slate-900 leading-snug" style={{ letterSpacing: '-0.01em' }}>{title}</div>
             <div className="mt-1 flex items-center gap-1.5 text-[12px] text-slate-500 min-w-0">
               {broadcast
-                ? <span className="truncate flex items-center gap-1"><Radio size={11} className="flex-shrink-0" /> From estate management</span>
+                ? <span className="truncate flex items-center gap-1"><Radio size={11} className="flex-shrink-0" /> {isEstate ? 'From estate management' : `From ${w.siteMgmtLc}`}</span>
                 : <span className="truncate">Sent to {targetLabel[a.audience] || a.audience || 'Security + Management'}</span>}
               {a.location && <span className="truncate flex items-center gap-0.5"><MapPin size={11} className="flex-shrink-0" />{a.location}</span>}
             </div>
@@ -184,6 +188,7 @@ export default function AlertsMobile({
   alerts, loading, page, pagination, pageSize, onPage,
 }) {
   const composerRef = useRef(null);
+  const { isEstate, w } = useSite();
   const [filter, setFilter] = useState('all');
   const mine = alerts.filter((a) => !a.isEmergencyBroadcast);
   const count = (s) => mine.filter((a) => a.status === s).length;
@@ -264,7 +269,7 @@ export default function AlertsMobile({
           <span className="relative">{sending ? 'Sending alert…' : targetCfg.button}</span>
         </button>
         <p className="text-center text-[11px] text-slate-400 mt-2.5 leading-relaxed">
-          {targetLabel[target]} will be alerted immediately with your name, unit and phone number.
+          {targetLabel[target]} will be alerted immediately with your name, {isEstate ? 'unit' : w.unitLc} and phone number.
           {['security', 'fire', 'medical'].includes(selectedType) && ' They also get an email.'} In immediate danger, call 112.
         </p>
       </section>
@@ -297,7 +302,7 @@ export default function AlertsMobile({
           </span>
           <div className="mt-4 text-[15px] font-semibold text-slate-900">Nothing here</div>
           <div className="text-[13px] text-slate-500 mt-1">
-            {filter === 'broadcasts' ? 'No estate broadcasts yet.' : filter === 'mine' ? "You haven't raised any alerts." : 'No alerts or broadcasts yet.'}
+            {filter === 'broadcasts' ? (isEstate ? 'No estate broadcasts yet.' : `No ${w.siteLc} broadcasts yet.`) : filter === 'mine' ? "You haven't raised any alerts." : 'No alerts or broadcasts yet.'}
           </div>
         </div>
       ) : (

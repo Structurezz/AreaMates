@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import QRCode from 'qrcode';
 import { visitorAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
-import { passKindLabel, passPurposeLine, passShareLines } from '../utils/passText';
+import { passKindLabel, passPurposeLine, passShareLines, passSiteName } from '../utils/passText';
 import InviteForm from '../components/visitors/InviteForm';
 import { CategoryBadge, DetailsLine } from '../components/visitors/PassCategory';
 import VisitorsMobile from '../components/visitors/VisitorsMobile';
@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
+import PassApprovals from '../components/roles/PassApprovals';
 
 const ACCENT      = '#6366F1';
 const ACCENT_DARK = '#4F46E5';
@@ -80,7 +81,7 @@ const drawShieldLogo = (ctx, x, y, size, text, opts = {}) => {
 
 const generateBrandedPass = async (v, estate) => {
   const W = 580, H = 820;
-  const estateName    = truncate(estate?.name || 'Your Estate', 36);
+  const estateName    = truncate(passSiteName(estate), 36);
   const estateAddress = truncate(estate?.address || '', 60);
 
   const canvas = document.createElement('canvas');
@@ -588,6 +589,8 @@ export default function ResidentVisitors() {
 
   return (
     <div className="animate-fade-in">
+      {/* Care team: passes to restricted units waiting for my approval (staff only) */}
+      <PassApprovals className="mb-5" />
       {/* ── Phone ── */}
       <div className="md:hidden pb-6">
         <VisitorsMobile

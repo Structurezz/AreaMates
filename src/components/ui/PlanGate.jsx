@@ -1,8 +1,10 @@
 import { Lock, ArrowUpRight, Sparkles } from 'lucide-react';
 import { usePlan } from '../../hooks/usePlan';
+import { useSite } from '../../context/SiteContext';
 
 export default function PlanGate({ feature, featureName, children }) {
   const { can, loading, planName, planColor } = usePlan();
+  const { isEstate, w } = useSite();
 
   if (loading) return null;
   if (can(feature)) return children;
@@ -24,19 +26,19 @@ export default function PlanGate({ feature, featureName, children }) {
         {featureName} is locked
       </h2>
       <p className="text-sm mb-1 max-w-sm leading-relaxed" style={{ color: '#475569' }}>
-        Your estate's current plan
+        {isEstate ? "Your estate's current plan" : `Your ${w.siteLc}'s current plan`}
         <span className="font-semibold mx-1" style={{ color: planColor }}>({planName})</span>
         doesn't include <span className="font-semibold">{featureName}</span>.
       </p>
       <p className="text-sm mb-8 max-w-sm" style={{ color: '#94A3B8' }}>
-        Ask your estate manager to upgrade the estate plan to unlock this feature.
+        {isEstate ? 'Ask your estate manager to upgrade the estate plan to unlock this feature.' : `Ask your ${w.managerLc} to upgrade the ${w.siteLc} plan to unlock this feature.`}
       </p>
 
       <div
         className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm text-white"
         style={{ background: '#6366F1', boxShadow: '0 4px 14px rgba(99,102,241,0.3)' }}>
         <ArrowUpRight size={16} />
-        Contact Your Estate Manager
+        {isEstate ? 'Contact Your Estate Manager' : `Contact Your ${w.manager.replace(/\b\w/g, (c) => c.toUpperCase())}`}
       </div>
 
       <p className="text-xs mt-4" style={{ color: '#CBD5E1' }}>

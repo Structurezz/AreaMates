@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useSite } from '../../context/SiteContext';
 
 // Branded loading: the app logo breathing inside a progress ring, with phrases
 // that describe what's loading on the current page.
@@ -128,10 +129,26 @@ const PAGE_PHRASES = [
 
 const BOOT_PHRASES = ["Signing you in", "Loading your home", "Checking for visitors", "Almost there"];
 
-function phrasesForPath() {
+// Estate phrases reworded for the other site types (hospital, school, …)
+const sitePhrase = (p, site) => {
+  if (!site || site.isEstate) return p;
+  const { w } = site;
+  return ({
+    'Catching up on your estate': `Catching up on your ${w.siteLc}`,
+    'Catching up on estate news': `Catching up on ${w.siteLc} news`,
+    'Loading listings from neighbours': `Loading listings from ${w.neighboursLc}`,
+    'Finding your neighbours': `Finding ${w.neighboursLc}`,
+    'Loading your home': `Loading your ${w.siteLc}`,
+    'Checking for visitors': 'Checking for visitors',
+    'Loading your bills': `Loading your ${w.duesLc}`,
+    'Loading notices': `Loading ${w.siteLc} notices`,
+  })[p] || p;
+};
+
+function phrasesForPath(site) {
   const path = typeof window !== 'undefined' ? window.location.pathname : '/';
   const hit = PAGE_PHRASES.find(([prefix]) => path === prefix || path.startsWith(`${prefix}/`) || (prefix !== '/' && path.startsWith(prefix)));
-  return hit ? hit[1] : BRAND.fallback;
+  return (hit ? hit[1] : BRAND.fallback).map((p) => sitePhrase(p, site));
 }
 
 const CSS = `
@@ -156,8 +173,10 @@ function Logo({ size }) {
 }
 
 export function LogoLoader({ size = 56, phrases, showPhrase = true, className = '', style }) {
-  const [auto] = useState(phrasesForPath);
-  const list = phrases || auto;
+  const site = useSite();
+  // Re-word when the site type becomes known (estate → hospital etc.)
+  const auto = useMemo(() => phrasesForPath(site), [site.type]); // eslint-disable-line react-hooks/exhaustive-deps
+  const list = useMemo(() => (phrases ? phrases.map((p) => sitePhrase(p, site)) : auto), [phrases, auto, site.type]); // eslint-disable-line react-hooks/exhaustive-deps
   const [i, setI] = useState(0);
   useEffect(() => {
     if (!showPhrase || list.length < 2) return undefined;

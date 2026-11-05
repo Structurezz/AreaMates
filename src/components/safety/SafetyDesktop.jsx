@@ -3,6 +3,7 @@ import {
   ShieldAlert, ShieldCheck, MapPin, UserX, Siren, Eye, EyeOff, Radio, Phone, Lock, BellRing, DoorOpen,
 } from 'lucide-react';
 import EstateMap from '../EstateMap';
+import { useSite } from '../../context/SiteContext';
 
 function Person({ p, size = 40 }) {
   return p?.profilePhoto
@@ -12,10 +13,10 @@ function Person({ p, size = 40 }) {
       </div>;
 }
 
-const HOW = [
-  { Icon: Siren,    title: "I'm being followed", desc: 'An instant critical alarm to security and your estate manager, with your location.' },
+const howList = (mgr, dirName) => [
+  { Icon: Siren,    title: "I'm being followed", desc: `An instant critical alarm to security and your ${mgr}, with your location.` },
   { Icon: Radio,    title: 'Live location',       desc: 'Security can watch where you are until you stop, or for up to 1 hour.' },
-  { Icon: Lock,     title: 'Block quietly',       desc: "They're never told. You vanish from each other's Neighbours, calls and buzzes." },
+  { Icon: Lock,     title: 'Block quietly',       desc: `They're never told. You vanish from each other's ${dirName}, calls and buzzes.` },
   { Icon: DoorOpen, title: 'Gate watch',          desc: "Security is told when a blocked person's guest arrives at the gate." },
 ];
 
@@ -24,6 +25,10 @@ const HOW = [
  * which also renders the panic and block sheets for both layouts.
  */
 export default function SafetyDesktop({ sharing, onToggleShare, blocks, loading, onPanic, onAddBlock, onUnblock, onToggleGate, estate }) {
+  const { isEstate, w } = useSite();
+  const mgr = isEstate ? 'estate manager' : w.managerLc;
+  const dirName = isEstate ? 'Neighbours' : 'Directory';
+  const HOW = howList(mgr, dirName);
   const attempts = blocks.reduce((t, b) => t + (b.contactAttempts || 0), 0);
   const gateOn = blocks.filter((b) => b.gateWatch).length;
   const fix = sharing?.lastFix;
@@ -51,7 +56,7 @@ export default function SafetyDesktop({ sharing, onToggleShare, blocks, loading,
               <p className="text-[13px] text-white/75">
                 {sharing
                   ? <>Security can see your live location · since {format(new Date(sharing.startedAt), 'h:mm a')}</>
-                  : 'Only security and your estate manager are ever alerted. Nobody else is told.'}
+                  : `Only security and your ${mgr} are ever alerted. Nobody else is told.`}
               </p>
             </div>
           </div>
@@ -80,7 +85,7 @@ export default function SafetyDesktop({ sharing, onToggleShare, blocks, loading,
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5 text-[12px] font-semibold text-red-100"><ShieldAlert size={14} /> Emergency</div>
                 <h2 className="mt-1.5 text-[20px] font-semibold text-white" style={{ letterSpacing: '-0.02em' }}>Feeling unsafe or being followed?</h2>
-                <p className="mt-1 text-[13px] text-red-100/90 max-w-md">Security and your estate manager are alerted instantly with your location, and live sharing starts so they can follow you. In immediate danger, call 112.</p>
+                <p className="mt-1 text-[13px] text-red-100/90 max-w-md">Security and your {mgr} are alerted instantly with your location, and live sharing starts so they can follow you. In immediate danger, call 112.</p>
               </div>
               <button onClick={onPanic} aria-label="I'm being followed" className="group relative w-36 h-36 flex-shrink-0">
                 <span className="dash-ripple absolute inset-0 rounded-full border-2 border-white/60" />
@@ -108,7 +113,7 @@ export default function SafetyDesktop({ sharing, onToggleShare, blocks, loading,
                 <p className="mt-0.5 text-[13px] text-slate-500">
                   {sharing
                     ? `Sharing since ${format(new Date(sharing.startedAt), 'h:mm a')}${fix ? ` · updated ${formatDistanceToNow(new Date(fix.at), { addSuffix: true })}` : ''}. Stops automatically after 1 hour.`
-                    : 'Walking home late or feeling uneasy? Security and your estate manager can watch your location until you stop.'}
+                    : `Walking home late or feeling uneasy? Security and your ${mgr} can watch your location until you stop.`}
                 </p>
                 {sharing && fix?.accuracy != null && <p className="mt-1 text-[12px] text-slate-400">Accuracy about {Math.round(fix.accuracy)} m</p>}
               </div>
@@ -136,7 +141,7 @@ export default function SafetyDesktop({ sharing, onToggleShare, blocks, loading,
             ) : blocks.length === 0 ? (
               <div className="px-5 py-6 flex gap-3 text-[13px] text-slate-500">
                 <ShieldCheck size={18} className="text-emerald-500 shrink-0 mt-0.5" />
-                <span>You haven't blocked anyone. If a resident is making you uncomfortable (calling, following or watching you), block them here. <strong className="text-slate-700">They're never told.</strong></span>
+                <span>You haven't blocked anyone. If {isEstate ? 'a resident' : w.aMember} is making you uncomfortable (calling, following or watching you), block them here. <strong className="text-slate-700">They're never told.</strong></span>
               </div>
             ) : (
               <div className="divide-y divide-slate-100">
@@ -160,7 +165,7 @@ export default function SafetyDesktop({ sharing, onToggleShare, blocks, loading,
               </div>
             )}
             <p className="px-5 py-3 border-t border-slate-100 text-[11px] text-slate-400">
-              Blocked people can't see you in Neighbours, call or buzz you. If they keep trying, security and your estate manager are alerted.
+              Blocked people can't see you in {dirName}, call or buzz you. If they keep trying, security and your {mgr} are alerted.
             </p>
           </div>
         </div>
@@ -171,7 +176,7 @@ export default function SafetyDesktop({ sharing, onToggleShare, blocks, loading,
             <div className="flex items-center justify-between px-4 h-12 border-b border-slate-100">
               <h3 className="text-[14px] font-semibold text-slate-900 flex items-center gap-2">
                 <span className={`w-6 h-6 rounded-lg flex items-center justify-center ${sharing ? 'bg-red-500' : 'bg-indigo-500'}`}><MapPin size={12} className="text-white" /></span>
-                {sharing ? 'Your live location' : 'Your estate'}
+                {sharing ? 'Your live location' : (isEstate ? 'Your estate' : `Your ${w.siteLc}`)}
               </h3>
               {sharing
                 ? <span className="flex items-center gap-1.5 text-[11px] font-semibold text-red-600"><span className="relative flex w-2 h-2"><span className="absolute inset-0 rounded-full bg-red-400 animate-ping" /><span className="relative w-2 h-2 rounded-full bg-red-500" /></span>Visible to security</span>
@@ -179,7 +184,7 @@ export default function SafetyDesktop({ sharing, onToggleShare, blocks, loading,
             </div>
             <div className="p-1.5">
               <EstateMap
-                name={sharing ? 'You are here' : (estate?.name || 'Your estate')}
+                name={sharing ? 'You are here' : (estate?.name || (isEstate ? 'Your estate' : `Your ${w.siteLc}`))}
                 address={estate?.address}
                 location={mapLocation}
                 height={300}

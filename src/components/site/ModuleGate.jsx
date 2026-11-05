@@ -13,6 +13,8 @@ const FEATURE_NAMES = {
   shifts: 'Staff shifts',
   stays: 'Guest stays',
   visiting: 'Visiting hours',
+  requests: 'Requests',
+  rollcall: 'Emergency roll-call',
 };
 
 // Shown instead of a page whose site module is switched off (e.g. the

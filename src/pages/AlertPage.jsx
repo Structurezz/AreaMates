@@ -7,6 +7,8 @@ import toast from 'react-hot-toast';
 import AlertsDesktop from '../components/alerts/AlertsDesktop';
 import AlertsMobile from '../components/alerts/AlertsMobile';
 import useIsDesktop from '../hooks/useIsDesktop';
+import { useSite } from '../context/SiteContext';
+import { useRoles } from '../context/RolesContext';
 
 const ALERT_TYPES = [
   { type: 'security', icon: Shield,        label: 'Security Threat',   color: 'text-red-600' },
@@ -18,19 +20,23 @@ const ALERT_TYPES = [
 
 // Who a resident's alert goes to. Residents can't alert other residents —
 // estate-wide broadcasts are for security / management only.
-const TARGETS = [
+const targetsFor = (manager) => [
   { value: 'staff',          label: 'Security + Management', sub: 'Everyone on duty',  Icon: Users,     button: 'ALERT SECURITY + MANAGEMENT' },
   { value: 'security',       label: 'Security only',         sub: 'Gate & patrol team', Icon: Shield,    button: 'ALERT SECURITY NOW' },
-  { value: 'estate_manager', label: 'Management only',       sub: 'Estate manager',     Icon: Briefcase, button: 'ALERT MANAGEMENT' },
+  { value: 'estate_manager', label: 'Management only',       sub: manager,     Icon: Briefcase, button: 'ALERT MANAGEMENT' },
 ];
 const TARGET_LABEL = { staff: 'Security + Management', security: 'Security', estate_manager: 'Management', all: 'Everyone' };
 
 const PAGE_SIZE = 10;
 
 export default function AlertPage() {
-  const [selectedType, setSelectedType] = useState('security');
+  const { terms, type: siteType, isEstate } = useSite();
+  const { trackAlert } = useRoles();
+  // Hospitals default to a medical emergency (routed to the care team)
+  const [selectedType, setSelectedType] = useState(siteType === 'hospital' ? 'medical' : 'security');
   const [target, setTarget] = useState('staff');
   const { subscribe } = useSocket() || {};
+  const TARGETS = targetsFor(terms.manager);
   const targetCfg = TARGETS.find((t) => t.value === target) || TARGETS[0];
   const [note, setNote] = useState('');
   const [sending, setSending] = useState(false);
@@ -65,6 +71,7 @@ export default function AlertPage() {
     try {
       const { data } = await alertAPI.create({ type: selectedType, note, audience: target });
       toast.success(data?.message || 'Alert sent. Help is on the way.', { duration: 5000 });
+      if (!isEstate) trackAlert(data?.data);
       setNote('');
       setPage(1);
       loadAlerts(1);

@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Siren, X, Radio, Shield, UserRound, Briefcase, Home, Phone, MapPin, ShieldAlert } from 'lucide-react';
 import { useNotifications } from '../../context/NotificationContext';
 import Portal from './Portal';
+import { useSite } from '../../context/SiteContext';
 
 const ROLE_CFG = {
   security:       { label: 'Security Guard',  Icon: Shield,    bg: '#EFF6FF', color: '#1D4ED8', border: '#BFDBFE' },
@@ -12,6 +13,7 @@ const ROLE_CFG = {
 
 export default function AlertModal() {
   const { activeAlert, dismissAlert } = useNotifications();
+  const { isEstate, w } = useSite();
   const btnRef = useRef(null);
 
   useEffect(() => {
@@ -30,7 +32,10 @@ export default function AlertModal() {
   const isBroadcast = activeAlert.type === 'alert_broadcast';
   const meta = activeAlert.meta || {};
   const role = meta.raisedByRole || (isBroadcast ? 'security' : 'resident');
-  const roleCfg = ROLE_CFG[role] || ROLE_CFG.resident;
+  const baseRoleCfg = ROLE_CFG[role] || ROLE_CFG.resident;
+  // Role names in the site's words (estate keeps the original labels)
+  const roleCfg = isEstate || role === 'security' ? baseRoleCfg
+    : { ...baseRoleCfg, label: role === 'estate_manager' || role === 'super_admin' ? w.manager : w.member };
   const RoleIcon = roleCfg.Icon;
 
   const headerGradient = isBroadcast
@@ -74,10 +79,10 @@ export default function AlertModal() {
           </div>
 
           <span style={{ display: 'inline-block', background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: 10, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', padding: '3px 10px', borderRadius: 99, marginBottom: 8 }}>
-            {isBroadcast ? 'Estate Broadcast'
+            {isBroadcast ? (isEstate ? 'Estate Broadcast' : `${w.site} Broadcast`)
               : role === 'security' ? 'Security Guard Alert'
               : role === 'estate_manager' || role === 'super_admin' ? 'Management Alert'
-              : 'Resident Alert'}
+              : (isEstate ? 'Resident Alert' : `${w.member} Alert`)}
           </span>
 
           <h2 style={{ color: '#fff', fontSize: 17, fontWeight: 800, margin: 0, lineHeight: 1.3 }}>

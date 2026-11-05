@@ -5,11 +5,13 @@ import BottomSheet from '../payments/BottomSheet';
 import { marketplaceAPI } from '../../api';
 import { imgUrl } from '../lounge/shared';
 import { CAT, CATEGORIES, CONDITION, REPORT_REASONS, naira } from './shared';
+import { useSite } from '../../context/SiteContext';
 
 const BLANK = { title: '', description: '', price: '', category: 'food', condition: 'good', isNegotiable: false };
 
 // Sell / edit. Shows the estate's price cap up front so nobody is surprised.
 export function SellSheet({ open, editing, rules, onClose, onSaved }) {
+  const { isEstate, w } = useSite();
   const [form, setForm] = useState(BLANK);
   const [files, setFiles] = useState([]);
   const [saving, setSaving] = useState(false);
@@ -41,7 +43,7 @@ export function SellSheet({ open, editing, rules, onClose, onSaved }) {
 
   const submit = async (e) => {
     e.preventDefault();
-    if (overCap) return toast.error(`Estate cap for ${CAT[form.category].label} is ${naira(cap)}`);
+    if (overCap) return toast.error(`${isEstate ? 'Estate' : w.site} cap for ${CAT[form.category].label} is ${naira(cap)}`);
     setSaving(true);
     try {
       let data;
@@ -53,7 +55,7 @@ export function SellSheet({ open, editing, rules, onClose, onSaved }) {
         files.forEach((f) => fd.append('images', f));
         ({ data } = await marketplaceAPI.create(fd));
       }
-      toast.success(data.held ? 'Sent to estate management for review' : editing ? 'Listing updated' : 'Your listing is live 🎉', { duration: 4000 });
+      toast.success(data.held ? (isEstate ? 'Sent to estate management for review' : `Sent to ${w.siteMgmtLc} for review`) : editing ? 'Listing updated' : 'Your listing is live 🎉', { duration: 4000 });
       onSaved(data.data);
       onClose();
     } catch (err) {
@@ -63,7 +65,7 @@ export function SellSheet({ open, editing, rules, onClose, onSaved }) {
 
   return (
     <BottomSheet open={open} onClose={onClose} title={editing ? 'Edit listing' : 'Sell something'}
-      subtitle={editing ? null : 'Neighbours see it instantly'}
+      subtitle={editing ? null : (isEstate ? 'Neighbours see it instantly' : `${w.neighbours} see it instantly`)}
       footer={(
         <button form="sell-form" type="submit" disabled={saving || overCap}
           className="mk-btn w-full text-white disabled:opacity-50" style={{ background: 'linear-gradient(135deg,#6366F1,#4F46E5)' }}>
@@ -72,7 +74,7 @@ export function SellSheet({ open, editing, rules, onClose, onSaved }) {
       )}>
       <form id="sell-form" onSubmit={submit} className="space-y-4">
         {rules?.requireApproval && !editing && (
-          <p className="flex gap-2 text-[13px] rounded-xl bg-indigo-50 text-indigo-900 p-3"><ShieldCheck size={16} className="shrink-0 text-indigo-600" /> Estate management approves listings before they go live.</p>
+          <p className="flex gap-2 text-[13px] rounded-xl bg-indigo-50 text-indigo-900 p-3"><ShieldCheck size={16} className="shrink-0 text-indigo-600" /> {isEstate ? 'Estate management' : w.siteMgmt} approves listings before they go live.</p>
         )}
 
         {/* Photos */}
@@ -124,7 +126,7 @@ export function SellSheet({ open, editing, rules, onClose, onSaved }) {
           <input type="number" inputMode="numeric" min="0" value={form.price} onChange={(e) => set('price', e.target.value)} placeholder="0 = free" className={`mk-input ${overCap ? '!border-red-400 !bg-red-50' : ''}`} />
           {cap > 0 && (
             <p className={`text-xs mt-1.5 flex items-center gap-1 ${overCap ? 'text-red-600 font-semibold' : 'text-slate-500'}`}>
-              <Info size={12} /> Estate price cap for {CAT[form.category].label.toLowerCase()}: {naira(cap)}
+              <Info size={12} /> {isEstate ? 'Estate' : w.site} price cap for {CAT[form.category].label.toLowerCase()}: {naira(cap)}
             </p>
           )}
           <label className="flex items-center gap-2 mt-2.5 text-sm text-slate-700">
@@ -151,7 +153,7 @@ export function SellSheet({ open, editing, rules, onClose, onSaved }) {
             placeholder="What is it, what's included, when can people pick it up?" className="mk-input resize-none" />
         </div>
         <p className="text-[11px] text-slate-400 leading-relaxed">
-          Fair pricing is protected: listings priced far above similar items go to estate management for review, and residents can report listings.
+          Fair pricing is protected: listings priced far above similar items go to {isEstate ? 'estate management' : w.siteMgmtLc} for review, and {isEstate ? 'residents' : w.membersLc} can report listings.
         </p>
       </form>
     </BottomSheet>
@@ -159,6 +161,7 @@ export function SellSheet({ open, editing, rules, onClose, onSaved }) {
 }
 
 export function ReportSheet({ listing, onClose, onDone }) {
+  const { isEstate, w } = useSite();
   const [reason, setReason] = useState('');
   const [note, setNote] = useState('');
   const [sending, setSending] = useState(false);
@@ -177,7 +180,7 @@ export function ReportSheet({ listing, onClose, onDone }) {
   };
 
   return (
-    <BottomSheet open={!!listing} onClose={onClose} title="Report listing" subtitle="Only estate management sees who reported"
+    <BottomSheet open={!!listing} onClose={onClose} title="Report listing" subtitle={isEstate ? 'Only estate management sees who reported' : `Only ${w.siteMgmtLc} sees who reported`}
       footer={<button onClick={send} disabled={!reason || sending} className="mk-btn w-full bg-red-600 text-white disabled:opacity-40">{sending ? <RefreshCw size={16} className="animate-spin" /> : 'Send report'}</button>}>
       <div className="space-y-2">
         {REPORT_REASONS.map((r) => (
@@ -187,13 +190,14 @@ export function ReportSheet({ listing, onClose, onDone }) {
             {r.hint && <p className="text-xs text-slate-500">{r.hint}</p>}
           </button>
         ))}
-        <textarea rows={3} maxLength={500} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Anything else estate management should know? (optional)" className="mk-input resize-none mt-1" />
+        <textarea rows={3} maxLength={500} value={note} onChange={(e) => setNote(e.target.value)} placeholder={isEstate ? 'Anything else estate management should know? (optional)' : `Anything else ${w.siteMgmtLc} should know? (optional)`} className="mk-input resize-none mt-1" />
       </div>
     </BottomSheet>
   );
 }
 
 export function RateSheet({ listing, onClose, onDone }) {
+  const { isEstate, w } = useSite();
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [sending, setSending] = useState(false);
@@ -214,7 +218,7 @@ export function RateSheet({ listing, onClose, onDone }) {
 
   const name = listing?.sellerId?.name?.split(' ')[0] || 'the seller';
   return (
-    <BottomSheet open={!!listing} onClose={onClose} title={`Rate ${name}`} subtitle="Helps neighbours buy with confidence"
+    <BottomSheet open={!!listing} onClose={onClose} title={`Rate ${name}`} subtitle={isEstate ? 'Helps neighbours buy with confidence' : `Helps ${w.neighboursLc} buy with confidence`}
       footer={<button onClick={send} disabled={!rating || sending} className="mk-btn w-full text-white disabled:opacity-40" style={{ background: 'linear-gradient(135deg,#6366F1,#4F46E5)' }}>{sending ? <RefreshCw size={16} className="animate-spin" /> : 'Submit rating'}</button>}>
       <div className="flex justify-center gap-2 py-3">
         {[1, 2, 3, 4, 5].map((i) => (

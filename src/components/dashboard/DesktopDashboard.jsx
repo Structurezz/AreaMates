@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   UserCheck, Bell, Megaphone, Plus, Pin, ShoppingBag, MessageSquare, Home, ArrowRight, ArrowUpRight,
-  Shield, Siren, MapPin, CalendarDays, Wallet, Users, Coffee, Zap, LogIn,
+  Shield, Siren, MapPin, CalendarDays, Wallet, Users, Coffee, Zap, LogIn, ClipboardList,
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { eventAPI, paymentAPI } from '../../api';
@@ -14,6 +14,9 @@ import { VISITOR_STATUS } from '../visitors/MobileVisitors';
 import EstateMap from '../EstateMap';
 import useCountUp from '../../hooks/useCountUp';
 import { CampaignBanner } from '../campaigns/CampaignSlots';
+import MyTeamCard from '../roles/MyTeamCard';
+import StaffHome from '../roles/StaffHome';
+import { RoleBadge } from '../roles/shared';
 
 const CATEGORY_COLORS = { general: '#3B82F6', urgent: '#EF4444', event: '#6366F1', maintenance: '#F59E0B' };
 const naira = (n) => `₦${Number(n || 0).toLocaleString('en-NG')}`;
@@ -93,10 +96,11 @@ const SHORTCUTS = [
   { to: '/lounge',       icon: Coffee,        label: 'Lounge',       color: '#8B5CF6', perm: 'community' },
   { to: '/payments',     icon: Wallet,        label: 'Payments',     color: '#10B981', perm: 'payments', siteLabel: (t) => t.dues },
   { to: '/neighbours',   icon: Users,         label: 'Neighbours',   color: '#EC4899', perm: 'neighbours', siteLabel: () => 'Directory' },
+  { to: '/requests',     icon: ClipboardList, label: 'Requests',     color: '#F97316', module: 'requests' },
 ];
 
 export default function DesktopDashboard({
-  user, myVisitors, announcements, estate, estateName, firstName, unitLabel, activeVisitors, alerting, onSOS,
+  user, myVisitors, announcements, estate, estateName, firstName, unitLabel, activeVisitors, alerting, onSOS, sosLabel,
 }) {
   const now = useClock();
   const [events, setEvents] = useState(null);
@@ -158,6 +162,7 @@ export default function DesktopDashboard({
                 : <span className="text-white/60">No {terms.unit.toLowerCase()} assigned</span>}
             </p>
             <ShiftLine user={user} light className="mt-1 text-[12px] max-w-full" />
+            {site.isStaff && <div className="mt-1.5"><RoleBadge myRole={site.myRole} user={user} terms={terms} light /></div>}
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             <Link to="/alerts" className="inline-flex items-center gap-1.5 text-[13px] font-medium px-3 py-2 rounded-xl text-white bg-white/10 border border-white/25 hover:bg-white/20 transition-all hover:-translate-y-0.5 backdrop-blur">
@@ -172,13 +177,15 @@ export default function DesktopDashboard({
               className="relative inline-flex items-center gap-1.5 text-[13px] font-bold px-3.5 py-2 rounded-xl text-white bg-red-500 hover:bg-red-600 transition-all hover:-translate-y-0.5 disabled:opacity-70"
               style={{ boxShadow: '0 10px 22px -10px rgba(239,68,68,0.9)' }}>
               <span className="absolute inset-0 rounded-xl border-2 border-red-300 animate-ping opacity-30 pointer-events-none" />
-              <Shield size={14} strokeWidth={2.5} /> {alerting ? 'Sending…' : 'SOS'}
+              <Shield size={14} strokeWidth={2.5} /> {alerting ? 'Sending…' : sosLabel || 'SOS'}
             </button>
           </div>
         </div>
       </div>
 
+      {site.isStaff && <StaffHome />}
       <StayCard user={user} />
+      <MyTeamCard />
       <MyPlaceCard />
 
       <CampaignBanner />
@@ -261,7 +268,7 @@ export default function DesktopDashboard({
             style={{ ...delay(7), background: 'linear-gradient(160deg, #450A0A 0%, #991B1B 60%, #EF4444 140%)', boxShadow: '0 20px 40px -24px rgba(153,27,27,0.9)' }}>
             <div className="dash-blob absolute -top-14 -right-14 w-44 h-44 rounded-full blur-2xl pointer-events-none" style={{ background: 'rgba(252,165,165,0.3)' }} />
             <div className="relative flex items-center justify-between">
-              <span className="text-[13px] font-semibold flex items-center gap-2"><Siren size={15} /> Emergency</span>
+              <span className="text-[13px] font-semibold flex items-center gap-2"><Siren size={15} /> {sosLabel || 'Emergency'}</span>
               <Link to="/alerts" className="text-[11px] font-semibold text-white/80 hover:text-white flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/10 hover:bg-white/20 transition-colors">
                 More options <ArrowRight size={11} />
               </Link>
@@ -275,7 +282,9 @@ export default function DesktopDashboard({
                 <Shield size={28} strokeWidth={2.5} />
                 <span className="mt-1">{alerting ? 'SENDING' : 'SOS'}</span>
               </button>
-              <p className="mt-4 text-[12px] text-red-100/80 text-center max-w-[220px]">One tap alerts security and {siteWord} management with your name and {terms.unit.toLowerCase()}.</p>
+              <p className="mt-4 text-[12px] text-red-100/80 text-center max-w-[220px]">{!site.isEstate && site.assignLabel
+                ? `One tap alerts your ${site.assignLabel.toLowerCase()}, the staff covering your ${terms.unit.toLowerCase()} and security.`
+                : `One tap alerts security and ${siteWord} management with your name and ${terms.unit.toLowerCase()}.`}</p>
             </div>
           </div>
         </div>

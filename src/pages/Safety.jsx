@@ -9,6 +9,7 @@ import BottomSheet from '../components/payments/BottomSheet';
 import SafetyDesktop from '../components/safety/SafetyDesktop';
 import useIsDesktop from '../hooks/useIsDesktop';
 import { useAuth } from '../context/AuthContext';
+import { useSite } from '../context/SiteContext';
 
 // Personal safety (anti-stalking):
 //  • Block a resident — they're never told; you disappear from each other's
@@ -29,6 +30,9 @@ function Person({ p, size = 40 }) {
 export default function Safety() {
   const { sharing, startSharing, stopSharing, getFix } = useSafety() || {};
   const { user, estate: sessionEstate } = useAuth() || {};
+  const { isEstate, w } = useSite();
+  const mgr = isEstate ? 'estate manager' : w.managerLc;
+  const dirName = isEstate ? 'Neighbours' : 'Directory';
   // The login session only carries the estate's name/code (and is empty after a
   // refresh), so load the full record for the map's address and location.
   const estateId = user?.estateId?._id || user?.estateId;
@@ -111,7 +115,7 @@ export default function Safety() {
     <>
       {/* ── Panic sheet ── */}
       <BottomSheet open={panicOpen} onClose={() => !panicking && setPanicOpen(false)} title="Alert security now"
-        subtitle="Security + estate manager only — with your location"
+        subtitle={`Security + ${mgr} only — with your location`}
         footer={<button onClick={sendPanic} disabled={panicking} className="w-full py-4 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-black text-base inline-flex items-center justify-center gap-2 disabled:opacity-60">
           {panicking ? <><RefreshCw size={18} className="animate-spin" /> Alerting…</> : <><Siren size={20} /> Send alarm</>}
         </button>}>
@@ -132,7 +136,7 @@ export default function Safety() {
               </button>
             </div>
           </div>
-          <input value={panicNote} onChange={(e) => setPanicNote(e.target.value.slice(0, 300))} placeholder="Where are you? (optional) e.g. Near Block C gym"
+          <input value={panicNote} onChange={(e) => setPanicNote(e.target.value.slice(0, 300))} placeholder={isEstate ? 'Where are you? (optional) e.g. Near Block C gym' : `Where are you? (optional) e.g. Near ${w.block} C`}
             className="input-field py-3" />
           <p className="text-xs text-slate-500">We'll also start sharing your live location with security until you stop it. In immediate danger, call 112.</p>
         </div>
@@ -154,9 +158,9 @@ export default function Safety() {
             <textarea value={reason} onChange={(e) => setReason(e.target.value.slice(0, 300))} rows={3}
               placeholder="What's been happening? (optional, only shared with security if an alarm is raised)" className="input-field resize-none" />
             <ul className="text-xs text-slate-500 space-y-1 list-disc pl-4">
-              <li>You'll disappear from each other's Neighbours list</li>
+              <li>You'll disappear from each other's {dirName} list</li>
               <li>Their calls and buzzes to you won't go through</li>
-              <li>Repeated attempts alert security and your estate manager</li>
+              <li>Repeated attempts alert security and your {mgr}</li>
               <li>Security is told when their guests check in at the gate</li>
             </ul>
           </div>
@@ -173,7 +177,7 @@ export default function Safety() {
                   <span className="flex-1 min-w-0"><span className="block text-sm font-semibold text-slate-900 truncate">{p.name}</span><span className="block text-xs text-slate-400">{p.unit}</span></span>
                 </button>
               ))}
-              {q.trim().length >= 2 && results.length === 0 && <p className="py-6 text-center text-sm text-slate-400">No resident found</p>}
+              {q.trim().length >= 2 && results.length === 0 && <p className="py-6 text-center text-sm text-slate-400">{isEstate ? 'No resident found' : `No ${w.memberLc} found`}</p>}
             </div>
           </div>
         )}
@@ -201,7 +205,7 @@ export default function Safety() {
         <div className="relative">
           <div className="flex items-center gap-2 text-red-100 text-sm"><ShieldAlert size={15} /> Personal safety</div>
           <p className="text-lg font-bold mt-1">Feeling unsafe or being followed?</p>
-          <p className="text-xs text-red-100/90 mt-1">Security and your estate manager are alerted instantly with your location. Nobody else is told.</p>
+          <p className="text-xs text-red-100/90 mt-1">Security and your {mgr} are alerted instantly with your location. Nobody else is told.</p>
           <button onClick={openPanic}
             className="mt-4 w-full flex items-center justify-center gap-2 rounded-2xl bg-white text-red-700 font-black py-4 text-base hover:bg-red-50 active:scale-[0.99] transition">
             <Siren size={20} /> I'm being followed
@@ -218,7 +222,7 @@ export default function Safety() {
             <div className="text-xs text-slate-500 mt-0.5">
               {sharing
                 ? `Sharing since ${format(new Date(sharing.startedAt), 'h:mm a')}${sharing.lastFix ? ` · updated ${format(new Date(sharing.lastFix.at), 'h:mm:ss a')}` : ''}. Stops automatically after 1 hour.`
-                : 'Walking home late or feeling uneasy? Security and your estate manager can watch your location until you stop.'}
+                : `Walking home late or feeling uneasy? Security and your ${mgr} can watch your location until you stop.`}
             </div>
           </div>
         </div>
@@ -241,7 +245,7 @@ export default function Safety() {
         ) : blocks.length === 0 ? (
           <div className="glass-card p-5 text-sm text-slate-500 flex gap-3">
             <ShieldCheck size={18} className="text-emerald-500 shrink-0 mt-0.5" />
-            <span>You haven't blocked anyone. If a resident is making you uncomfortable — calling, following or watching you — block them here. <strong>They're never told.</strong></span>
+            <span>You haven't blocked anyone. If {isEstate ? 'a resident' : w.aMember} is making you uncomfortable — calling, following or watching you — block them here. <strong>They're never told.</strong></span>
           </div>
         ) : (
           <div className="glass-card divide-y divide-slate-100 overflow-hidden">
@@ -269,7 +273,7 @@ export default function Safety() {
           </div>
         )}
         <p className="text-[11px] text-slate-400 px-1">
-          Blocked people can't see you in Neighbours, call or buzz you. If they keep trying, security and your estate manager are alerted. Gate watch tells security when their guests arrive.
+          Blocked people can't see you in {dirName}, call or buzz you. If they keep trying, security and your {mgr} are alerted. Gate watch tells security when their guests arrive.
         </p>
       </div>
 

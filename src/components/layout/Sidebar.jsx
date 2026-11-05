@@ -1,6 +1,7 @@
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { PhoneCall, ShieldAlert, LayoutDashboard, UserCheck, ShoppingBag, MessageSquare, Bell, LogOut, CreditCard, Music, Calendar, BarChart2, Lock, Scale, Settings as SettingsIcon, Radio, Megaphone, Users, Map as MapIcon } from 'lucide-react';
+import { PhoneCall, ShieldAlert, LayoutDashboard, UserCheck, ShoppingBag, MessageSquare, Bell, LogOut, CreditCard, Music, Calendar, BarChart2, Lock, Scale, Settings as SettingsIcon, Radio, Megaphone, Users, Map as MapIcon, ClipboardList, Siren } from 'lucide-react';
+import { RoleBadge } from '../roles/shared';
 import { useHousehold } from '../../hooks/useHousehold';
 import { useSite } from '../../context/SiteContext';
 import { usePlan } from '../../hooks/usePlan';
@@ -15,6 +16,8 @@ const NAV = [
       { to: '/payments',   icon: CreditCard,       label: 'Payments',       feature: 'paymentSystem', perm: 'payments', siteLabel: (t) => t.dues },
       { to: '/map',        icon: MapIcon,          label: 'Estate map', siteLabel: (t) => `${t.site} map` },
       { to: '/household',  icon: Users,            label: 'My Household', module: 'household', siteLabel: (t) => `My ${t.household.toLowerCase()}` },
+      // Site roles (never for estates — the module is off there)
+      { to: '/requests',   icon: ClipboardList,    label: 'Requests', module: 'requests' },
     ],
   },
   {
@@ -35,6 +38,7 @@ const NAV = [
     links: [
       { to: '/alerts',    icon: Bell,  label: 'Alert Security', feature: 'securityPortal' },
       { to: '/safety',    icon: ShieldAlert, label: 'Personal Safety' },
+      { to: '/rollcall',  icon: Siren, label: 'Roll-call', module: 'rollcall', show: (site) => !!site.myRole?.rollcall },
       { to: '/courtroom', icon: Scale, label: 'Courtroom', perm: 'community' },
     ],
   },
@@ -72,7 +76,7 @@ export default function Sidebar({ mobile = false, onClose }) {
             <div className="text-xs font-medium mt-0.5 truncate" style={{ color: '#94A3B8' }}>{estateName}</div>
           </div>
         </Link>
-        {allowed('neighbours') && <NavLink to="/neighbours" aria-label="Call or buzz a neighbour" onClick={onClose}
+        {allowed('neighbours') && <NavLink to="/neighbours" aria-label={site.isEstate ? 'Call or buzz a neighbour' : `Call or buzz ${site.w.aMember}`} onClick={onClose}
           className="p-2 rounded-xl transition-all hover:bg-slate-100"
           style={({ isActive }) => ({ color: isActive ? '#4F46E5' : '#64748B' })}>
           <PhoneCall size={19} />
@@ -88,7 +92,7 @@ export default function Sidebar({ mobile = false, onClose }) {
               {section}
             </p>
             <div className="space-y-0.5">
-              {links.filter(l => allowed(l.perm, l.module)).map((l) => {
+              {links.filter(l => allowed(l.perm, l.module) && (!l.show || l.show(site))).map((l) => {
                 const { to, icon: Icon, feature } = l;
                 const label = labelOf(l);
                 const locked = feature ? !can(feature) : false;
@@ -139,7 +143,9 @@ export default function Sidebar({ mobile = false, onClose }) {
           )}
           <div className="flex-1 min-w-0">
             <div className="text-sm font-semibold truncate" style={{ color: '#0F172A' }}>{user?.name}</div>
-            <div className="text-xs truncate" style={{ color: '#94A3B8' }}>{user?.email}</div>
+            {site.isStaff
+              ? <RoleBadge myRole={site.myRole} user={user} terms={site.terms} className="mt-0.5" />
+              : <div className="text-xs truncate" style={{ color: '#94A3B8' }}>{user?.email}</div>}
           </div>
         </Link>
         <NavLink

@@ -37,13 +37,17 @@ import Podcasts from './pages/Podcasts';
 import Announcements from './pages/Announcements';
 import Household from './pages/Household';
 import SiteMap from './pages/SiteMap';
+import Requests from './pages/Requests';
+import Rollcall from './pages/Rollcall';
+import { RolesProvider } from './context/RolesContext';
 import HouseholdGate from './components/household/HouseholdGate';
 import ModuleGate from './components/site/ModuleGate';
-import { SiteProvider } from './context/SiteContext';
+import { SiteProvider, useSite } from './context/SiteContext';
 import { PERM_MODULE } from './hooks/useHousehold';
 
 function RequireResident({ children, perm, module }) {
   const { user, loading } = useAuth();
+  const { isEstate, w } = useSite();
   if (loading) return <LoadingScreen />;
   if (!user) return <Navigate to="/login" replace />;
   if (user.role !== 'resident') {
@@ -51,7 +55,7 @@ function RequireResident({ children, perm, module }) {
       <div className="min-h-screen flex items-center justify-center p-8">
         <div className="glass-card p-8 max-w-sm text-center">
           <p className="text-red-400 font-semibold mb-2">Access Denied</p>
-          <p className="text-white/50 text-sm">This portal is for Residents only.</p>
+          <p className="text-white/50 text-sm">{isEstate ? 'This portal is for Residents only.' : `This portal is for ${w.members} only.`}</p>
         </div>
       </div>
     );
@@ -62,8 +66,16 @@ function RequireResident({ children, perm, module }) {
   return <AppLayout>{mod ? <ModuleGate module={mod}>{page}</ModuleGate> : page}</AppLayout>;
 }
 
+// Site-role pages (roll-call…) don't exist for estates
+function NonEstate({ children }) {
+  const { isEstate } = useSite();
+  return isEstate ? <Navigate to="/dashboard" replace /> : children;
+}
+
 function AppRoutes() {
   const { user, loading } = useAuth();
+  const { isEstate } = useSite();
+  const loungeName = isEstate ? 'Resident Lounge' : 'Lounge';
   if (loading) return <LoadingScreen />;
 
   return (
@@ -82,14 +94,16 @@ function AppRoutes() {
       <Route path="/chat" element={<RequireResident perm="chat"><PlanGate feature="communityChat" featureName="Community Chat"><Chat /></PlanGate></RequireResident>} />
       <Route path="/payments" element={<RequireResident perm="payments"><PlanGate feature="paymentSystem" featureName="Payments"><Payments /></PlanGate></RequireResident>} />
       <Route path="/alerts" element={<RequireResident><PlanGate feature="securityPortal" featureName="Security & Alerts"><AlertPage /></PlanGate></RequireResident>} />
-      <Route path="/lounge" element={<RequireResident perm="community"><PlanGate feature="residentLounge" featureName="Resident Lounge"><Lounge /></PlanGate></RequireResident>} />
-      <Route path="/lounge/live" element={<RequireResident perm="community"><PlanGate feature="residentLounge" featureName="Resident Lounge"><ResidentLive /></PlanGate></RequireResident>} />
+      <Route path="/lounge" element={<RequireResident perm="community"><PlanGate feature="residentLounge" featureName={loungeName}><Lounge /></PlanGate></RequireResident>} />
+      <Route path="/lounge/live" element={<RequireResident perm="community"><PlanGate feature="residentLounge" featureName={loungeName}><ResidentLive /></PlanGate></RequireResident>} />
       <Route path="/podcasts" element={<RequireResident perm="community"><PlanGate feature="residentLounge" featureName="Podcast"><Podcasts /></PlanGate></RequireResident>} />
       <Route path="/announcements" element={<RequireResident><Announcements /></RequireResident>} />
       <Route path="/events" element={<RequireResident perm="community" module="events"><PlanGate feature="eventBoard" featureName="Event Board"><EventBoard /></PlanGate></RequireResident>} />
       <Route path="/polls" element={<RequireResident perm="community"><PlanGate feature="pollsAndVoting" featureName="Polls & Voting"><Polls /></PlanGate></RequireResident>} />
       <Route path="/courtroom" element={<RequireResident perm="community"><Courtroom /></RequireResident>} />
       <Route path="/household" element={<RequireResident module="household"><Household /></RequireResident>} />
+      <Route path="/requests" element={<RequireResident module="requests"><Requests /></RequireResident>} />
+      <Route path="/rollcall" element={<RequireResident><NonEstate><Rollcall /></NonEstate></RequireResident>} />
       <Route path="/map" element={<RequireResident><SiteMap /></RequireResident>} />
       <Route path="/settings" element={<RequireResident><Settings /></RequireResident>} />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
@@ -110,9 +124,11 @@ export default function App() {
           <CallOverlay />
           <UpdateBanner />
           <NotificationProvider>
+          <RolesProvider>
           <AppRoutes />
           <AlertModal />
           <EarlyEntryModal />
+          </RolesProvider>
           <Toaster position="top-right" toastOptions={{
             style: { background: '#FFFFFF', color: '#0F172A', border: '1px solid #E2E8F0', borderRadius: '12px', fontSize: '0.875rem', boxShadow: '0 8px 24px rgba(15,23,42,0.12)', padding: '0.75rem 1rem' },
             success: { iconTheme: { primary: '#6366F1', secondary: '#FFFFFF' } },

@@ -4,11 +4,13 @@ import { BarChart2, Check, RefreshCw, Clock, Lock, TrendingUp, ChevronDown } fro
 import toast from 'react-hot-toast';
 import { pollAPI } from '../../api';
 import { COLORS, total, ended, myPicks } from './PollsDesktop';
+import { useSite } from '../../context/SiteContext';
 
 // Phone layout for Polls. Results stay visible (as before on phones);
 // once you've voted they fold away behind a tap to keep the list tidy.
 
 function PollCard({ poll, userId, onVote, i }) {
+  const { isEstate, w } = useSite();
   const [voting, setVoting] = useState(null);
   const picks = myPicks(poll, userId);
   const voted = picks.length > 0;
@@ -82,7 +84,7 @@ function PollCard({ poll, userId, onVote, i }) {
 
       <div className="mt-3 flex items-center justify-between text-[12px] text-slate-400">
         <span>{sum} vote{sum === 1 ? '' : 's'}</span>
-        <span className="truncate ml-2">by {poll.createdBy?.name || 'Estate'}</span>
+        <span className="truncate ml-2">by {poll.createdBy?.name || (isEstate ? 'Estate' : w.site)}</span>
         {open && voted && !closed && (
           <button onClick={() => setOpen(false)} className="ml-2 text-indigo-600 font-semibold">Hide</button>
         )}

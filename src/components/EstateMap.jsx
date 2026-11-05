@@ -3,6 +3,7 @@ import { GoogleMap, useJsApiLoader, OverlayView } from '@react-google-maps/api';
 import { MapPin, Navigation, Layers, ExternalLink } from 'lucide-react';
 
 import { GOOGLE_MAPS_LOADER } from '../utils/googleMaps';
+import { useSite } from '../context/SiteContext';
 
 const API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
@@ -72,6 +73,7 @@ export default function EstateMap({
   location, address, name, height = 220, variant = 'card', showControls = true,
 }) {
   const { isLoaded, loadError } = useJsApiLoader(GOOGLE_MAPS_LOADER);
+  const site = useSite();
 
   const [mapType, setMapType] = useState('roadmap');
   const [pin, setPin] = useState(location?.lat ? { lat: location.lat, lng: location.lng } : null);
@@ -160,7 +162,7 @@ export default function EstateMap({
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: '#0F172A', letterSpacing: '-0.01em' }}>
-            {name || 'Your Estate'}
+            {name || (site.isEstate ? 'Your Estate' : `Your ${site.w.site}`)}
           </div>
           <div style={{ fontSize: 11, color: '#64748B', marginTop: 1, overflow: 'hidden',
                         textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -220,15 +222,16 @@ function ErrorState({ variant, height, message }) {
 
 function NoLocationState({ variant, height, address }) {
   const { inner, outer } = shellStyle(variant, height);
+  const { isEstate, w } = useSite();
   const content = (
     <div style={inner}>
       <div style={{ width: 40, height: 40, borderRadius: 12, background: 'rgba(99,102,241,0.12)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <MapPin size={20} color={INDIGO} />
       </div>
-      <div style={{ fontSize: 13, color: '#0F172A', fontWeight: 700 }}>Estate location unavailable</div>
+      <div style={{ fontSize: 13, color: '#0F172A', fontWeight: 700 }}>{isEstate ? 'Estate location unavailable' : `${w.site} location unavailable`}</div>
       <div style={{ fontSize: 11, color: '#64748B', maxWidth: 260 }}>
-        {address ? `"${address}" hasn't been mapped yet. Ask your estate manager to update it.` : 'Your estate manager hasn\'t set a location yet.'}
+        {address ? `"${address}" hasn't been mapped yet. Ask your ${isEstate ? 'estate manager' : w.managerLc} to update it.` : (isEstate ? 'Your estate manager hasn\'t set a location yet.' : `Your ${w.managerLc} hasn't set a location yet.`)}
       </div>
     </div>
   );

@@ -38,6 +38,9 @@ export const visitorAPI = {
   blacklist: (id) => api.patch(`/visitors/${id}/blacklist`),
   approveEarly: (id) => api.post(`/visitors/${id}/approve-early`),
   cancel: (id) => api.patch(`/visitors/${id}/cancel`),
+  // Care team: passes waiting for approval (restricted wards) and approving one
+  approvals: () => api.get('/visitors', { params: { approvals: 1 } }),
+  approvePass: (id) => api.post(`/visitors/${id}/approve-pass`),
 };
 
 // Residents
@@ -113,6 +116,8 @@ export const alertAPI = {
   acknowledge: (id) => api.patch(`/alerts/${id}/acknowledge`),
   resolve: (id) => api.patch(`/alerts/${id}/resolve`),
   broadcast: (data) => api.post('/alerts/broadcast', data),
+  // Routed staff: 'on_my_way' | 'arrived' | 'cannot'
+  respond: (id, status) => api.post(`/alerts/${id}/respond`, { status }),
 };
 
 // Events
@@ -257,4 +262,20 @@ export const siteAPI = {
   get: () => api.get('/site'),
   // Halls / buildings / gates on Google Maps (members see public places + their own)
   places: () => api.get('/site/places'),
+  // Site roles: my care team / adviser / supervisor (members) or my people (staff)
+  myTeam: () => api.get('/site/my-team'),
+  setOnCall: (onCall) => api.patch('/site/me/on-call', { onCall }),
+  staff: (params) => api.get('/site/staff', { params }),
+  // Emergency roll-call
+  activeRollcall: () => api.get('/site/rollcall/active'),
+  startRollcall: (reason) => api.post('/site/rollcall', { reason }),
+  respondRollcall: (id, status, note) => api.post(`/site/rollcall/${id}/respond`, { status, note }),
+  endRollcall: (id) => api.post(`/site/rollcall/${id}/end`),
+};
+
+// Requests (call a nurse, housekeeping, repairs, incident reports…)
+export const requestAPI = {
+  getAll: (params) => api.get('/requests', { params }),
+  create: (data) => api.post('/requests', data),
+  update: (id, data) => api.patch(`/requests/${id}`, data),
 };

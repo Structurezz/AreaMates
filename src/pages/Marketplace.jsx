@@ -19,6 +19,7 @@ import ProductCard from '../components/market/desktop/ProductCard';
 import useIsDesktop from '../hooks/useIsDesktop';
 import useCountUp from '../hooks/useCountUp';
 import { Receipt, Store, Heart, LayoutGrid } from 'lucide-react';
+import { useSite } from '../context/SiteContext';
 
 const SORTS = [
   { id: 'newest', label: 'Newest' },
@@ -44,6 +45,7 @@ function ChatOverlay({ chat, me, onClose }) {
 
 // Row for "My listings": status and management's reason are what matter here.
 function MyRow({ l, onOpen }) {
+  const { isEstate, w } = useSite();
   const st = STATUS[l.status] || STATUS.active;
   return (
     <button onClick={() => onOpen(l)} className="w-full flex gap-3 items-center p-3 rounded-2xl bg-white border border-slate-200 text-left active:bg-slate-50">
@@ -60,7 +62,7 @@ function MyRow({ l, onOpen }) {
         {['rejected', 'removed'].includes(l.status) && l.moderation?.reason && (
           <p className="text-xs text-red-600 truncate">{l.moderation.reason}</p>
         )}
-        {l.status === 'pending_approval' && <p className="text-xs text-amber-700 truncate">Waiting for estate management</p>}
+        {l.status === 'pending_approval' && <p className="text-xs text-amber-700 truncate">{isEstate ? 'Waiting for estate management' : `Waiting for ${w.siteMgmtLc}`}</p>}
       </div>
       <ChevronRight size={18} className="text-slate-300 shrink-0" />
     </button>
@@ -68,6 +70,7 @@ function MyRow({ l, onOpen }) {
 }
 
 export default function Marketplace() {
+  const { isEstate, w } = useSite();
   const { user } = useAuth();
   const [tab, setTab] = useState('browse');
   const [listings, setListings] = useState([]);
@@ -213,7 +216,7 @@ export default function Marketplace() {
       <div className="px-4 md:px-0 mt-3">
         {tab === 'orders' ? (
           orders === null ? <ListSkeleton /> : orders.length === 0 ? (
-            <Empty title="No orders yet" body="When you buy from a neighbour, your order and its status show here. Your money is held safely until you confirm delivery." cta="Browse the market" onCta={() => setTab('browse')} />
+            <Empty title="No orders yet" body={isEstate ? 'When you buy from a neighbour, your order and its status show here. Your money is held safely until you confirm delivery.' : `When you buy from ${w.aMember}, your order and its status show here. Your money is held safely until you confirm delivery.`} cta="Browse the market" onCta={() => setTab('browse')} />
           ) : (
             <div className="space-y-2.5">
               {orders.map((o) => <div key={o._id} data-focus-id={o._id}><OrderCard order={o} as="buyer" onChanged={updateOrder} onChat={chatAbout} onCall={(p) => startCall?.(p)} onDispute={setDisputeFor} /></div>)}
@@ -250,7 +253,7 @@ export default function Marketplace() {
         ) : shown.length === 0 ? (
           tab === 'saved'
             ? <Empty title="Nothing saved yet" body="Tap the ♥ on a listing to keep it here." />
-            : <Empty title={q ? `No results for "${q}"` : 'No listings yet'} body={q || cat ? 'Try another search or category.' : 'Be the first to sell something in your estate.'} cta={!q && !cat ? 'Sell something' : null} onCta={startSell} />
+            : <Empty title={q ? `No results for "${q}"` : 'No listings yet'} body={q || cat ? 'Try another search or category.' : (isEstate ? 'Be the first to sell something in your estate.' : `Be the first to sell something in your ${w.siteLc}.`)} cta={!q && !cat ? 'Sell something' : null} onCta={startSell} />
         ) : (
           isDesktop ? (
             <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
@@ -300,7 +303,7 @@ export default function Marketplace() {
 
   if (isDesktop) {
     const SECTIONS = [
-      { id: 'browse', label: 'Browse',  icon: LayoutGrid, hint: 'Everything your neighbours are selling' },
+      { id: 'browse', label: 'Browse',  icon: LayoutGrid, hint: isEstate ? 'Everything your neighbours are selling' : `Everything ${w.neighboursLc} are selling` },
       { id: 'orders', label: 'Orders',  icon: Receipt,    hint: 'What you bought and its status', badge: toConfirm },
       { id: 'mine',   label: 'Selling', icon: Store,      hint: 'Your listings, sales and wallet', badge: pending },
       { id: 'saved',  label: 'Saved',   icon: Heart,      hint: 'Listings you liked' },
@@ -316,7 +319,7 @@ export default function Marketplace() {
               <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-white/10 border border-white/15 flex-shrink-0"><ShoppingBag size={22} className="text-indigo-200" /></div>
               <div className="min-w-0">
                 <h1 className="text-[22px] font-semibold text-white" style={{ letterSpacing: '-0.025em' }}>Marketplace</h1>
-                <p className="text-[13px] text-indigo-100/75 flex items-center gap-1.5"><ShieldCheck size={13} /> Neighbours only · protected by estate management</p>
+                <p className="text-[13px] text-indigo-100/75 flex items-center gap-1.5"><ShieldCheck size={13} /> {isEstate ? 'Neighbours only · protected by estate management' : `${w.members} only · protected by ${w.siteMgmtLc}`}</p>
               </div>
             </div>
             <div className="relative flex-1 max-w-xl ml-auto">
@@ -405,7 +408,7 @@ export default function Marketplace() {
         {/* Header */}
         <header className="dash-rise flex items-end justify-between gap-3">
           <div className="min-w-0">
-            <div className="text-[12px] font-medium text-slate-400">Buy &amp; sell with neighbours</div>
+            <div className="text-[12px] font-medium text-slate-400">{isEstate ? 'Buy & sell with neighbours' : `Buy & sell with ${w.neighboursLc}`}</div>
             <h1 className="text-[22px] font-semibold text-slate-900 leading-tight" style={{ letterSpacing: '-0.03em' }}>Marketplace</h1>
           </div>
           <button onClick={startSell}
@@ -422,7 +425,7 @@ export default function Marketplace() {
           <ShoppingBag size={150} className="absolute -right-6 -bottom-8 text-white/[0.06] pointer-events-none" />
           <div className="relative">
             <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-white/10 border border-white/15">
-              <ShieldCheck size={12} className="text-indigo-200" /> Neighbours only · protected payments
+              <ShieldCheck size={12} className="text-indigo-200" /> {isEstate ? 'Neighbours only' : `${w.members} only`} · protected payments
             </span>
             <div className="mt-4 grid grid-cols-3 gap-2">
               <MarketStat label="For sale" value={browseCount} delay={120} />

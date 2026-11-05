@@ -3,6 +3,7 @@ import { formatDistanceToNowStrict } from 'date-fns';
 import { Megaphone, Pin, Users, AlertTriangle, Zap, Hammer, ChevronDown, Bell } from 'lucide-react';
 import DJLive from '../DJLive';
 import useCountUp from '../../hooks/useCountUp';
+import { useSite } from '../../context/SiteContext';
 
 const CAT = {
   general:     { Icon: Megaphone,     color: '#4F46E5', label: 'General' },
@@ -87,6 +88,7 @@ function NoticeCard({ a, i }) {
 }
 
 export default function AnnouncementsMobile({ items, loading }) {
+  const { isEstate, w } = useSite();
   const [cat, setCat] = useState('');
   const pinned = items.filter(a => a.isPinned);
   const thisWeek = items.filter(a => Date.now() - new Date(a.createdAt) < 7 * DAY).length;
@@ -101,7 +103,7 @@ export default function AnnouncementsMobile({ items, loading }) {
   return (
     <div className="space-y-5 pb-2">
       <header className="dash-rise">
-        <div className="text-[12px] font-medium text-slate-400">From your estate manager</div>
+        <div className="text-[12px] font-medium text-slate-400">{isEstate ? 'From your estate manager' : `From your ${w.managerLc}`}</div>
         <h1 className="text-[22px] font-semibold text-slate-900 leading-tight" style={{ letterSpacing: '-0.03em' }}>Announcements</h1>
       </header>
 

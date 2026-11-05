@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Calendar, MapPin, Users, Check, RefreshCw, Clock, CalendarCheck, History, Sparkles } from 'lucide-react';
 import { eventAPI } from '../../api';
 import toast from 'react-hot-toast';
+import { useSite } from '../../context/SiteContext';
 
 export const CATS = {
   general:     { label: 'General',     color: '#6366F1', emoji: '📅' },
@@ -82,6 +83,7 @@ function EventTile({ ev, i, userId, onRsvp }) {
 }
 
 export default function EventsDesktop({ events, loading, userId, onRsvp }) {
+  const { isEstate, w } = useSite();
   const [tab, setTab] = useState('upcoming');
   const now = new Date();
   const upcoming = events.filter((e) => new Date(e.date) >= now).sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -105,7 +107,7 @@ export default function EventsDesktop({ events, loading, userId, onRsvp }) {
             <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-white/10 border border-white/15 flex-shrink-0"><Calendar size={22} className="text-indigo-200" /></div>
             <div className="min-w-0">
               <h1 className="text-[22px] font-semibold text-white" style={{ letterSpacing: '-0.025em' }}>Event Board</h1>
-              <p className="text-[13px] text-indigo-100/75">Estate events, activities and Friday Night FunTimes</p>
+              <p className="text-[13px] text-indigo-100/75">{isEstate ? 'Estate' : w.site} events, activities and Friday Night FunTimes</p>
             </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
@@ -245,7 +247,7 @@ export default function EventsDesktop({ events, loading, userId, onRsvp }) {
           <div className="dash-rise rounded-2xl bg-white border border-slate-200/70 p-4" style={{ animationDelay: '140ms' }}>
             <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5"><CalendarCheck size={12} /> Your plans</div>
             {mine.length === 0 ? (
-              <p className="mt-2 text-[12px] text-slate-500">You haven't RSVPed to anything yet. Tap <b>RSVP</b> on an event to let neighbours know you're coming.</p>
+              <p className="mt-2 text-[12px] text-slate-500">You haven't RSVPed to anything yet. Tap <b>RSVP</b> on an event to let {isEstate ? 'neighbours' : w.neighboursLc} know you're coming.</p>
             ) : (
               <div className="mt-2 space-y-1.5">
                 {mine.slice(0, 4).map((ev) => (

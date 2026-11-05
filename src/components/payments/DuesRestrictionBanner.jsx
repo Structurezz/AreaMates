@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import { paymentAPI } from '../../api';
 import Modal from '../ui/Modal';
+import { useSite } from '../../context/SiteContext';
 
 // Shown across the app while the resident has a dues notice or paused
 // services (server: utils/duesEnforcement). Paying clears it automatically.
@@ -14,6 +15,8 @@ const day = (d) => (d ? format(new Date(d), 'd MMM yyyy') : '');
 
 export default function DuesRestrictionBanner() {
   const { pathname } = useLocation();
+  const { isEstate, w } = useSite();
+  const mgmt = isEstate ? 'estate management' : w.siteMgmtLc;
   const [info, setInfo] = useState(null);
   const [open, setOpen] = useState(false);
   const [dispute, setDispute] = useState('');
@@ -49,12 +52,12 @@ export default function DuesRestrictionBanner() {
         </span>
         <div className="flex-1 min-w-[200px]">
           <p className={`text-[13.5px] font-semibold ${active ? 'text-red-800' : 'text-amber-900'}`}>
-            {active ? `Paused for overdue bills: ${names}` : `${NGN(info.overdue)} in estate bills is overdue`}
+            {active ? `Paused for overdue bills: ${names}` : `${NGN(info.overdue)} in ${isEstate ? 'estate bills' : w.duesLc} is overdue`}
           </p>
           <p className={`text-[12px] ${active ? 'text-red-700/80' : 'text-amber-800/80'}`}>
             {active
               ? `Pay ${NGN(info.overdue)} to restore everything instantly.`
-              : `Please pay by ${day(info.effectiveAt)} — after that, estate management may pause: ${names}.`}
+              : `Please pay by ${day(info.effectiveAt)} — after that, ${mgmt} may pause: ${names}.`}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -72,7 +75,7 @@ export default function DuesRestrictionBanner() {
           <p className="text-[13px] text-slate-600">
             {active
               ? <>Since {day(info.appliedAt)}, under <b>{info.clause}</b>, these are paused until your overdue bills are paid:</>
-              : <>Under <b>{info.clause}</b>, if your overdue bills are not paid by <b>{day(info.effectiveAt)}</b>, estate management may pause:</>}
+              : <>Under <b>{info.clause}</b>, if your overdue bills are not paid by <b>{day(info.effectiveAt)}</b>, {mgmt} may pause:</>}
           </p>
           <div className="space-y-2">
             {info.services.map((s) => (
@@ -106,7 +109,7 @@ export default function DuesRestrictionBanner() {
             <p className="text-[12px] font-semibold text-slate-600 mb-1">Think this is a mistake?</p>
             {info.dispute ? (
               <p className="text-[12.5px] text-slate-500 rounded-xl bg-slate-50 border border-slate-100 p-3">
-                You told estate management on {day(info.dispute.at)}: “{info.dispute.message}”. They'll get back to you.
+                You told {mgmt} on {day(info.dispute.at)}: “{info.dispute.message}”. They'll get back to you.
               </p>
             ) : (
               <>
@@ -114,7 +117,7 @@ export default function DuesRestrictionBanner() {
                   placeholder="e.g. I paid in cash on 2 Oct — receipt no. 1043. Or ask for a payment plan." />
                 <button onClick={sendDispute} disabled={sending || dispute.trim().length < 10}
                   className="mt-2 w-full h-10 rounded-xl text-sm font-semibold border border-slate-200 text-slate-700 disabled:opacity-50">
-                  {sending ? 'Sending…' : 'Send to estate management'}
+                  {sending ? 'Sending…' : `Send to ${mgmt}`}
                 </button>
               </>
             )}

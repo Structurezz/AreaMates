@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { Heart, TrendingDown, MessageCircle, ShoppingCart, Eye } from 'lucide-react';
 import { imgUrl } from '../../lounge/shared';
 import { CAT, naira, priceDrop, sellerOf, isMine, NoPhoto, RatingPill } from '../shared';
+import { useSite } from '../../../context/SiteContext';
 
 // Desktop: image-first product card with hover zoom and quick actions.
 export default function ProductCard({ listing, me, i = 0, onOpen, onToggleSave, onChat, onBuy }) {
+  const { isEstate, w } = useSite();
   const [broken, setBroken] = useState(false);
   const saved = (listing.savedBy || []).some((id) => String(id) === String(me?._id));
   const drop = priceDrop(listing);
@@ -49,7 +51,7 @@ export default function ProductCard({ listing, me, i = 0, onOpen, onToggleSave, 
           {seller.profilePhoto
             ? <img src={imgUrl(seller.profilePhoto)} alt="" className="w-6 h-6 rounded-full object-cover" />
             : <span className="w-6 h-6 rounded-full bg-indigo-50 text-indigo-700 text-[10px] font-semibold flex items-center justify-center">{(seller.name || 'N')[0]}</span>}
-          <span className="text-[12px] text-slate-500 truncate flex-1">{mine ? 'You' : (seller.name || 'Neighbour')}</span>
+          <span className="text-[12px] text-slate-500 truncate flex-1">{mine ? 'You' : (seller.name || (isEstate ? 'Neighbour' : w.neighbour))}</span>
           <RatingPill rating={listing.sellerRating} />
         </div>
         <div className="mt-auto pt-3 flex gap-1.5">

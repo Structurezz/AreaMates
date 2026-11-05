@@ -27,19 +27,28 @@ function useNow(ms = 60000) {
  * to check-out. Renders nothing for anyone without a stay.
  */
 export function StayCard({ user, compact = false }) {
-  const { modules, terms } = useSite();
+  const { modules, terms, type, isStaff } = useSite();
   const now = useNow();
   const stay = user?.stay;
-  if (!modules.stays || !stay?.checkIn || !stay?.checkOut) return null;
+  const hotel = type === 'hotel';
+  // Hotels need both dates; elsewhere (hospital admission / discharge) the end may be open
+  if (!modules.stays || isStaff || !stay?.checkIn || (hotel && !stay?.checkOut)) return null;
+  const inWord = terms.stayIn || 'Check-in';
+  const outWord = terms.stayOut || 'Check-out';
 
   const room = user?.unitId && typeof user.unitId === 'object' ? user.unitId : null;
   const roomLabel = room ? `${terms.unit} ${room.unitNumber}${room.block ? ` · ${room.block}` : ''}` : null;
   const upcoming = new Date(stay.checkIn) > now;
-  const left = countdown(upcoming ? stay.checkIn : stay.checkOut, now);
-  const headline = upcoming
-    ? (left ? `Check-in in ${left}` : 'Check-in today')
-    : left ? `Checks out in ${left}` : 'Check-out time';
-  const urgent = !upcoming && differenceInMinutes(new Date(stay.checkOut), now) < 180;
+  const left = upcoming || stay.checkOut ? countdown(upcoming ? stay.checkIn : stay.checkOut, now) : null;
+  const headline = hotel
+    ? (upcoming
+      ? (left ? `Check-in in ${left}` : 'Check-in today')
+      : left ? `Checks out in ${left}` : 'Check-out time')
+    : upcoming
+      ? (left ? `${inWord} in ${left}` : `${inWord} today`)
+      : !stay.checkOut ? `${inWord} ${fmt(stay.checkIn)}`
+        : left ? `${outWord} in ${left}` : `${outWord} today`;
+  const urgent = !upcoming && !!stay.checkOut && differenceInMinutes(new Date(stay.checkOut), now) < 180;
 
   return (
     <section className={`dash-rise relative overflow-hidden rounded-2xl bg-white border border-slate-200/70 ${compact ? 'p-4' : 'p-5'}`}
@@ -51,7 +60,7 @@ export function StayCard({ user, compact = false }) {
         </span>
         <div className="flex-1 min-w-0">
           <div className="text-[12px] font-medium text-slate-500 truncate">
-            Your stay{roomLabel ? <> · <span className="font-semibold text-slate-700">{roomLabel}</span></> : null}
+            {hotel ? 'Your stay' : type === 'hospital' ? 'Your admission' : 'Your dates'}{roomLabel ? <> · <span className="font-semibold text-slate-700">{roomLabel}</span></> : null}
           </div>
           <div className={`text-[17px] font-semibold leading-tight truncate ${urgent ? 'text-amber-600' : 'text-slate-900'}`} style={{ letterSpacing: '-0.02em' }}>
             {headline}
@@ -60,15 +69,15 @@ export function StayCard({ user, compact = false }) {
       </div>
       <div className="mt-3.5 grid grid-cols-2 gap-2">
         <div className="rounded-xl bg-white border border-slate-200/70 px-3 py-2">
-          <div className="text-[11px] text-slate-400 flex items-center gap-1"><LogIn size={11} /> Check-in</div>
+          <div className="text-[11px] text-slate-400 flex items-center gap-1"><LogIn size={11} /> {inWord}</div>
           <div className="text-[13px] font-semibold text-slate-800 mt-0.5 truncate">{fmt(stay.checkIn)}</div>
         </div>
         <div className="rounded-xl bg-white border border-slate-200/70 px-3 py-2">
-          <div className="text-[11px] text-slate-400 flex items-center gap-1"><LogOut size={11} /> Check-out</div>
-          <div className="text-[13px] font-semibold text-slate-800 mt-0.5 truncate">{fmt(stay.checkOut)}</div>
+          <div className="text-[11px] text-slate-400 flex items-center gap-1"><LogOut size={11} /> {outWord}</div>
+          <div className="text-[13px] font-semibold text-slate-800 mt-0.5 truncate">{stay.checkOut ? fmt(stay.checkOut) : 'Not set yet'}</div>
         </div>
       </div>
-      {!upcoming && (
+      {!upcoming && hotel && (
         <p className="mt-2.5 text-[11px] text-slate-400">Your access ends at check-out. Ask the {terms.manager.toLowerCase()} to extend your stay.</p>
       )}
     </section>

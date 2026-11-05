@@ -2,6 +2,7 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import { Plus, ImagePlus, ArrowUp, PartyPopper } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { postAPI } from '../../api';
+import { useSite } from '../../context/SiteContext';
 import { useSocket } from '../../context/SocketContext';
 import { Avatar } from './shared';
 import PostCard from './PostCard';
@@ -30,6 +31,7 @@ function Skeleton() {
 
 // The Lounge feed: Instagram-style stories + posts, live over the socket.
 export default function Feed({ me }) {
+  const { isEstate, w } = useSite();
   const { subscribe } = useSocket() || {};
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -219,7 +221,7 @@ export default function Feed({ me }) {
       <div className="flex items-center gap-3 px-4 py-3 mt-px sm:mt-3 bg-white sm:rounded-2xl sm:border sm:border-slate-200">
         <Avatar person={me} size={36} />
         <button onClick={() => setComposer({ photo: false })} className="flex-1 text-left text-[15px] text-slate-400 bg-slate-100 rounded-full px-4 py-2.5">
-          What's happening, {me?.name?.split(' ')[0] || 'neighbour'}?
+          What's happening, {me?.name?.split(' ')[0] || (isEstate ? 'neighbour' : w.memberLc)}?
         </button>
         <button onClick={() => setComposer({ photo: true })} aria-label="Post a photo" className="w-10 h-10 rounded-full flex items-center justify-center text-indigo-600 hover:bg-indigo-50">
           <ImagePlus size={22} />

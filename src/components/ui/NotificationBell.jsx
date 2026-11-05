@@ -4,6 +4,7 @@ import { Bell, X, CheckCheck, Trash2, Siren, ChevronRight, Sparkles } from 'luci
 import { isToday, isYesterday } from 'date-fns';
 import { useNotifications, TYPE_CONFIG as TC } from '../../context/NotificationContext';
 import { linkFor } from '../../utils/notificationLinks';
+import { useSite } from '../../context/SiteContext';
 
 const PRIMARY = '#6366F1';
 
@@ -18,6 +19,7 @@ function timeAgo(iso) {
 const dayOf = (iso) => { const d = new Date(iso); return isToday(d) ? 'Today' : isYesterday(d) ? 'Yesterday' : 'Earlier'; };
 
 function NotifRow({ n, i, onGo }) {
+  const { isEstate, w } = useSite();
   const cfg = TC[n.type] || { Icon: Bell, color: PRIMARY, isAlert: false };
   const { Icon, color } = cfg;
   const link = linkFor(n);
@@ -40,7 +42,7 @@ function NotifRow({ n, i, onGo }) {
         </div>
         {n.body && <p className="text-[12px] text-slate-500 mt-0.5 leading-snug line-clamp-2">{n.body}</p>}
         <div className="mt-1.5 flex items-center gap-1.5">
-          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md" style={{ background: `${color}14`, color }}>{cfg.label || 'Notification'}</span>
+          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md" style={{ background: `${color}14`, color }}>{(n.type === 'new_resident' && !isEstate ? w.neighbour : cfg.label) || 'Notification'}</span>
           {unread && <span className="w-1.5 h-1.5 rounded-full" style={{ background: cfg.isAlert ? '#EF4444' : PRIMARY }} />}
         </div>
       </div>
@@ -51,6 +53,7 @@ function NotifRow({ n, i, onGo }) {
 
 export default function NotificationBell() {
   const navigate = useNavigate();
+  const { isEstate, w } = useSite();
   const { notifications, unreadCount, alertCount, markAllRead, markRead, openAlert, openLive, clearAll, stopSiren } = useNotifications();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState('all');
@@ -188,7 +191,7 @@ export default function NotificationBell() {
                   {tab === 'unread' ? 'Nothing unread' : tab === 'alerts' ? 'No security alerts' : 'No notifications yet'}
                 </p>
                 <p className="mt-1 text-[12px] text-slate-400">
-                  {tab === 'alerts' ? 'The estate is calm. We’ll ring if anything happens.' : 'Visitors, payments, events and messages will show up here.'}
+                  {tab === 'alerts' ? (isEstate ? 'The estate is calm. We’ll ring if anything happens.' : `The ${w.siteLc} is calm. We’ll ring if anything happens.`) : 'Visitors, payments, events and messages will show up here.'}
                 </p>
               </div>
             ) : groups.map(([day, list]) => (

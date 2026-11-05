@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import BottomSheet from '../payments/BottomSheet';
 import { marketplaceAPI } from '../../api';
 import { timeAgo } from '../lounge/shared';
+import { useSite } from '../../context/SiteContext';
 
 const money = (n) => `₦${Number(n || 0).toLocaleString('en-NG', { maximumFractionDigits: 2 })}`;
 
@@ -53,6 +54,7 @@ function Row({ a }) {
 }
 
 export function WalletSheet({ open, wallet, onClose, onWithdraw, onBank }) {
+  const site = useSite();
   const w = wallet || {};
   return (
     <BottomSheet open={open} onClose={onClose} title="Seller wallet" subtitle="Your marketplace earnings">
@@ -77,7 +79,7 @@ export function WalletSheet({ open, wallet, onClose, onWithdraw, onBank }) {
 
       <h3 className="text-sm font-bold text-slate-900 mt-5">Activity</h3>
       {(w.activity || []).length === 0
-        ? <p className="text-sm text-slate-500 py-6 text-center">No sales yet. When a neighbour buys from you, it shows here.</p>
+        ? <p className="text-sm text-slate-500 py-6 text-center">{site.isEstate ? 'No sales yet. When a neighbour buys from you, it shows here.' : `No sales yet. When ${site.w.aMember} buys from you, it shows here.`}</p>
         : <ul className="divide-y divide-slate-100">{w.activity.map((a) => <Row key={`${a.kind}-${a.id}`} a={a} />)}</ul>}
       {w.completedOrders > 0 && <p className="text-[11px] text-slate-400 mt-2">{w.completedOrders} completed sale{w.completedOrders > 1 ? 's' : ''} · {money(w.grossSales)} sold · {money(w.commissionPaid)} in fees</p>}
     </BottomSheet>

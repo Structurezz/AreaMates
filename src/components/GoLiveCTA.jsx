@@ -3,8 +3,10 @@ import { Mic, Radio, Heart, MessageSquare, Headphones } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { djAPI } from '../api';
 import { useSocket } from '../context/SocketContext';
+import { useSite } from '../context/SiteContext';
 
 export default function GoLiveCTA() {
+  const { isEstate, w } = useSite();
   const navigate = useNavigate();
   const { subscribe } = useSocket();
   const [active, setActive] = useState(null);
@@ -35,7 +37,7 @@ export default function GoLiveCTA() {
         <div className="flex-1 min-w-0">
           <div className="text-[10px] font-extrabold tracking-widest uppercase opacity-85">Start a live room</div>
           <div className="text-sm font-extrabold">Spin, pray, chat or podcast</div>
-          <div className="text-[11px] opacity-85 mt-0.5">Your neighbours get a notification instantly.</div>
+          <div className="text-[11px] opacity-85 mt-0.5">Your {isEstate ? 'neighbours' : w.neighboursLc} get a notification instantly.</div>
         </div>
         <div className="flex items-center gap-1 flex-shrink-0">
           <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.14)' }}><Radio size={13}/></div>

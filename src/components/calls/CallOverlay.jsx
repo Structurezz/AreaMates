@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { Phone, PhoneOff, Mic, MicOff, ShieldCheck } from 'lucide-react';
 import Portal from '../ui/Portal';
 import { useCall, END_TEXT, REASON_TEXT } from '../../context/CallContext';
+import { useSite } from '../../context/SiteContext';
 
-const ROLE_LABEL = { security: 'Security', estate_manager: 'Estate Manager', super_admin: 'AreaConnect support', resident: 'Neighbour' };
+const ESTATE_ROLE_LABEL = { security: 'Security', estate_manager: 'Estate Manager', super_admin: 'AreaConnect support', resident: 'Neighbour' };
 
 const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
@@ -44,6 +45,9 @@ function RoundButton({ onClick, label, tone, children }) {
 // Full-screen call UI: incoming ring, outgoing ringing, in-call, end state.
 export default function CallOverlay() {
   const { call, accept, decline, hangup, toggleMute } = useCall() || {};
+  const { isEstate, w } = useSite();
+  const ROLE_LABEL = isEstate ? ESTATE_ROLE_LABEL : { ...ESTATE_ROLE_LABEL, estate_manager: w.manager, resident: w.member };
+  const neighbourWord = isEstate ? 'Neighbour' : w.member;
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
@@ -67,7 +71,7 @@ export default function CallOverlay() {
   const left = call.maxSeconds && kind === 'standard' && direction === 'outgoing' ? Math.max(0, call.maxSeconds - elapsed) : null;
 
   let subtitle;
-  if (status === 'incoming') subtitle = kind === 'emergency' ? 'Emergency call' : kind === 'staff' ? `${ROLE_LABEL[peer.role] || 'Estate staff'} calling` : 'Neighbour calling';
+  if (status === 'incoming') subtitle = kind === 'emergency' ? 'Emergency call' : kind === 'staff' ? `${ROLE_LABEL[peer.role] || (isEstate ? 'Estate staff' : `${w.site} staff`)} calling` : `${neighbourWord} calling`;
   else if (status === 'ringing') subtitle = 'Calling…';
   else if (status === 'connecting') subtitle = 'Connecting…';
   else if (status === 'active') subtitle = mmss(elapsed);
@@ -83,14 +87,14 @@ export default function CallOverlay() {
     <Portal>
       <div className="fixed inset-0 flex flex-col items-center justify-between text-white"
         style={{ zIndex: 350, background: 'linear-gradient(160deg,#1E1B4B 0%,#312E81 45%,#4338CA 100%)', paddingTop: 'max(3rem, env(safe-area-inset-top))', paddingBottom: 'max(2.5rem, env(safe-area-inset-bottom))' }}
-        role="dialog" aria-modal="true" aria-label={`Call with ${peer.name || 'neighbour'}`}>
+        role="dialog" aria-modal="true" aria-label={`Call with ${peer.name || (isEstate ? 'neighbour' : w.memberLc)}`}>
 
         <div className="flex flex-col items-center text-center px-6 mt-6">
           <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest px-3 py-1 rounded-full mb-8 ${free ? 'bg-emerald-400/20 text-emerald-200' : 'bg-white/10 text-indigo-100'}`}>
             {free ? <><ShieldCheck size={12} /> {kind === 'emergency' ? 'Emergency · free' : 'Free call'}</> : 'AreaMates call'}
           </span>
           <PersonAvatar person={peer} ring={status === 'incoming' || status === 'ringing'} />
-          <h2 className="text-2xl font-bold mt-6" style={{ color: '#fff' }}>{peer.name || 'Neighbour'}</h2>
+          <h2 className="text-2xl font-bold mt-6" style={{ color: '#fff' }}>{peer.name || neighbourWord}</h2>
           <p className="text-sm text-indigo-200 mt-1">{[ROLE_LABEL[peer.role] && peer.role !== 'resident' ? ROLE_LABEL[peer.role] : null, peer.unit].filter(Boolean).join(' · ')}</p>
           <p className={`mt-5 text-lg font-medium ${status === 'active' ? 'tabular-nums' : ''}`}>{subtitle}</p>
           {status === 'active' && call.path && (
