@@ -468,11 +468,11 @@ function Thread({ thread, currentUser, subscribe, emit, estateName, showInfo, on
         },
       } : undefined);
       const msg = data.data;
-      setMessages((prev) => prev.map((m) => (m._id === optId ? msg : m)));
-      if (isGroup) {
-        const estateId = typeof currentUser.estateId === 'object' ? currentUser.estateId._id : currentUser.estateId;
-        emit?.('send_message', { ...msg, estateId });
-      }
+      // The live event for this message can arrive before this response:
+      // if it's already in the list, just drop the temporary copy (no doubles)
+      setMessages((prev) => (prev.some((m) => m._id === msg._id)
+        ? prev.filter((m) => m._id !== optId)
+        : prev.map((m) => (m._id === optId ? msg : m))));
     } catch (err) {
       setMessages((prev) => prev.filter((m) => m._id !== optId));
       if (text) setContent(text);
