@@ -340,7 +340,7 @@ export default function Household() {
   const roomLeft = unit ? Math.max(0, unit.maxOccupants - unit.occupants) : 0;
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-5 sm:py-7 space-y-5">
+    <div className="w-full px-4 sm:px-6 py-5 sm:py-7 space-y-5">
       {/* Header */}
       <div className="flex items-end justify-between gap-3 flex-wrap dash-rise">
         <div>
@@ -412,7 +412,7 @@ export default function Household() {
               </>}
             </div>
           ) : (
-            <div className="grid sm:grid-cols-2 gap-4">
+            <div className="grid sm:grid-cols-2 2xl:grid-cols-3 gap-4">
               {members.map((m, i) => (
                 <MemberCard key={m._id} m={m} i={i} options={options} isHead={isHead}
                   onEdit={setPanel} onChanged={load} />

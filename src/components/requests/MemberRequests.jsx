@@ -287,7 +287,7 @@ export default function MemberRequests({ site, team, kinds, mine, myId, seen, in
   }
 
   return (
-    <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-6 lg:items-start space-y-5 lg:space-y-0">
+    <div className="lg:grid lg:grid-cols-[minmax(0,1.4fr)_minmax(360px,1fr)] lg:gap-8 lg:items-start space-y-5 lg:space-y-0">
       {/* ── Call panel ─────────────────────────────────── */}
       <div className="space-y-4">
         <header className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-1.5 sm:gap-4">

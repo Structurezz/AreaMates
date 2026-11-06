@@ -283,7 +283,7 @@ export default function Requests() {
   // Members: the bedside call panel + "Your requests"
   if (!isStaff) {
     return (
-      <div className="max-w-5xl mx-auto animate-fade-in">
+      <div className="w-full animate-fade-in">
         <MemberRequests
           site={site} team={team} kinds={kinds} mine={mine} myId={myId} seen={seen}
           initialKind={initialKind} onOpen={setOpen} onSent={apply}
@@ -294,7 +294,7 @@ export default function Requests() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-4 animate-fade-in">
+    <div className="w-full space-y-4 animate-fade-in">
       <div>
         <h1 className="text-[22px] font-semibold text-slate-900" style={{ letterSpacing: '-0.03em' }}>Requests</h1>
         <p className="text-[13px] text-slate-500">{isStaff ? 'Requests sent to you, most urgent first' : `Ask ${terms.site.toLowerCase()} staff for help — they're told straight away`}</p>
