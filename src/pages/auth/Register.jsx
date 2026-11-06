@@ -22,8 +22,8 @@ const ROLE_ROUTES = {
   security: '/security/dashboard',
 };
 
-// Same frame as the login page; the form renders on the dark phone card and
-// the light desktop panel, so it picks its input style from this context.
+// Same frame as the login page; the form renders on the light phone page and
+// the desktop panel, so it picks its input style from this context.
 const Ui = createContext({ input: 'rl-input', dark: false });
 
 // A <label> wrapping the input links them (tap the label → focus the field)
@@ -150,16 +150,20 @@ export default function Register() {
     <>
       {/* ── Mobile ── */}
       <div className="lg:hidden">
-        <Ui.Provider value={{ input: 'am-input', dark: true }}>
+        <Ui.Provider value={{ input: 'am-input', dark: false }}>
           <MobileAuthShell>
             {pending ? <PendingNotice message={pending} /> : (
               <>
-                <div className="ax-title" style={{ marginBottom: 2 }}>Join your {W.site}</div>
-                <p className="ax-sub" style={{ marginBottom: 22 }}>Create your {W.member} account</p>
+                <h1 className="ax-title">Create your account</h1>
+                <p className="ax-sub mt-1.5 mb-7">Join your {W.site} as a {W.member}</p>
                 <RegisterForm {...shared} />
-                <p style={{ textAlign: 'center', marginTop: 18, fontSize: 13, color: 'rgba(255,255,255,0.35)' }}>
+                <p className="mt-6 text-center text-[14px] text-[#667085]">
                   Already registered?{' '}
-                  <Link to="/login" style={{ color: '#818CF8', fontWeight: 600 }}>Sign in</Link>
+                  <Link to="/login" className="ax-link">Sign in</Link>
+                </p>
+                <p className="mt-3 text-center text-[13px] text-[#667085]">
+                  Manage {W.E ? 'an estate' : `a ${W.site}`}?{' '}
+                  <a href="https://area-connector.areaconnect.pro/register" className="ax-link">{W.E ? 'Estate manager' : 'Manager'} portal</a>
                 </p>
               </>
             )}

@@ -1,35 +1,31 @@
 import { useEffect, useState } from 'react';
 import { CheckCircle, Lock, UserCheck, Package, Radio, Vote, Wallet, Megaphone } from 'lucide-react';
 
-// Frame matching the login page, so sign-up looks the same: phones get the
-// dark animated AreaMates hero + glass card, desktop gets the split screen with
-// the live resident preview. Forms inside use the theme-aware `ax-*` classes.
-// (Login.jsx still has its own copy of this frame.)
+// Shared frame for the login and sign-up pages: phones get a clean light page,
+// desktop gets the split screen with the live resident preview. Forms inside
+// use the theme-aware `ax-*` classes. (Login.jsx keeps its own desktop frame.)
 
+// Phone: "clean light" — white page, a thin brand strip + soft glow at the
+// top, big inputs (16px text so iOS doesn't zoom). Scoped to `.ax-m` so the
+// desktop panel (rendered alongside, hidden by CSS) is untouched.
 const MOBILE_CSS = `
-  @keyframes amOrb1 {
-    0%,100% { transform: translate(0,0) scale(1); }
-    35% { transform: translate(28px,-40px) scale(1.08); }
-    68% { transform: translate(-22px,26px) scale(0.93); }
-  }
-  @keyframes amOrb2 {
-    0%,100% { transform: translate(0,0) scale(1); }
-    40% { transform: translate(-32px,24px) scale(1.06); }
-    72% { transform: translate(20px,-28px) scale(0.95); }
-  }
-  @keyframes amPulse { 0% { transform: scale(1); opacity: 0.55; } 100% { transform: scale(2.6); opacity: 0; } }
-  @keyframes amCardIn { 0% { opacity: 0; transform: translateY(36px); } 100% { opacity: 1; transform: translateY(0); } }
-  @keyframes amHeroIn { 0% { opacity: 0; transform: scale(0.92) translateY(-10px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
-  @keyframes amScan { 0% { top: -2px; opacity: 0.07; } 100% { top: 101%; opacity: 0.01; } }
-  @keyframes amGlow { 0%,100% { opacity: 0.65; } 50% { opacity: 1; } }
   .am-input {
-    width: 100%; padding: 13px 16px; border-radius: 12px;
-    background: rgba(255,255,255,0.07); border: 1.5px solid rgba(255,255,255,0.11);
-    color: #fff; font-size: 14px; outline: none; box-sizing: border-box;
-    transition: border-color 0.2s;
+    width: 100%; height: 52px; padding: 0 16px; border-radius: 14px;
+    background: #fff; border: 1.5px solid #E4E7EC; color: #101828;
+    font-size: 16px; outline: none; box-sizing: border-box; -webkit-appearance: none; appearance: none;
+    transition: border-color .15s, box-shadow .15s;
   }
-  .am-input:focus { border-color: rgba(99,102,241,0.55); }
-  .am-input::placeholder { color: rgba(255,255,255,0.3); }
+  .am-input:focus { border-color: #6366F1; box-shadow: 0 0 0 4px rgba(99,102,241,.16); }
+  .am-input::placeholder { color: #98A2B3; }
+  .ax-m .ax-title { font-size: 27px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.15; color: #101828; }
+  .ax-m .ax-sub { font-size: 15px; line-height: 1.5; color: #475467; }
+  .ax-m .ax-label { font-size: 13.5px; font-weight: 600; color: #344054; margin-bottom: 7px; }
+  .ax-m .ax-btn { height: 52px; border-radius: 14px; font-size: 16px; background: #4F46E5;
+    box-shadow: 0 10px 22px -10px rgba(79,70,229,.65), inset 0 -2px 0 rgba(0,0,0,.1); }
+  .ax-m .ax-btn:active:not(:disabled) { transform: scale(.99); }
+  .ax-m .ax-error { border-radius: 12px; font-size: 14px; }
+  .ax-m .ax-stay { background: #EEF2FF; border: 1px solid #C7D2FE; color: #3730A3; border-radius: 12px; font-size: 14px; }
+  @keyframes amRise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 `;
 
 const DESKTOP_CSS = `
@@ -77,72 +73,38 @@ const FORM_CSS = `
   .ax-dark  .ax-seg-off { color: rgba(255,255,255,.5); }
 `;
 
-/* ── Phone: dark animated hero + glass form card ── */
+/* ── Phone: clean light page ── */
 export function MobileAuthShell({ children }) {
   return (
-    <div className="ax-dark" style={{ minHeight: '100vh', background: 'linear-gradient(160deg,#05091A 0%,#08103A 100%)', position: 'relative', overflow: 'hidden' }}>
-      <style>{MOBILE_CSS + FORM_CSS}</style>
+    <div className="ax-light ax-m min-h-[100dvh] flex flex-col bg-white relative"
+      style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)', paddingLeft: 'env(safe-area-inset-left)', paddingRight: 'env(safe-area-inset-right)' }}>
+      <style>{FORM_CSS + MOBILE_CSS}</style>
 
-      <div style={{
-        position: 'fixed', top: -100, right: -80, width: 360, height: 360, borderRadius: '50%', pointerEvents: 'none',
-        background: 'radial-gradient(circle, rgba(99,102,241,0.24) 0%, transparent 65%)', animation: 'amOrb1 11s ease-in-out infinite',
-      }}/>
-      <div style={{
-        position: 'fixed', bottom: -110, left: -90, width: 320, height: 320, borderRadius: '50%', pointerEvents: 'none',
-        background: 'radial-gradient(circle, rgba(79,70,229,0.17) 0%, transparent 65%)', animation: 'amOrb2 14s 3s ease-in-out infinite',
-      }}/>
-      <div style={{
-        position: 'fixed', left: 0, right: 0, height: 1, pointerEvents: 'none',
-        background: 'linear-gradient(to right, transparent, rgba(99,102,241,0.35), transparent)', animation: 'amScan 9s linear infinite',
-      }}/>
-
-      {/* ── Hero ── */}
-      <div style={{ textAlign: 'center', padding: '56px 24px 32px', position: 'relative', zIndex: 1, animation: 'amHeroIn 0.8s cubic-bezier(0.22,1,0.36,1) both' }}>
-        <div style={{ position: 'relative', display: 'inline-flex', marginBottom: 22 }}>
-          <div style={{ position: 'absolute', inset: -18, borderRadius: '50%', border: '1.5px solid rgba(99,102,241,0.5)', animation: 'amPulse 2.8s ease-out infinite' }}/>
-          <div style={{ position: 'absolute', inset: -9, borderRadius: '50%', border: '1.5px solid rgba(99,102,241,0.35)', animation: 'amPulse 2.8s 0.7s ease-out infinite' }}/>
-          <div style={{
-            width: 76, height: 76, borderRadius: 22, background: 'linear-gradient(135deg,#6366F1,#4F46E5)',
-            boxShadow: '0 0 56px rgba(99,102,241,0.55), 0 12px 40px rgba(0,0,0,0.5)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'amGlow 3s ease-in-out infinite',
-          }}>
-            <svg width="38" height="38" viewBox="0 0 40 40" fill="none">
-              <path d="M20 6L8 13v14l12 7 12-7V13L20 6z" stroke="rgba(255,255,255,0.25)" strokeWidth="1" fill="none"/>
-              <path d="M20 10L11 15.5v11L20 32l9-5.5v-11L20 10z" fill="rgba(255,255,255,0.15)"/>
-              <text x="20" y="25" textAnchor="middle" fill="white" fontSize="13" fontWeight="800" fontFamily="system-ui,sans-serif">AM</text>
-            </svg>
-          </div>
-        </div>
-
-        <div style={{ fontSize: 32, fontWeight: 900, letterSpacing: '-0.045em', color: '#fff', marginBottom: 4 }}>
-          Area<span style={{ color: '#818CF8' }}>Mates</span>
-        </div>
-        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', marginBottom: 24 }}>
-          Resident Portal
-        </div>
-
-        <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 7 }}>
-          {['Visitor Passes', 'Pay Levies', 'Community Chat', 'Alerts'].map(f => (
-            <span key={f} style={{
-              fontSize: 11, fontWeight: 600, padding: '5px 13px', borderRadius: 99,
-              background: 'rgba(99,102,241,0.12)', color: '#A5B4FC', border: '1px solid rgba(99,102,241,0.25)',
-            }}>{f}</span>
-          ))}
-        </div>
+      {/* Decorative: thin brand strip + soft glow, top only (clipped box so nothing scrolls sideways) */}
+      <div aria-hidden className="absolute inset-x-0 top-0 h-[240px] overflow-hidden pointer-events-none">
+        <div className="absolute inset-x-0 top-0 h-[3px]" style={{ background: 'linear-gradient(90deg,#A5B4FC,#6366F1 45%,#4F46E5 75%,#EC4899)' }}/>
+        <div className="absolute" style={{ top: -140, right: -90, width: 280, height: 280, borderRadius: '50%', background: 'radial-gradient(circle, rgba(99,102,241,.20) 0%, rgba(99,102,241,0) 70%)' }}/>
+        <div className="absolute" style={{ top: -110, left: -120, width: 240, height: 240, borderRadius: '50%', background: 'radial-gradient(circle, rgba(236,72,153,.08) 0%, rgba(236,72,153,0) 70%)' }}/>
       </div>
 
-      <div style={{ margin: '0 20px', height: 1, background: 'linear-gradient(to right, transparent, rgba(99,102,241,0.2), transparent)' }}/>
+      <header className="relative flex items-center gap-2.5 px-5 pt-5">
+        <img src="/icon-192.png" alt="" className="w-8 h-8 rounded-[9px]" style={{ boxShadow: '0 4px 12px -4px rgba(79,70,229,.45)' }}/>
+        <div className="leading-tight">
+          <div className="text-[16px] font-bold tracking-tight text-[#101828]">Area<span style={{ color: '#4F46E5' }}>Mates</span></div>
+          <div className="text-[11px] font-medium text-[#667085]">For residents</div>
+        </div>
+      </header>
 
-      {/* ── Form card ── */}
-      <div style={{
-        margin: '0 12px', padding: '28px 24px 40px', borderRadius: '28px 28px 0 0',
-        background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(28px)', WebkitBackdropFilter: 'blur(28px)',
-        border: '1px solid rgba(255,255,255,0.09)', borderBottom: 'none',
-        animation: 'amCardIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both', position: 'relative', zIndex: 1,
-      }}>
-        {children}
-        <p style={{ textAlign: 'center', marginTop: 20, fontSize: 11, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.04em' }}>
-          Powered by <span style={{ fontWeight: 600, color: 'rgba(255,255,255,0.6)' }}>AREA CONNECTOR TECHNOLOGIES</span> · RC&nbsp;9607864
+      {/* Only the form block is vertically centred in the space below; the page grows and scrolls when it is taller */}
+      <div className="relative flex-1 flex flex-col w-full max-w-[440px] mx-auto px-5 pb-6">
+        <div className="flex-1 flex flex-col justify-center py-8">
+          <main style={{ animation: 'amRise .5s cubic-bezier(.22,1,.36,1) both' }}>
+            {children}
+          </main>
+        </div>
+
+        <p className="mt-8 text-center text-[11px] text-[#98A2B3] tracking-[0.02em]">
+          Powered by <span className="font-semibold text-[#667085]">AREA CONNECTOR TECHNOLOGIES</span> · RC&nbsp;9607864
         </p>
       </div>
     </div>

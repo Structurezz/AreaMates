@@ -6,6 +6,7 @@ import { Eye, EyeOff, AlertCircle, CalendarClock, CheckCircle, KeyRound, Mail, S
 import toast from 'react-hot-toast';
 import Portal from '../../components/ui/Portal';
 import { TERMS, preAuthSiteType } from '../../utils/siteTypes';
+import { MobileAuthShell } from '../../components/auth/AuthShell';
 
 /**
  * Forgot-password modal. Residents (and security) submit their email →
@@ -244,222 +245,77 @@ function AdSidebar() {
   );
 }
 
-/* ── Mobile CSS ── */
-const MOBILE_CSS = `
-  @keyframes amOrb1 {
-    0%,100% { transform: translate(0,0) scale(1); }
-    35% { transform: translate(28px,-40px) scale(1.08); }
-    68% { transform: translate(-22px,26px) scale(0.93); }
-  }
-  @keyframes amOrb2 {
-    0%,100% { transform: translate(0,0) scale(1); }
-    40% { transform: translate(-32px,24px) scale(1.06); }
-    72% { transform: translate(20px,-28px) scale(0.95); }
-  }
-  @keyframes amPulse {
-    0% { transform: scale(1); opacity: 0.55; }
-    100% { transform: scale(2.6); opacity: 0; }
-  }
-  @keyframes amCardIn {
-    0% { opacity: 0; transform: translateY(36px); }
-    100% { opacity: 1; transform: translateY(0); }
-  }
-  @keyframes amHeroIn {
-    0% { opacity: 0; transform: scale(0.92) translateY(-10px); }
-    100% { opacity: 1; transform: scale(1) translateY(0); }
-  }
-  @keyframes amScan {
-    0% { top: -2px; opacity: 0.07; }
-    100% { top: 101%; opacity: 0.01; }
-  }
-  @keyframes amGlow {
-    0%,100% { opacity: 0.65; }
-    50% { opacity: 1; }
-  }
-  .am-input {
-    width: 100%; padding: 13px 16px; border-radius: 12px;
-    background: rgba(255,255,255,0.07); border: 1.5px solid rgba(255,255,255,0.11);
-    color: #fff; font-size: 14px; outline: none; box-sizing: border-box;
-    transition: border-color 0.2s;
-  }
-  .am-input:focus { border-color: rgba(99,102,241,0.55); }
-  .am-input::placeholder { color: rgba(255,255,255,0.3); }
-`;
-
+/* ── Phone: clean light page (shared frame with sign-up) ── */
 function MobileLogin({ form, setForm, showPw, setShowPw, loading, error, errorTone, handleSubmit, openForgot }) {
   const W = authWords();
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(160deg,#05091A 0%,#08103A 100%)', position: 'relative', overflow: 'hidden' }}>
-      <style>{MOBILE_CSS}</style>
+    <MobileAuthShell>
+      <h1 className="ax-title">Welcome back</h1>
+      <p className="ax-sub mt-1.5">Sign in to your {W.site}</p>
 
-      {/* Orb 1 — top right */}
-      <div style={{
-        position: 'fixed', top: -100, right: -80, width: 360, height: 360,
-        borderRadius: '50%', pointerEvents: 'none',
-        background: 'radial-gradient(circle, rgba(99,102,241,0.24) 0%, transparent 65%)',
-        animation: 'amOrb1 11s ease-in-out infinite',
-      }}/>
-      {/* Orb 2 — bottom left */}
-      <div style={{
-        position: 'fixed', bottom: -110, left: -90, width: 320, height: 320,
-        borderRadius: '50%', pointerEvents: 'none',
-        background: 'radial-gradient(circle, rgba(79,70,229,0.17) 0%, transparent 65%)',
-        animation: 'amOrb2 14s 3s ease-in-out infinite',
-      }}/>
-      {/* Scan line */}
-      <div style={{
-        position: 'fixed', left: 0, right: 0, height: 1, pointerEvents: 'none',
-        background: 'linear-gradient(to right, transparent, rgba(99,102,241,0.35), transparent)',
-        animation: 'amScan 9s linear infinite',
-      }}/>
-
-      {/* ── Hero ── */}
-      <div style={{
-        textAlign: 'center', padding: '64px 24px 36px',
-        position: 'relative', zIndex: 1,
-        animation: 'amHeroIn 0.8s cubic-bezier(0.22,1,0.36,1) both',
-      }}>
-        {/* Icon + pulse rings */}
-        <div style={{ position: 'relative', display: 'inline-flex', marginBottom: 22 }}>
-          <div style={{
-            position: 'absolute', inset: -18, borderRadius: '50%',
-            border: '1.5px solid rgba(99,102,241,0.5)',
-            animation: 'amPulse 2.8s ease-out infinite',
-          }}/>
-          <div style={{
-            position: 'absolute', inset: -9, borderRadius: '50%',
-            border: '1.5px solid rgba(99,102,241,0.35)',
-            animation: 'amPulse 2.8s 0.7s ease-out infinite',
-          }}/>
-          <div style={{
-            width: 76, height: 76, borderRadius: 22,
-            background: 'linear-gradient(135deg,#6366F1,#4F46E5)',
-            boxShadow: '0 0 56px rgba(99,102,241,0.55), 0 12px 40px rgba(0,0,0,0.5)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            animation: 'amGlow 3s ease-in-out infinite',
-          }}>
-            <svg width="38" height="38" viewBox="0 0 40 40" fill="none">
-              <path d="M20 6L8 13v14l12 7 12-7V13L20 6z" stroke="rgba(255,255,255,0.25)" strokeWidth="1" fill="none"/>
-              <path d="M20 10L11 15.5v11L20 32l9-5.5v-11L20 10z" fill="rgba(255,255,255,0.15)"/>
-              <text x="20" y="25" textAnchor="middle" fill="white" fontSize="13" fontWeight="800" fontFamily="system-ui,sans-serif">AM</text>
-            </svg>
-          </div>
-        </div>
-
-        <div style={{ fontSize: 32, fontWeight: 900, letterSpacing: '-0.045em', color: '#fff', marginBottom: 4 }}>
-          Area<span style={{ color: '#818CF8' }}>Mates</span>
-        </div>
-        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', marginBottom: 24 }}>
-          Resident Portal
-        </div>
-
-        <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 7 }}>
-          {['Visitor Passes', 'Pay Levies', 'Community Chat', 'Alerts'].map(f => (
-            <span key={f} style={{
-              fontSize: 11, fontWeight: 600, padding: '5px 13px', borderRadius: 99,
-              background: 'rgba(99,102,241,0.12)', color: '#A5B4FC',
-              border: '1px solid rgba(99,102,241,0.25)',
-            }}>{f}</span>
-          ))}
-        </div>
-      </div>
-
-      {/* Separator */}
-      <div style={{ margin: '0 20px', height: 1, background: 'linear-gradient(to right, transparent, rgba(99,102,241,0.2), transparent)' }}/>
-
-      {/* ── Form card ── */}
-      <div style={{
-        margin: '0 12px', padding: '28px 24px 40px',
-        borderRadius: '28px 28px 0 0',
-        background: 'rgba(255,255,255,0.05)',
-        backdropFilter: 'blur(28px)',
-        WebkitBackdropFilter: 'blur(28px)',
-        border: '1px solid rgba(255,255,255,0.09)',
-        borderBottom: 'none',
-        animation: 'amCardIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both',
-        position: 'relative', zIndex: 1,
-      }}>
-        <h2 style={{ fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-0.03em', marginBottom: 2 }}>Welcome back</h2>
-        <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 22 }}>Sign in to your {W.site} account</p>
-
+      <form onSubmit={handleSubmit} className="mt-7 space-y-4">
         {error && errorTone === 'stay' && (
-          <div style={{
-            display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 14px', borderRadius: 12, marginBottom: 16,
-            background: 'rgba(129,140,248,0.14)', border: '1px solid rgba(165,180,252,0.35)', color: '#E0E7FF', fontSize: 13, lineHeight: 1.5,
-          }}>
-            <CalendarClock size={16} style={{ flexShrink: 0, marginTop: 1, color: '#A5B4FC' }}/> <span>{error}</span>
+          <div className="ax-stay flex items-start gap-2.5 px-3.5 py-3 leading-relaxed" role="status">
+            <CalendarClock size={17} className="shrink-0 mt-0.5 text-[#6366F1]"/> <span>{error}</span>
           </div>
         )}
         {error && errorTone !== 'stay' && (
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 10, marginBottom: 16,
-            background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', color: '#FCA5A5', fontSize: 13,
-          }}>
-            <AlertCircle size={14}/> {error}
+          <div className="ax-error flex items-start gap-2 px-3.5 py-3" role="alert">
+            <AlertCircle size={16} className="shrink-0 mt-0.5"/> <span>{error}</span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: 14 }}>
-            <label style={{ display: 'block', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', marginBottom: 8 }}>
-              Email Address
-            </label>
-            <input type="email" className="am-input" placeholder="you@example.com"
-              value={form.email} onChange={e => setForm({ ...form, email: e.target.value })}
-              required autoComplete="email"/>
-          </div>
+        <label className="block">
+          <span className="ax-label">Email</span>
+          <input type="email" inputMode="email" className="am-input" placeholder="you@email.com"
+            value={form.email} onChange={e => setForm({ ...form, email: e.target.value })}
+            required autoComplete="email" autoCapitalize="none" autoCorrect="off" spellCheck={false}/>
+        </label>
 
-          <div style={{ marginBottom: 10 }}>
-            <label style={{ display: 'block', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', marginBottom: 8 }}>
-              Password
-            </label>
-            <div style={{ position: 'relative' }}>
-              <input type={showPw ? 'text' : 'password'} className="am-input" placeholder="••••••••"
+        <div>
+          <label className="block">
+            <span className="ax-label">Password</span>
+            <div className="relative">
+              <input type={showPw ? 'text' : 'password'} className="am-input" placeholder="Enter your password"
                 value={form.password} onChange={e => setForm({ ...form, password: e.target.value })}
-                required autoComplete="current-password" style={{ paddingRight: 44 }}/>
-              <button type="button" onClick={() => setShowPw(!showPw)}
-                style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.4)', padding: 0 }}>
-                {showPw ? <EyeOff size={16}/> : <Eye size={16}/>}
+                required autoComplete="current-password" style={{ paddingRight: 52 }}/>
+              <button type="button" onClick={() => setShowPw(!showPw)} aria-label={showPw ? 'Hide password' : 'Show password'}
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 w-10 h-10 rounded-lg flex items-center justify-center text-[#98A2B3] active:text-[#475467]">
+                {showPw ? <EyeOff size={18}/> : <Eye size={18}/>}
               </button>
             </div>
+          </label>
+          <div className="mt-2.5 text-right">
+            <button type="button" onClick={openForgot} className="ax-link text-[14px] py-1">Forgot password?</button>
           </div>
+        </div>
 
-          <div style={{ textAlign: 'right', marginBottom: 18 }}>
-            <button type="button" onClick={openForgot}
-              style={{ background: 'none', border: 'none', color: '#A5B4FC', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0 }}>
-              Forgot password?
-            </button>
-          </div>
+        <button type="submit" disabled={loading} className="ax-btn !mt-5">
+          {loading ? (
+            <>
+              <svg className="animate-spin" width={17} height={17} viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="white" strokeWidth="3" strokeOpacity=".3"/>
+                <path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round"/>
+              </svg>
+              Signing in…
+            </>
+          ) : <>Sign in <ArrowRight size={18}/></>}
+        </button>
+      </form>
 
-          <button type="submit" disabled={loading} style={{
-            width: '100%', padding: '15px', borderRadius: 14, border: 'none',
-            background: loading ? 'rgba(99,102,241,0.4)' : 'linear-gradient(135deg,#6366F1,#4F46E5)',
-            color: '#fff', fontWeight: 700, fontSize: 15,
-            boxShadow: loading ? 'none' : '0 6px 24px rgba(99,102,241,0.4)',
-            cursor: loading ? 'not-allowed' : 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          }}>
-            {loading ? (
-              <>
-                <svg style={{ animation: 'spin 1s linear infinite' }} width={16} height={16} viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="10" stroke="white" strokeWidth="3" strokeOpacity=".3"/>
-                  <path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round"/>
-                </svg>
-                Signing in…
-              </>
-            ) : 'Sign In'}
-          </button>
+      <p className="mt-6 text-center text-[14px] text-[#667085]">
+        New here?{' '}
+        <Link to="/register" className="ax-link">Join with {W.site} code</Link>
+      </p>
 
-          <p style={{ textAlign: 'center', marginTop: 18, fontSize: 13, color: 'rgba(255,255,255,0.35)' }}>
-            New {W.member}?{' '}
-            <Link to="/register" style={{ color: '#818CF8', fontWeight: 600 }}>Join with {W.site} code</Link>
-          </p>
-        </form>
-        <p style={{ textAlign: 'center', marginTop: 20, fontSize: 11, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.04em' }}>
-          Powered by <span style={{ fontWeight: 600, color: 'rgba(255,255,255,0.6)' }}>AREA CONNECTOR TECHNOLOGIES</span> · RC&nbsp;9607864
+      <div className="mt-8 rounded-xl border border-[#EAECF0] bg-[#F9FAFB] px-4 py-3.5 flex items-center gap-3">
+        <span className="w-9 h-9 rounded-lg bg-white border border-[#EAECF0] flex items-center justify-center text-[#475467] shrink-0"><ShieldCheck size={16}/></span>
+        <p className="text-[13px] leading-snug text-[#667085] min-w-0">
+          <span className="block font-medium text-[#101828]">Manage {W.E ? 'an estate' : `a ${W.site}`}?</span>
+          Use the <a href="https://area-connector.areaconnect.pro/login" className="ax-link">{W.E ? 'estate manager' : 'manager'} portal</a>.
         </p>
       </div>
-    </div>
+    </MobileAuthShell>
   );
 }
 
