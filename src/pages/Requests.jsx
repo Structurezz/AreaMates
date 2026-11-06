@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
+import { useSearchParams } from 'react-router-dom';
 import { formatDistanceToNowStrict } from 'date-fns';
 import {
   MessageCircle, Building2, Send, CheckCircle2, Clock, Loader2, Home, Phone, UserRound, ChevronRight,
@@ -11,7 +12,9 @@ import { useSocket } from '../context/SocketContext';
 import { PageLoader } from '../components/ui/Spinner';
 import { Avatar, CARD, unitText } from '../components/roles/shared';
 import { KIND_ICON, StatusPill, kindColor } from '../components/requests/requestUi';
-import RequestThread, { lastMessage, isStaffSide } from '../components/requests/RequestThread';
+import RequestThread, { lastMessage, isStaffSide, threadOf } from '../components/requests/RequestThread';
+import MemberRequests from '../components/requests/MemberRequests';
+import { useRoles } from '../context/RolesContext';
 
 const ago = (d) => { try { return formatDistanceToNowStrict(new Date(d), { addSuffix: true }); } catch { return ''; } };
 const upsert = (list, r) => {
@@ -21,8 +24,20 @@ const upsert = (list, r) => {
 };
 const isActive = (r) => r.status === 'open' || r.status === 'accepted';
 
-function SendPanel({ kinds, onSent }) {
+// Members: how many messages of each request they've seen (drives the unread dot)
+const SEEN_KEY = 'areamates:requestsSeen';
+const loadSeen = () => { try { return JSON.parse(localStorage.getItem(SEEN_KEY) || '{}') || {}; } catch { return {}; } };
+const saveSeen = (m) => { try { localStorage.setItem(SEEN_KEY, JSON.stringify(m)); } catch { /* ignore */ } };
+
+function SendPanel({ kinds, onSent, initialKind = null }) {
   const [kind, setKind] = useState(null);
+  // ?kind=call_nurse (dashboard quick buttons) preselects that kind once the kinds are known
+  const [preselect, setPreselect] = useState(initialKind);
+  useEffect(() => {
+    if (!preselect) return;
+    const k = kinds.find((x) => x.key === preselect);
+    if (k) { setKind(k); setPreselect(null); }
+  }, [preselect, kinds]);
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const send = async () => {
@@ -179,11 +194,15 @@ function QueueRow({ r, kindLabel, terms, myId, onOpen, onUpdate }) {
 }
 
 export default function Requests() {
-  const { requestKinds, isStaff, terms } = useSite();
+  const site = useSite();
+  const { requestKinds, isStaff, terms } = site;
+  const { team } = useRoles();
   const { user } = useAuth();
   const myId = String(user?._id || '');
   const { subscribe } = useSocket() || {};
-  const [tab, setTab] = useState(isStaff ? 'queue' : 'send');
+  const [params] = useSearchParams();
+  const initialKind = params.get('kind');
+  const [tab, setTab] = useState(initialKind ? 'send' : isStaff ? 'queue' : 'send');
   const [mine, setMine] = useState(null);
   const [queue, setQueue] = useState(null);
   const [done, setDone] = useState(null);
@@ -221,6 +240,20 @@ export default function Requests() {
     return subscribe('request_update', apply);
   }, [subscribe, apply]);
 
+  // Members: mark the open conversation as read (also as new messages arrive while it's open)
+  const [seen, setSeen] = useState(loadSeen);
+  const openId = open?._id;
+  const openCount = open ? threadOf(open).length : 0;
+  useEffect(() => {
+    if (isStaff || !openId) return;
+    setSeen((m) => {
+      if ((m[openId] || 0) >= openCount) return m;
+      const next = { ...m, [openId]: openCount };
+      saveSeen(next);
+      return next;
+    });
+  }, [isStaff, openId, openCount]);
+
   const cancel = async (r) => {
     if (!window.confirm(`Cancel your ${kindLabel(r.kind).toLowerCase()} request?`)) return;
     try {
@@ -240,6 +273,26 @@ export default function Requests() {
   const myRows = (list) => list.map((r) => <MyRequestRow key={r._id} r={r} kinds={kinds} kindLabel={kindLabel} myId={myId} onOpen={setOpen} />);
   const queueRows = (list) => list.map((r) => <QueueRow key={r._id} r={r} kindLabel={kindLabel} terms={terms} myId={myId} onOpen={setOpen} onUpdate={apply} />);
 
+  const thread = open && (
+    <RequestThread
+      request={open} myId={myId} kinds={kinds} kindLabel={kindLabel} terms={terms}
+      onClose={() => setOpen(null)} onChange={apply} onCancel={cancel}
+    />
+  );
+
+  // Members: the bedside call panel + "Your requests"
+  if (!isStaff) {
+    return (
+      <div className="max-w-5xl mx-auto animate-fade-in">
+        <MemberRequests
+          site={site} team={team} kinds={kinds} mine={mine} myId={myId} seen={seen}
+          initialKind={initialKind} onOpen={setOpen} onSent={apply}
+        />
+        {thread}
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-3xl mx-auto space-y-4 animate-fade-in">
       <div>
@@ -255,7 +308,7 @@ export default function Requests() {
 
       {tab === 'send' && (
         <>
-          <SendPanel kinds={kinds} onSent={(r) => { apply(r); setOpen(r); }} />
+          <SendPanel kinds={kinds} initialKind={initialKind} onSent={(r) => { apply(r); setOpen(r); }} />
           {!isStaff && activeMine.length > 0 && (
             <section>
               <h2 className="text-[15px] font-semibold text-slate-900 mb-2">In progress</h2>
@@ -285,12 +338,7 @@ export default function Requests() {
         </div>
       ))}
 
-      {open && (
-        <RequestThread
-          request={open} myId={myId} kinds={kinds} kindLabel={kindLabel} terms={terms}
-          onClose={() => setOpen(null)} onChange={apply} onCancel={cancel}
-        />
-      )}
+      {thread}
     </div>
   );
 }

@@ -5,9 +5,9 @@ import { visitorAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { passKindLabel, passPurposeLine, passShareLines, passSiteName } from '../utils/passText';
 import InviteForm from '../components/visitors/InviteForm';
-import { CategoryBadge, DetailsLine } from '../components/visitors/PassCategory';
 import VisitorsMobile from '../components/visitors/VisitorsMobile';
 import VisitorsDesktop from '../components/visitors/desktop/VisitorsDesktop';
+import VisitorPassDrawer from '../components/visitors/desktop/VisitorPassDrawer';
 import {
   UserCheck, Plus, QrCode, Calendar, Clock, X,
   Users, Package, Wrench, Heart, MoreHorizontal,
@@ -233,103 +233,19 @@ const shareVisitorPass = async (pass, estate) => {
   }
 };
 
-function PassTimer({ visitor }) {
-  const [tick, setTick] = useState(0);
-  useEffect(() => {
-    const id = setInterval(() => setTick(t => t + 1), 1000);
-    return () => clearInterval(id);
-  }, []);
-
-  const now      = new Date();
-  const start    = new Date(visitor.expectedDate);
-  const duration = visitor.expectedDuration || 720;
-  const expiry   = new Date(start.getTime() + duration * 60 * 1000);
-
-  const fmt = (ms) => {
-    if (ms <= 0) return null;
-    const totalSec = Math.floor(ms / 1000);
-    const h = Math.floor(totalSec / 3600);
-    const m = Math.floor((totalSec % 3600) / 60);
-    const s = totalSec % 60;
-    if (h > 0) return `${h}h ${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s`;
-    return `${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s`;
-  };
-
-  if (['checked-out', 'blacklisted', 'expired', 'cancelled'].includes(visitor.status)) return null;
-
-  if (visitor.status === 'checked-in') {
-    const entryTime = visitor.entryTime ? new Date(visitor.entryTime) : null;
-    return (
-      <div className="rounded-xl p-4"
-        style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)' }}>
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-            style={{ background: 'rgba(16,185,129,0.14)' }}>
-            <CheckCircle size={20} style={{ color: '#059669' }} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-[10px] font-black uppercase tracking-widest" style={{ color: '#059669' }}>Arrived</div>
-            <div className="text-sm font-bold mt-0.5" style={{ color: '#0F172A' }}>
-              Checked in{entryTime ? ` at ${entryTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}
-            </div>
-          </div>
-          <span className="w-2 h-2 rounded-full flex-shrink-0 animate-pulse" style={{ background: '#10B981' }} />
-        </div>
-      </div>
-    );
-  }
-
-  if (now < start) {
-    const left = fmt(start - now);
-    return (
-      <div className="rounded-xl p-4 text-center" style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.14)' }}>
-        <div className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: '#94A3B8' }}>Arrives in</div>
-        <div className="text-2xl font-bold tabular-nums" style={{ color: ACCENT, letterSpacing: '-0.02em' }}>{left}</div>
-        <div className="text-xs mt-1" style={{ color: '#94A3B8' }}>
-          Expected at {start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-        </div>
-      </div>
-    );
-  }
-
-  const left = fmt(expiry - now);
-  if (!left) {
-    return (
-      <div className="rounded-xl p-4 text-center" style={{ background: '#FEF2F2', border: '1px solid #FECACA' }}>
-        <div className="text-sm font-semibold" style={{ color: '#DC2626' }}>Pass Expired</div>
-      </div>
-    );
-  }
-
-  const pct      = Math.max(0, Math.min(100, ((expiry - now) / (duration * 60 * 1000)) * 100));
-  const isUrgent = pct < 20;
-  return (
-    <div className="rounded-xl p-4" style={{ background: isUrgent ? '#FEF2F2' : 'rgba(99,102,241,0.06)', border: `1px solid ${isUrgent ? '#FECACA' : 'rgba(99,102,241,0.14)'}` }}>
-      <div className="flex items-center justify-between mb-2">
-        <div className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#94A3B8' }}>Pass expires in</div>
-        <div className="text-xs font-medium" style={{ color: isUrgent ? '#DC2626' : '#64748B' }}>{Math.round(pct)}% remaining</div>
-      </div>
-      <div className="text-2xl font-bold tabular-nums mb-3" style={{ color: isUrgent ? '#DC2626' : ACCENT, letterSpacing: '-0.02em' }}>
-        {left}
-      </div>
-      <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(0,0,0,0.08)' }}>
-        <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: isUrgent ? '#EF4444' : ACCENT }} />
-      </div>
-    </div>
-  );
-}
-
-function QRCanvas({ value, size = 160 }) {
-  const canvasRef = useRef(null);
-  useEffect(() => {
-    if (!value || !canvasRef.current) return;
-    QRCode.toCanvas(canvasRef.current, value, {
-      width: size, margin: 2,
-      color: { dark: '#0B1C3D', light: '#FFFFFF' },
-    });
-  }, [value, size]);
-  return <canvas ref={canvasRef} className="rounded-xl mx-auto" style={{ border: '1px solid #E2E8F0' }} />;
-}
+// Download the branded pass image (same artwork the share sheet attaches)
+const savePassImage = async (v, estate) => {
+  try {
+    const canvas = await generateBrandedPass(v, estate);
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+    if (!blob) throw new Error('no image');
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `visitor-pass-${v.visitorCode}.png`; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast.success('Pass image saved');
+  } catch { toast.error('Couldn\'t create the pass image'); }
+};
 
 const PURPOSES = [
   { label: 'Family',     Icon: Users          },
@@ -373,153 +289,6 @@ function Drawer({ open, onClose, title, children }) {
         </button>
       </div>
       <div className="flex-1 overflow-y-auto p-6">{children}</div>
-    </div>
-  );
-}
-
-/* ─────────────────────────────────────────────────────── */
-/*  Visitor Pass Sidebar                                   */
-/* ─────────────────────────────────────────────────────── */
-function VisitorPassDrawer({ visitor, onClose, onCancelPass }) {
-  const { user } = useAuth();
-  useEffect(() => {
-    if (visitor) document.body.style.overflow = 'hidden';
-    else document.body.style.overflow = '';
-    return () => { document.body.style.overflow = ''; };
-  }, [visitor]);
-
-  if (!visitor) return null;
-
-  const copyCode = () => {
-    navigator.clipboard?.writeText(visitor.visitorCode);
-    toast.success('Access code copied!');
-  };
-
-  const statusColor = {
-    active:        { bg: '#EEF2FF', text: '#4F46E5', border: '#C7D2FE' },
-    'checked-in':  { bg: '#EFF6FF', text: '#2563EB', border: '#BFDBFE' },
-    'checked-out': { bg: '#F8FAFC', text: '#475569', border: '#E2E8F0' },
-    expired:       { bg: '#FFFBEB', text: '#D97706', border: '#FDE68A' },
-    blacklisted:   { bg: '#FEF2F2', text: '#DC2626', border: '#FECACA' },
-  }[visitor.status] || { bg: '#F8FAFC', text: '#475569', border: '#E2E8F0' };
-
-  return (
-    <div className="fixed right-0 top-0 bottom-0 z-50 flex flex-col w-full sm:w-[480px] animate-slide-in-right bg-white"
-      style={{ boxShadow: '-16px 0 48px rgba(15,23,42,0.12)', borderLeft: '1px solid #E2E8F0' }}>
-
-      {/* Header */}
-      <div className="px-6 py-5 flex-shrink-0" style={{ borderBottom: '1px solid #E2E8F0' }}>
-        <div className="flex items-center justify-between mb-4">
-          <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#94A3B8' }}>Visitor Pass</span>
-          <button onClick={onClose} className="p-1.5 rounded-lg transition-all" style={{ color: '#94A3B8' }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#F1F5F9'; e.currentTarget.style.color = '#0F172A'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#94A3B8'; }}>
-            <X size={18} />
-          </button>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-base font-bold text-white flex-shrink-0"
-            style={{ background: `linear-gradient(135deg, ${ACCENT} 0%, ${ACCENT_DARK} 100%)` }}>
-            {visitor.visitorName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-          </div>
-          <div className="min-w-0">
-            <div className="font-bold text-lg truncate" style={{ color: '#0F172A', letterSpacing: '-0.02em' }}>
-              {visitor.visitorName}
-            </div>
-            <div className="flex items-center gap-2 mt-0.5">
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
-                style={{ background: statusColor.bg, color: statusColor.text, border: `1px solid ${statusColor.border}` }}>
-                {visitor.status}
-              </span>
-              <span className="text-sm" style={{ color: '#64748B' }}>{visitor.purpose}</span>
-              <CategoryBadge visitor={visitor} />
-            </div>
-            <DetailsLine visitor={visitor} className="text-xs mt-1 text-slate-500" />
-          </div>
-        </div>
-      </div>
-
-      {/* Scrollable content */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-5">
-
-        <PassTimer visitor={visitor} />
-
-        {/* Ticket */}
-        <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(99,102,241,0.18)' }}>
-          <div className="p-5 flex items-center justify-between"
-            style={{ background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)' }}>
-            <div>
-              <div className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: 'rgba(255,255,255,0.70)' }}>
-                {visitor.category && visitor.category !== 'guest' ? passKindLabel(visitor) : 'Guest Pass'}
-              </div>
-              <div className="text-xl font-bold text-white" style={{ letterSpacing: '-0.02em' }}>{visitor.visitorName}</div>
-              <div className="text-sm mt-0.5" style={{ color: 'rgba(255,255,255,0.75)' }}>{visitor.purpose}</div>
-            </div>
-            <div className="w-11 h-11 rounded-xl flex items-center justify-center"
-              style={{ background: 'rgba(255,255,255,0.20)', border: '1px solid rgba(255,255,255,0.30)' }}>
-              <UserCheck size={20} className="text-white" />
-            </div>
-          </div>
-
-          <div className="relative" style={{ borderTop: '2px dashed rgba(99,102,241,0.20)' }}>
-            <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full"
-              style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }} />
-            <div className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full"
-              style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }} />
-          </div>
-
-          <div className="p-5 text-center" style={{ background: '#FFFFFF' }}>
-            <div className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: '#94A3B8' }}>
-              Access Code
-            </div>
-            <button onClick={copyCode} className="group inline-block mb-4" title="Click to copy">
-              <div className="visitor-code text-4xl font-bold tracking-[0.15em] mb-1" style={{ color: ACCENT }}>
-                {visitor.visitorCode}
-              </div>
-              <div className="text-xs opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: '#94A3B8' }}>
-                Click to copy
-              </div>
-            </button>
-            <QRCanvas value={visitor.visitorCode} size={160} />
-            <p className="text-xs mt-2" style={{ color: '#94A3B8' }}>Scan at the security gate</p>
-          </div>
-        </div>
-
-        {/* Details */}
-        <div className="grid grid-cols-2 gap-3">
-          {[
-            { label: 'Date',     value: format(new Date(visitor.expectedDate), 'MMM d, yyyy') },
-            { label: 'Time',     value: format(new Date(visitor.expectedDate), 'h:mm a')      },
-            { label: 'Duration', value: `${visitor.expectedDuration || 60} min`               },
-            ...(visitor.visitorPhone ? [{ label: 'Phone', value: visitor.visitorPhone }] : []),
-          ].map(({ label, value }) => (
-            <div key={label} className="rounded-xl p-3" style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
-              <div className="text-xs font-medium mb-0.5" style={{ color: '#94A3B8' }}>{label}</div>
-              <div className="text-sm font-semibold truncate" style={{ color: '#0F172A' }}>{value}</div>
-            </div>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-2 gap-2">
-          <button onClick={copyCode} className="btn-outline gap-2">
-            <Share2 size={14} /> Copy Code
-          </button>
-          <button
-            onClick={() => shareVisitorPass(visitor, user?.estateId)}
-            className="flex items-center justify-center gap-2 rounded-[9px] px-3 py-2 text-sm font-semibold transition-all"
-            style={{ background: '#25D366', color: 'white', border: 'none', cursor: 'pointer' }}>
-            <WhatsAppIcon /> Share Pass
-          </button>
-          {visitor.status === 'active' && onCancelPass && (
-            <button onClick={() => onCancelPass(visitor)} className="col-span-2 py-2 rounded-[9px] text-sm font-semibold text-red-600 hover:bg-red-50">
-              Cancel this pass
-            </button>
-          )}
-          <button onClick={onClose} className="btn-primary col-span-2 gap-2">
-            <CheckCircle size={14} /> Done
-          </button>
-        </div>
-      </div>
     </div>
   );
 }
@@ -624,7 +393,11 @@ export default function ResidentVisitors() {
       </Drawer>
 
       {/* Pass detail sidebar */}
-      <VisitorPassDrawer visitor={selectedVisitor} onClose={() => setSelectedVisitor(null)} onCancelPass={cancelPass} />
+      <VisitorPassDrawer
+        visitor={selectedVisitor} onClose={() => setSelectedVisitor(null)} onCancelPass={cancelPass}
+        onShare={(v) => shareVisitorPass(v, user?.estateId)} onSaveImage={(v) => savePassImage(v, user?.estateId)}
+        ShareIcon={WhatsAppIcon}
+      />
     </div>
   );
 }
