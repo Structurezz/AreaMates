@@ -120,17 +120,6 @@ export default function Register() {
                 onChange={(e) => set('phone', e.target.value)}
               />
             </div>
-            <div>
-              <label className="text-sm mb-1.5 block font-medium" style={{ color: '#475569' }}>Role</label>
-              <select
-                className="input-field"
-                value={form.role}
-                onChange={(e) => set('role', e.target.value)}
-              >
-                <option value="resident">Resident</option>
-                <option value="security">Security</option>
-              </select>
-            </div>
             <div className="col-span-2">
               <label className="text-sm mb-1.5 block font-medium" style={{ color: '#475569' }}>Estate Invite Code</label>
               <input
