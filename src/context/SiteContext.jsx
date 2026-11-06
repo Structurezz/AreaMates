@@ -63,6 +63,11 @@ export function SiteProvider({ children }) {
     const roles = Array.isArray(remote?.roles) && remote.roles.length ? remote.roles : fallback.roles;
     const requestKinds = Array.isArray(remote?.requestKinds) ? remote.requestKinds : fallback.requestKinds;
     const myRole = roleOfUser(roles, user);
+    // Staff (porter, teacher, doctor…) don't get member-only features:
+    // fees / bills, family and the members' marketplace
+    if (!isEstate && myRole?.staff) {
+      for (const k of (myRole.hide || ['payments', 'household', 'marketplace'])) modules[k] = false;
+    }
     const defaultRoleDef = roles?.find((r) => r.key === (remote?.defaultRole || fallback.defaultRole)) || roles?.[0] || null;
     return {
       ...cfg,
